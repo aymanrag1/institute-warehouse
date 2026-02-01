@@ -26,7 +26,10 @@
 <script>
 jQuery(document).ready(function($) {
     var products = [];
-    $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) { if(r.success) products = r.data; });
+    $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) {
+        if(r.success) { products = r.data; console.log('OB Products loaded:', r.data.length); }
+        else console.log('OB Products error:', r);
+    });
 
     window.iwAddObItem = function() {
         var opts = '<option value="">اختر الصنف</option>';

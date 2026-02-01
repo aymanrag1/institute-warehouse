@@ -3,7 +3,7 @@
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
  * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
- * Version: 2.0.0
+ * Version: 2.1.0
  * Author: Your Name
  * Text Domain: institute-warehouse
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.0.0');
+define('IW_VERSION', '2.1.0');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -311,8 +311,12 @@ class Institute_Warehouse_System {
             return;
         }
 
-        wp_enqueue_style('iw-admin-css', IW_PLUGIN_URL . 'assets/css/admin.css', array(), IW_VERSION);
-        wp_enqueue_script('iw-admin-js', IW_PLUGIN_URL . 'assets/js/admin.js', array('jquery'), IW_VERSION, true);
+        // Select2 for searchable dropdowns
+        wp_enqueue_style('select2-css', 'https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css', array(), '4.0.13');
+        wp_enqueue_script('select2-js', 'https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.full.min.js', array('jquery'), '4.0.13', true);
+
+        wp_enqueue_style('iw-admin-css', IW_PLUGIN_URL . 'assets/css/admin.css', array('select2-css'), IW_VERSION);
+        wp_enqueue_script('iw-admin-js', IW_PLUGIN_URL . 'assets/js/admin.js', array('jquery', 'select2-js'), IW_VERSION, true);
 
         // إضافة مكتبة XLSX لاستيراد Excel
         wp_enqueue_script('xlsx-js', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', array(), '0.18.5', true);

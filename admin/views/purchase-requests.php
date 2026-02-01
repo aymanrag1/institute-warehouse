@@ -75,7 +75,10 @@
 <script>
 jQuery(document).ready(function($) {
     var products = [];
-    $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) { if(r.success) products = r.data; });
+    $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) {
+        if(r.success) { products = r.data; console.log('PR Products loaded:', r.data.length); }
+        else console.log('PR Products error:', r);
+    });
 
     window.iwPrSwitchTab = function(tab) {
         $('.iw-tab-content').hide();

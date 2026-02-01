@@ -70,7 +70,26 @@ class IW_Products {
     public static function get_products_list() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
         global $wpdb;
-        $products = $wpdb->get_results("SELECT id, name, sku, current_stock, min_stock, max_stock, unit, price FROM {$wpdb->prefix}iw_products ORDER BY name ASC");
+        $table = $wpdb->prefix . 'iw_products';
+
+        // Use SELECT * to be compatible with old and new table schemas
+        $products = $wpdb->get_results("SELECT * FROM {$table} ORDER BY name ASC");
+
+        if ($wpdb->last_error) {
+            wp_send_json_error(array('message' => 'خطأ في قاعدة البيانات: ' . $wpdb->last_error));
+            return;
+        }
+
+        // Ensure all expected fields exist
+        foreach ($products as &$p) {
+            if (!isset($p->current_stock)) $p->current_stock = 0;
+            if (!isset($p->min_stock)) $p->min_stock = 0;
+            if (!isset($p->max_stock)) $p->max_stock = 0;
+            if (!isset($p->sku)) $p->sku = '';
+            if (!isset($p->unit)) $p->unit = '';
+            if (!isset($p->price)) $p->price = 0;
+        }
+
         wp_send_json_success($products);
     }
 

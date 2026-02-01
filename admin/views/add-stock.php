@@ -28,16 +28,16 @@
 <script>
 jQuery(document).ready(function($) {
     $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) {
-        if (!r.success) return;
+        if (!r.success) { console.log('Products load error:', r); return; }
         var h = '<option value="">اختر الصنف</option>';
-        r.data.forEach(function(p) { h += '<option value="'+p.id+'">'+p.name+' (المخزون: '+p.current_stock+')</option>'; });
-        $('#as_product_id').html(h);
+        r.data.forEach(function(p) { h += '<option value="'+p.id+'">'+p.name+' (المخزون: '+(p.current_stock||0)+')</option>'; });
+        $('#as_product_id').html(h).trigger('change.select2');
     });
     $.post(iwAdmin.ajaxurl, {action: 'iw_get_suppliers', nonce: iwAdmin.nonce}, function(r) {
-        if (!r.success) return;
+        if (!r.success) { console.log('Suppliers load error:', r); return; }
         var h = '<option value="">اختر المورد</option>';
         r.data.forEach(function(s) { h += '<option value="'+s.id+'">'+s.name+'</option>'; });
-        $('#as_supplier_id').html(h);
+        $('#as_supplier_id').html(h).trigger('change.select2');
     });
 
     function loadHistory() {

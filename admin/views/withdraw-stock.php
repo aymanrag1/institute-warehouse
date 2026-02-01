@@ -82,32 +82,35 @@ jQuery(document).ready(function($) {
     var products = [], departments = [], employees = [];
 
     // Load dropdowns
-    $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) { if(r.success) products = r.data; });
+    $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) {
+        if(r.success) { products = r.data; console.log('Products loaded:', r.data.length); }
+        else console.log('Products error:', r);
+    });
     $.post(iwAdmin.ajaxurl, {action: 'iw_get_departments', nonce: iwAdmin.nonce}, function(r) {
         if(r.success) {
             departments = r.data;
             var html = '<option value="">اختر القسم</option>';
             r.data.forEach(function(d) { html += '<option value="'+d.id+'">'+d.name+'</option>'; });
-            $('#wd_department_id').html(html);
+            $('#wd_department_id').html(html).trigger('change.select2');
         }
     });
 
     // Load employees when department changes
-    $('#wd_department_id').on('change', function() {
+    $(document).on('change', '#wd_department_id', function() {
         var deptId = $(this).val();
-        if (!deptId) { $('#wd_employee_id').html('<option value="">اختر الموظف</option>'); return; }
+        if (!deptId) { $('#wd_employee_id').html('<option value="">اختر الموظف</option>').trigger('change.select2'); return; }
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_employees_by_dept', nonce: iwAdmin.nonce, department_id: deptId}, function(r) {
             if(r.success) {
                 var html = '<option value="">اختر الموظف</option>';
                 r.data.forEach(function(e) { html += '<option value="'+e.id+'">'+e.name+'</option>'; });
-                $('#wd_employee_id').html(html);
+                $('#wd_employee_id').html(html).trigger('change.select2');
             }
         });
     });
 
     window.iwAddWdItem = function() {
         var opts = '<option value="">اختر الصنف</option>';
-        products.forEach(function(p) { opts += '<option value="'+p.id+'" data-stock="'+p.current_stock+'">'+p.name+' ('+p.current_stock+' '+p.unit+')</option>'; });
+        products.forEach(function(p) { opts += '<option value="'+p.id+'" data-stock="'+(p.current_stock||0)+'">'+p.name+' ('+(p.current_stock||0)+' '+(p.unit||'')+')</option>'; });
         var row = '<tr><td><select class="wd-product regular-text" onchange="iwUpdateStock(this)">'+opts+'</select></td>';
         row += '<td class="wd-available">-</td>';
         row += '<td><input type="number" class="wd-qty" min="1" value="1"></td>';
