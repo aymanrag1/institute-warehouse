@@ -83,7 +83,12 @@ jQuery(document).ready(function($) {
 
     // Load dropdowns
     $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) {
-        if(r.success) { products = r.data; console.log('Products loaded:', r.data.length); }
+        if(r.success) {
+            products = r.data;
+            console.log('Products loaded:', r.data.length);
+            // Now add the first item row since products are ready
+            iwAddWdItem();
+        }
         else console.log('Products error:', r);
     });
     $.post(iwAdmin.ajaxurl, {action: 'iw_get_departments', nonce: iwAdmin.nonce}, function(r) {
@@ -91,19 +96,25 @@ jQuery(document).ready(function($) {
             departments = r.data;
             var html = '<option value="">اختر القسم</option>';
             r.data.forEach(function(d) { html += '<option value="'+d.id+'">'+d.name+'</option>'; });
-            $('#wd_department_id').html(html).trigger('change.select2');
+            $('#wd_department_id').html(html);
+            if (typeof iwRefreshSelect2 === 'function') iwRefreshSelect2('#wd_department_id');
         }
     });
 
     // Load employees when department changes
     $(document).on('change', '#wd_department_id', function() {
         var deptId = $(this).val();
-        if (!deptId) { $('#wd_employee_id').html('<option value="">اختر الموظف</option>').trigger('change.select2'); return; }
+        if (!deptId) {
+            $('#wd_employee_id').html('<option value="">اختر الموظف</option>');
+            if (typeof iwRefreshSelect2 === 'function') iwRefreshSelect2('#wd_employee_id');
+            return;
+        }
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_employees_by_dept', nonce: iwAdmin.nonce, department_id: deptId}, function(r) {
             if(r.success) {
                 var html = '<option value="">اختر الموظف</option>';
                 r.data.forEach(function(e) { html += '<option value="'+e.id+'">'+e.name+'</option>'; });
-                $('#wd_employee_id').html(html).trigger('change.select2');
+                $('#wd_employee_id').html(html);
+                if (typeof iwRefreshSelect2 === 'function') iwRefreshSelect2('#wd_employee_id');
             }
         });
     });
@@ -115,7 +126,9 @@ jQuery(document).ready(function($) {
         row += '<td class="wd-available">-</td>';
         row += '<td><input type="number" class="wd-qty" min="1" value="1"></td>';
         row += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
-        $('#wd-items-body').append(row);
+        var $row = $(row);
+        $('#wd-items-body').append($row);
+        if (typeof iwInitSelect2 === 'function') iwInitSelect2($row);
     };
 
     window.iwUpdateStock = function(sel) {
@@ -306,7 +319,6 @@ jQuery(document).ready(function($) {
         });
     };
 
-    // Auto add first item row
-    iwAddWdItem();
+    // First item row is added after products load (see products AJAX callback above)
 });
 </script>

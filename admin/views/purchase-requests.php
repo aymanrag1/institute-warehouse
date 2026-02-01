@@ -76,7 +76,11 @@
 jQuery(document).ready(function($) {
     var products = [];
     $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) {
-        if(r.success) { products = r.data; console.log('PR Products loaded:', r.data.length); }
+        if(r.success) {
+            products = r.data;
+            console.log('PR Products loaded:', r.data.length);
+            iwAddPrItem();
+        }
         else console.log('PR Products error:', r);
     });
 
@@ -98,7 +102,9 @@ jQuery(document).ready(function($) {
         row += '<td><input type="number" class="pr-qty" min="1" value="1"></td>';
         row += '<td><input type="number" class="pr-price" min="0" step="0.01" value="0"></td>';
         row += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
-        $('#pr-items-body').append(row);
+        var $row = $(row);
+        $('#pr-items-body').append($row);
+        if (typeof iwInitSelect2 === 'function') iwInitSelect2($row);
     };
 
     window.iwUpdatePrRow = function(sel) {
@@ -263,6 +269,6 @@ jQuery(document).ready(function($) {
         });
     };
 
-    iwAddPrItem();
+    // First item row is added after products load (see products AJAX callback above)
 });
 </script>

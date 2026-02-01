@@ -2,25 +2,35 @@
  * Institute Warehouse Admin JS
  */
 jQuery(document).ready(function($) {
-    // Initialize Select2 on all existing selects
-    function initSelect2() {
-        $('.iw-wrap select.regular-text, .iw-wrap select.iw-select2').not('.select2-hidden-accessible').select2({
+    // Initialize Select2 on all selects inside .iw-wrap
+    window.iwInitSelect2 = function(container) {
+        var $target = container ? $(container).find('select.regular-text, select.iw-select2') : $('.iw-wrap select.regular-text, .iw-wrap select.iw-select2');
+        $target.not('.select2-hidden-accessible').each(function() {
+            $(this).select2({
+                dir: 'rtl',
+                width: '100%',
+                placeholder: $(this).find('option:first').text() || 'اختر...',
+                allowClear: true
+            });
+        });
+    };
+
+    // Reinitialize a specific select after its options have been updated via AJAX
+    window.iwRefreshSelect2 = function(selector) {
+        var $el = $(selector);
+        if ($el.hasClass('select2-hidden-accessible')) {
+            $el.select2('destroy');
+        }
+        $el.select2({
             dir: 'rtl',
             width: '100%',
-            placeholder: 'اختر...',
+            placeholder: $el.find('option:first').text() || 'اختر...',
             allowClear: true
         });
-    }
-    initSelect2();
+    };
 
-    // Re-initialize Select2 when new rows are added
-    var observer = new MutationObserver(function() {
-        setTimeout(initSelect2, 150);
-    });
-
-    $('.iw-wrap').each(function() {
-        observer.observe(this, { childList: true, subtree: true });
-    });
+    // Initial Select2 setup (for selects that already have their options)
+    iwInitSelect2();
 
     // Close modals when clicking outside
     $(document).on('click', '.iw-modal', function(e) {
