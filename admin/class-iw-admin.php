@@ -55,6 +55,38 @@ class IW_Admin {
         include IW_PLUGIN_DIR . 'admin/views/permissions.php';
     }
 
+    public static function print_add_permit_page() {
+        include IW_PLUGIN_DIR . 'admin/views/print-add-permit.php';
+    }
+
+    public static function print_withdraw_permit_page() {
+        include IW_PLUGIN_DIR . 'admin/views/print-withdraw-permit.php';
+    }
+
+    public static function stock_report_page() {
+        include IW_PLUGIN_DIR . 'admin/views/reports/stock-report.php';
+    }
+
+    public static function low_stock_report_page() {
+        include IW_PLUGIN_DIR . 'admin/views/reports/low-stock-report.php';
+    }
+
+    public static function out_of_stock_report_page() {
+        include IW_PLUGIN_DIR . 'admin/views/reports/out-of-stock-report.php';
+    }
+
+    public static function transactions_report_page() {
+        include IW_PLUGIN_DIR . 'admin/views/reports/transactions-report.php';
+    }
+
+    public static function department_consumption_report_page() {
+        include IW_PLUGIN_DIR . 'admin/views/reports/department-consumption-report.php';
+    }
+
+    public static function product_movement_report_page() {
+        include IW_PLUGIN_DIR . 'admin/views/reports/product-movement-report.php';
+    }
+
     /**
      * Get print header with logo and institute name from settings
      */

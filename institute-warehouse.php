@@ -55,8 +55,21 @@ class Institute_Warehouse_System {
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
 
         add_action('init', array($this, 'load_textdomain'));
+        add_action('admin_init', array($this, 'check_db_update'));
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
+    }
+
+    /**
+     * Check if database needs updating (handles plugin updates without deactivation)
+     */
+    public function check_db_update() {
+        $current_db_version = get_option('iw_db_version', '0');
+        if (version_compare($current_db_version, IW_VERSION, '<')) {
+            IW_Database::create_tables();
+            IW_Permissions::create_roles();
+            update_option('iw_db_version', IW_VERSION);
+        }
     }
 
     private function init_ajax() {
@@ -118,6 +131,16 @@ class Institute_Warehouse_System {
             array('IW_Admin', 'add_stock_page')
         );
 
+        // طباعة إذن إضافة
+        add_submenu_page(
+            'institute-warehouse',
+            __('طباعة إذن إضافة', 'institute-warehouse'),
+            __('طباعة إذن إضافة', 'institute-warehouse'),
+            'iw_add_stock',
+            'iw-print-add-permit',
+            array('IW_Admin', 'print_add_permit_page')
+        );
+
         // إذن صرف (مع تدفق الاعتماد)
         add_submenu_page(
             'institute-warehouse',
@@ -126,6 +149,16 @@ class Institute_Warehouse_System {
             'iw_withdraw_stock',
             'iw-withdraw-stock',
             array('IW_Admin', 'withdraw_stock_page')
+        );
+
+        // طباعة إذن صرف
+        add_submenu_page(
+            'institute-warehouse',
+            __('طباعة إذن صرف', 'institute-warehouse'),
+            __('طباعة إذن صرف', 'institute-warehouse'),
+            'iw_withdraw_stock',
+            'iw-print-withdraw-permit',
+            array('IW_Admin', 'print_withdraw_permit_page')
         );
 
         // طلبات الشراء
@@ -148,7 +181,7 @@ class Institute_Warehouse_System {
             array('IW_Admin', 'opening_balance_page')
         );
 
-        // التقارير
+        // التقارير (الصفحة العامة)
         add_submenu_page(
             'institute-warehouse',
             __('التقارير', 'institute-warehouse'),
@@ -156,6 +189,66 @@ class Institute_Warehouse_System {
             'iw_view_reports',
             'iw-reports',
             array('IW_Admin', 'reports_page')
+        );
+
+        // تقرير المخزون
+        add_submenu_page(
+            'institute-warehouse',
+            __('تقرير المخزون', 'institute-warehouse'),
+            __('- تقرير المخزون', 'institute-warehouse'),
+            'iw_view_reports',
+            'iw-stock-report',
+            array('IW_Admin', 'stock_report_page')
+        );
+
+        // تقرير الأصناف تحت الحد الأدنى
+        add_submenu_page(
+            'institute-warehouse',
+            __('أصناف تحت الحد الأدنى', 'institute-warehouse'),
+            __('- أصناف تحت الحد الأدنى', 'institute-warehouse'),
+            'iw_view_reports',
+            'iw-low-stock-report',
+            array('IW_Admin', 'low_stock_report_page')
+        );
+
+        // تقرير الأصناف المنتهية
+        add_submenu_page(
+            'institute-warehouse',
+            __('أصناف منتهية', 'institute-warehouse'),
+            __('- أصناف منتهية', 'institute-warehouse'),
+            'iw_view_reports',
+            'iw-out-of-stock-report',
+            array('IW_Admin', 'out_of_stock_report_page')
+        );
+
+        // تقرير الحركات
+        add_submenu_page(
+            'institute-warehouse',
+            __('تقرير الحركات', 'institute-warehouse'),
+            __('- تقرير الحركات', 'institute-warehouse'),
+            'iw_view_reports',
+            'iw-transactions-report',
+            array('IW_Admin', 'transactions_report_page')
+        );
+
+        // تقرير استهلاك الأقسام
+        add_submenu_page(
+            'institute-warehouse',
+            __('استهلاك الأقسام', 'institute-warehouse'),
+            __('- استهلاك الأقسام', 'institute-warehouse'),
+            'iw_view_reports',
+            'iw-dept-consumption-report',
+            array('IW_Admin', 'department_consumption_report_page')
+        );
+
+        // تقرير حركة صنف
+        add_submenu_page(
+            'institute-warehouse',
+            __('حركة صنف', 'institute-warehouse'),
+            __('- حركة صنف', 'institute-warehouse'),
+            'iw_view_reports',
+            'iw-product-movement-report',
+            array('IW_Admin', 'product_movement_report_page')
         );
 
         // الأقسام والموظفين
