@@ -2,8 +2,8 @@
 /**
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
- * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية
- * Version: 1.0.0
+ * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
+ * Version: 2.0.0
  * Author: Your Name
  * Text Domain: institute-warehouse
  * Domain Path: /languages
@@ -14,61 +14,78 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '1.0.0');
+define('IW_VERSION', '2.0.0');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 class Institute_Warehouse_System {
-    
+
     private static $instance = null;
-    
+
     public static function get_instance() {
         if (null === self::$instance) {
             self::$instance = new self();
         }
         return self::$instance;
     }
-    
+
     private function __construct() {
         $this->load_dependencies();
         $this->init_hooks();
+        $this->init_ajax();
     }
-    
+
     private function load_dependencies() {
         require_once IW_PLUGIN_DIR . 'includes/class-iw-database.php';
+        require_once IW_PLUGIN_DIR . 'includes/class-iw-permissions.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-products.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-transactions.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-departments.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-suppliers.php';
-        require_once IW_PLUGIN_DIR . 'includes/class-iw-permissions.php';
+        require_once IW_PLUGIN_DIR . 'includes/class-iw-withdrawal-orders.php';
+        require_once IW_PLUGIN_DIR . 'includes/class-iw-purchase-requests.php';
+        require_once IW_PLUGIN_DIR . 'includes/class-iw-opening-balance.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-reports.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-excel-import.php';
         require_once IW_PLUGIN_DIR . 'admin/class-iw-admin.php';
     }
-    
+
     private function init_hooks() {
         register_activation_hook(__FILE__, array($this, 'activate'));
         register_deactivation_hook(__FILE__, array($this, 'deactivate'));
-        
+
         add_action('init', array($this, 'load_textdomain'));
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_assets'));
     }
-    
+
+    private function init_ajax() {
+        IW_Products::init();
+        IW_Transactions::init();
+        IW_Departments::init();
+        IW_Suppliers::init();
+        IW_Permissions::init();
+        IW_Withdrawal_Orders::init();
+        IW_Purchase_Requests::init();
+        IW_Opening_Balance::init();
+        IW_Reports::init();
+        IW_Excel_Import::init();
+    }
+
     public function activate() {
         IW_Database::create_tables();
         IW_Permissions::create_roles();
         flush_rewrite_rules();
     }
-    
+
     public function deactivate() {
         flush_rewrite_rules();
     }
-    
+
     public function load_textdomain() {
         load_plugin_textdomain('institute-warehouse', false, dirname(plugin_basename(__FILE__)) . '/languages');
     }
-    
+
     public function add_admin_menu() {
         // القائمة الرئيسية
         add_menu_page(
@@ -80,7 +97,7 @@ class Institute_Warehouse_System {
             'dashicons-store',
             30
         );
-        
+
         // الأصناف
         add_submenu_page(
             'institute-warehouse',
@@ -90,7 +107,7 @@ class Institute_Warehouse_System {
             'iw-products',
             array('IW_Admin', 'products_page')
         );
-        
+
         // إذن إضافة
         add_submenu_page(
             'institute-warehouse',
@@ -100,8 +117,8 @@ class Institute_Warehouse_System {
             'iw-add-stock',
             array('IW_Admin', 'add_stock_page')
         );
-        
-        // إذن صرف
+
+        // إذن صرف (مع تدفق الاعتماد)
         add_submenu_page(
             'institute-warehouse',
             __('إذن صرف', 'institute-warehouse'),
@@ -110,7 +127,27 @@ class Institute_Warehouse_System {
             'iw-withdraw-stock',
             array('IW_Admin', 'withdraw_stock_page')
         );
-        
+
+        // طلبات الشراء
+        add_submenu_page(
+            'institute-warehouse',
+            __('طلبات الشراء', 'institute-warehouse'),
+            __('طلبات الشراء', 'institute-warehouse'),
+            'iw_view_warehouse',
+            'iw-purchase-requests',
+            array('IW_Admin', 'purchase_requests_page')
+        );
+
+        // الرصيد الافتتاحي
+        add_submenu_page(
+            'institute-warehouse',
+            __('الرصيد الافتتاحي', 'institute-warehouse'),
+            __('الرصيد الافتتاحي', 'institute-warehouse'),
+            'iw_add_stock',
+            'iw-opening-balance',
+            array('IW_Admin', 'opening_balance_page')
+        );
+
         // التقارير
         add_submenu_page(
             'institute-warehouse',
@@ -120,17 +157,17 @@ class Institute_Warehouse_System {
             'iw-reports',
             array('IW_Admin', 'reports_page')
         );
-        
-        // الأقسام
+
+        // الأقسام والموظفين
         add_submenu_page(
             'institute-warehouse',
-            __('الأقسام', 'institute-warehouse'),
-            __('الأقسام', 'institute-warehouse'),
+            __('الأقسام والموظفين', 'institute-warehouse'),
+            __('الأقسام والموظفين', 'institute-warehouse'),
             'iw_manage_departments',
             'iw-departments',
             array('IW_Admin', 'departments_page')
         );
-        
+
         // الموردين
         add_submenu_page(
             'institute-warehouse',
@@ -140,7 +177,7 @@ class Institute_Warehouse_System {
             'iw-suppliers',
             array('IW_Admin', 'suppliers_page')
         );
-        
+
         // استيراد من Excel
         add_submenu_page(
             'institute-warehouse',
@@ -150,7 +187,17 @@ class Institute_Warehouse_System {
             'iw-import',
             array('IW_Admin', 'import_page')
         );
-        
+
+        // الصلاحيات
+        add_submenu_page(
+            'institute-warehouse',
+            __('الصلاحيات', 'institute-warehouse'),
+            __('الصلاحيات', 'institute-warehouse'),
+            'manage_options',
+            'iw-permissions',
+            array('IW_Admin', 'permissions_page')
+        );
+
         // الإعدادات
         add_submenu_page(
             'institute-warehouse',
@@ -161,22 +208,22 @@ class Institute_Warehouse_System {
             array('IW_Admin', 'settings_page')
         );
     }
-    
+
     public function dashboard_page() {
         include IW_PLUGIN_DIR . 'admin/views/dashboard.php';
     }
-    
+
     public function enqueue_admin_assets($hook) {
         if (strpos($hook, 'institute-warehouse') === false && strpos($hook, 'iw-') === false) {
             return;
         }
-        
+
         wp_enqueue_style('iw-admin-css', IW_PLUGIN_URL . 'assets/css/admin.css', array(), IW_VERSION);
         wp_enqueue_script('iw-admin-js', IW_PLUGIN_URL . 'assets/js/admin.js', array('jquery'), IW_VERSION, true);
-        
+
         // إضافة مكتبة XLSX لاستيراد Excel
         wp_enqueue_script('xlsx-js', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', array(), '0.18.5', true);
-        
+
         wp_localize_script('iw-admin-js', 'iwAdmin', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('iw_admin_nonce'),
