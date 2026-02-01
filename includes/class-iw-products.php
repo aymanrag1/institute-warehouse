@@ -73,15 +73,21 @@ class IW_Products {
         $table = $wpdb->prefix . 'iw_products';
 
         // Use SELECT * to be compatible with old and new table schemas
-        $products = $wpdb->get_results("SELECT * FROM {$table} ORDER BY name ASC");
+        $products = $wpdb->get_results("SELECT * FROM {$table} ORDER BY id ASC");
 
         if ($wpdb->last_error) {
             wp_send_json_error(array('message' => 'خطأ في قاعدة البيانات: ' . $wpdb->last_error));
             return;
         }
 
-        // Ensure all expected fields exist
+        // Normalize field names for compatibility with old tables
         foreach ($products as &$p) {
+            // Handle different possible name columns
+            if (!isset($p->name) || empty($p->name)) {
+                if (isset($p->product_name)) $p->name = $p->product_name;
+                elseif (isset($p->title)) $p->name = $p->title;
+                else $p->name = 'صنف #' . $p->id;
+            }
             if (!isset($p->current_stock)) $p->current_stock = 0;
             if (!isset($p->min_stock)) $p->min_stock = 0;
             if (!isset($p->max_stock)) $p->max_stock = 0;
