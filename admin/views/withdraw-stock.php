@@ -190,7 +190,7 @@ jQuery(document).ready(function($) {
                 html += '<td>'+o.created_at+'</td>';
                 html += '<td><button class="button" onclick="iwViewOrder('+o.id+')">عرض</button>';
                 if (o.status === 'pending') html += ' <button class="button" onclick="iwViewOrder('+o.id+')">تعديل</button>';
-                if (o.status === 'approved') html += ' <button class="button button-primary" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
+                if (o.status === 'approved' || o.status === 'completed') html += ' <button class="button button-primary" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
                 if (o.status === 'approved') html += ' <button class="button" style="background:#46b450;color:#fff;" onclick="iwCompleteOrder('+o.id+')">تنفيذ الصرف</button>';
                 html += '</td></tr>';
             });
@@ -246,6 +246,12 @@ jQuery(document).ready(function($) {
                 html += '<div style="margin-top:15px;">';
                 html += '<button class="button button-primary button-large" onclick="iwPrintOrder('+o.id+')">طباعة</button> ';
                 html += '<button class="button button-large" style="background:#46b450;color:#fff;" onclick="iwCompleteOrder('+o.id+')">تنفيذ الصرف</button>';
+                html += '</div>';
+            }
+
+            if (o.status === 'completed') {
+                html += '<div style="margin-top:15px;">';
+                html += '<button class="button button-primary button-large" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
                 html += '</div>';
             }
 
@@ -316,10 +322,18 @@ jQuery(document).ready(function($) {
                 printContent += '<tr><td>'+it.product_name+'</td><td>'+(it.product_unit||'-')+'</td><td>'+qty+'</td></tr>';
             });
             printContent += '</table>';
+            // Signatures section
+            printContent += '<table width="100%" style="margin-top:40px;border:none;"><tr>';
             if (sig) {
-                printContent += '<div style="margin-top:30px;text-align:left;"><p><strong>توقيع المعتمد:</strong></p>';
-                printContent += '<img src="'+sig+'" style="max-height:80px;" /></div>';
+                printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المعتمد:</strong></p>';
+                printContent += '<img src="'+sig+'" style="max-height:80px;" /></td>';
+            } else {
+                printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المعتمد:</strong></p><div style="height:60px;"></div></td>';
             }
+            printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المستلم:</strong></p>';
+            printContent += '<div style="border-bottom:1px solid #000;width:200px;margin:40px auto 5px;"></div>';
+            printContent += '<p>الاسم: '+(o.employee_name||'.................')+'</p></td>';
+            printContent += '</tr></table>';
             var w = window.open('','','width=800,height=600');
             w.document.write('<html dir="rtl"><head><title>إذن صرف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
             w.document.close();
@@ -355,7 +369,16 @@ jQuery(document).ready(function($) {
                         printContent += '<tr><td>'+it.product_name+'</td><td>'+(it.product_unit||'-')+'</td><td>'+qty+'</td></tr>';
                     });
                     printContent += '</table>';
-                    if (sig) printContent += '<div style="margin-top:30px;text-align:left;"><p><strong>توقيع المعتمد:</strong></p><img src="'+sig+'" style="max-height:80px;" /></div>';
+                    printContent += '<table width="100%" style="margin-top:40px;border:none;"><tr>';
+                    if (sig) {
+                        printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المعتمد:</strong></p><img src="'+sig+'" style="max-height:80px;" /></td>';
+                    } else {
+                        printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المعتمد:</strong></p><div style="height:60px;"></div></td>';
+                    }
+                    printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المستلم:</strong></p>';
+                    printContent += '<div style="border-bottom:1px solid #000;width:200px;margin:40px auto 5px;"></div>';
+                    printContent += '<p>الاسم: '+(o.employee_name||'.................')+'</p></td>';
+                    printContent += '</tr></table>';
                     printContent += '</div>';
                 }
                 loaded++;

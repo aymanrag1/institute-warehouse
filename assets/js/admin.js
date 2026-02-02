@@ -32,6 +32,17 @@ jQuery(document).ready(function($) {
     // Initial Select2 setup (for selects that already have their options)
     iwInitSelect2();
 
+    // Fix Select2 clear (X) button - ensure it clears selection properly
+    $(document).on('select2:unselecting', '.iw-wrap select', function(e) {
+        $(this).data('unselecting', true);
+    });
+    $(document).on('select2:opening', '.iw-wrap select', function(e) {
+        if ($(this).data('unselecting')) {
+            $(this).removeData('unselecting');
+            e.preventDefault();
+        }
+    });
+
     // Close modals when clicking outside
     $(document).on('click', '.iw-modal', function(e) {
         if (e.target === this) $(this).hide();
