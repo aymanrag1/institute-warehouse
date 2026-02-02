@@ -24,10 +24,18 @@
         </div>
     </div>
 
+    <!-- Bulk Actions -->
+    <div style="margin-bottom:10px;">
+        <button class="button" onclick="iwSelectAll()">تحديد الكل</button>
+        <button class="button iw-btn-danger" onclick="iwBulkDeleteProducts()">حذف المحدد</button>
+        <button class="button button-primary" onclick="iwPrintProducts()">طباعة المحدد</button>
+    </div>
+
     <!-- Products Table -->
     <table class="wp-list-table widefat fixed striped">
         <thead>
             <tr>
+                <th style="width:30px;"><input type="checkbox" id="iw-select-all" onchange="iwToggleAll(this)"></th>
                 <th>#</th>
                 <th>اسم الصنف</th>
                 <th>الكود</th>
@@ -62,13 +70,13 @@ jQuery(document).ready(function($) {
                 } else {
                     status = '<span class="iw-badge iw-badge-success">طبيعي</span>';
                 }
-                html += '<tr><td>'+(i+1)+'</td><td>'+p.name+'</td><td>'+(p.sku||'-')+'</td><td>'+(p.category||'-')+'</td>';
+                html += '<tr><td><input type="checkbox" class="iw-row-check" value="'+p.id+'"></td><td>'+(i+1)+'</td><td>'+p.name+'</td><td>'+(p.sku||'-')+'</td><td>'+(p.category||'-')+'</td>';
                 html += '<td>'+(p.unit||'-')+'</td><td>'+p.current_stock+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td>';
                 html += '<td>'+parseFloat(p.price).toFixed(2)+'</td><td>'+status+'</td>';
                 html += '<td><button class="button" onclick="iwEditProduct('+p.id+')">تعديل</button> ';
                 html += '<button class="button iw-btn-danger" onclick="iwDeleteProduct('+p.id+')">حذف</button></td></tr>';
             });
-            $('#iw-products-table').html(html || '<tr><td colspan="11">لا توجد أصناف</td></tr>');
+            $('#iw-products-table').html(html || '<tr><td colspan="12">لا توجد أصناف</td></tr>');
         });
     }
 
@@ -107,6 +115,52 @@ jQuery(document).ready(function($) {
             alert(res.data.message);
             loadProducts();
         });
+    };
+
+    // Bulk actions
+    window.iwToggleAll = function(el) {
+        $('.iw-row-check').prop('checked', el.checked);
+    };
+    window.iwSelectAll = function() {
+        var all = $('#iw-select-all').prop('checked');
+        $('#iw-select-all').prop('checked', !all).trigger('change');
+        $('.iw-row-check').prop('checked', !all);
+    };
+    window.iwBulkDeleteProducts = function() {
+        var ids = [];
+        $('.iw-row-check:checked').each(function() { ids.push($(this).val()); });
+        if (!ids.length) { alert('اختر أصناف أولاً'); return; }
+        if (!confirm('هل أنت متأكد من حذف ' + ids.length + ' أصناف؟')) return;
+        var done = 0;
+        ids.forEach(function(id) {
+            $.post(iwAdmin.ajaxurl, {action: 'iw_delete_product', nonce: iwAdmin.nonce, product_id: id}, function() {
+                done++;
+                if (done === ids.length) { alert('تم حذف ' + ids.length + ' أصناف'); loadProducts(); }
+            });
+        });
+    };
+    window.iwPrintProducts = function() {
+        var rows = [];
+        $('.iw-row-check:checked').each(function() {
+            var tr = $(this).closest('tr');
+            rows.push(tr.clone());
+        });
+        if (!rows.length) { alert('اختر أصناف أولاً'); return; }
+        var printContent = '<?php echo addslashes(IW_Admin::get_print_header()); ?>';
+        printContent += '<h2 style="text-align:center;">قائمة الأصناف</h2>';
+        printContent += '<table border="1" cellpadding="8" cellspacing="0" width="100%" style="border-collapse:collapse;text-align:right;">';
+        printContent += '<tr style="background:#f0f0f0;"><th>#</th><th>الصنف</th><th>الكود</th><th>التصنيف</th><th>الوحدة</th><th>المخزون</th><th>الحد الأدنى</th><th>الحد الأقصى</th><th>السعر</th></tr>';
+        rows.forEach(function(tr, i) {
+            var tds = tr.find('td');
+            printContent += '<tr><td>'+(i+1)+'</td>';
+            for (var j = 2; j <= 9; j++) { printContent += '<td>'+tds.eq(j).text()+'</td>'; }
+            printContent += '</tr>';
+        });
+        printContent += '</table>';
+        var w = window.open('','','width=900,height=600');
+        w.document.write('<html dir="rtl"><head><title>قائمة الأصناف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+        w.document.close();
+        w.print();
     };
 
     $('#iw-product-form').on('submit', function(e) {

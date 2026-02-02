@@ -61,8 +61,9 @@
     <!-- History -->
     <div id="ob-tab-history" class="iw-tab-content" style="display:none;">
         <h2>الأرصدة الافتتاحية السابقة</h2>
+        <p><button class="button iw-btn-danger" onclick="iwResetAllOb()">حذف جميع الأرصدة الافتتاحية وإعادة الضبط</button></p>
         <table class="wp-list-table widefat fixed striped">
-            <thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>التاريخ</th><th>ملاحظات</th></tr></thead>
+            <thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>التاريخ</th><th>ملاحظات</th><th>إجراء</th></tr></thead>
             <tbody id="ob-history"></tbody>
         </table>
     </div>
@@ -106,11 +107,29 @@ jQuery(document).ready(function($) {
             if (!r.success) return;
             var h = '';
             r.data.forEach(function(b) {
-                h += '<tr><td>'+(b.product_name||'-')+'</td><td>'+b.quantity+'</td><td>'+parseFloat(b.unit_price).toFixed(2)+'</td><td>'+b.balance_date+'</td><td>'+(b.notes||'-')+'</td></tr>';
+                h += '<tr><td>'+(b.product_name||'-')+'</td><td>'+b.quantity+'</td><td>'+parseFloat(b.unit_price).toFixed(2)+'</td><td>'+b.balance_date+'</td><td>'+(b.notes||'-')+'</td>';
+                h += '<td><button class="button iw-btn-danger" onclick="iwDeleteOb('+b.id+')">حذف</button></td></tr>';
             });
-            $('#ob-history').html(h || '<tr><td colspan="5">لا توجد أرصدة افتتاحية</td></tr>');
+            $('#ob-history').html(h || '<tr><td colspan="6">لا توجد أرصدة افتتاحية</td></tr>');
         });
     }
+
+    window.iwDeleteOb = function(id) {
+        if (!confirm('هل أنت متأكد؟ سيتم حذف الرصيد وتعديل المخزون.')) return;
+        $.post(iwAdmin.ajaxurl, {action: 'iw_delete_opening_balance', nonce: iwAdmin.nonce, balance_id: id}, function(r) {
+            alert(r.data.message);
+            if (r.success) loadHistory();
+        });
+    };
+
+    window.iwResetAllOb = function() {
+        if (!confirm('هل أنت متأكد من حذف جميع الأرصدة الافتتاحية؟ سيتم إعادة ضبط المخزون.')) return;
+        if (!confirm('تأكيد نهائي: سيتم حذف كل الأرصدة الافتتاحية وتعديل المخزون!')) return;
+        $.post(iwAdmin.ajaxurl, {action: 'iw_reset_opening_balance', nonce: iwAdmin.nonce}, function(r) {
+            alert(r.data.message);
+            if (r.success) loadHistory();
+        });
+    };
 
     $('#iw-ob-form').on('submit', function(e) {
         e.preventDefault();

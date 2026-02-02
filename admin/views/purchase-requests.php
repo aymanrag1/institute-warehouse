@@ -137,7 +137,25 @@ jQuery(document).ready(function($) {
 
     window.iwAutoGenerate = function() {
         $.post(iwAdmin.ajaxurl, {action: 'iw_auto_generate_purchase_requests', nonce: iwAdmin.nonce}, function(r) {
-            $('#pr-auto-result').html('<div class="notice notice-success"><p>'+r.data.message+'</p></div>');
+            if (!r.success) { alert('حدث خطأ'); return; }
+            var d = r.data;
+            var html = '';
+            if (d.created > 0) {
+                html += '<div class="notice notice-success"><p><strong>' + d.message + '</strong></p></div>';
+                if (d.items && d.items.length) {
+                    html += '<table class="wp-list-table widefat fixed striped"><thead><tr><th>الصنف</th><th>الكمية المطلوبة</th><th>السعر التقديري</th></tr></thead><tbody>';
+                    d.items.forEach(function(it) {
+                        html += '<tr><td>'+it.product_name+'</td><td>'+it.quantity+'</td><td>'+parseFloat(it.estimated_price).toFixed(2)+'</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                }
+            } else {
+                html += '<div class="notice notice-warning"><p>' + d.message + '</p></div>';
+            }
+            if (d.skipped > 0) {
+                html += '<p>تم تخطي ' + d.skipped + ' أصناف لوجود طلبات شراء معلقة لها بالفعل</p>';
+            }
+            $('#pr-auto-result').html(html);
         });
     };
 

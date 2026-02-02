@@ -50,8 +50,12 @@
     <!-- Approved Orders (for printing) -->
     <div id="tab-approved" class="iw-tab-content" style="display:none;">
         <h2>أوامر الصرف المعتمدة (جاهزة للطباعة والتنفيذ)</h2>
+        <div style="margin-bottom:10px;">
+            <button class="button" onclick="iwWdSelectAll('approved')">تحديد الكل</button>
+            <button class="button button-primary" onclick="iwBulkPrintOrders()">طباعة المحدد</button>
+        </div>
         <table class="wp-list-table widefat fixed striped">
-            <thead><tr><th>رقم الإذن</th><th>القسم</th><th>الموظف</th><th>المعتمد</th><th>التاريخ</th><th>إجراءات</th></tr></thead>
+            <thead><tr><th style="width:30px;"><input type="checkbox" onchange="$('.wd-approved-check').prop('checked',this.checked)"></th><th>رقم الإذن</th><th>القسم</th><th>الموظف</th><th>المعتمد</th><th>التاريخ</th><th>إجراءات</th></tr></thead>
             <tbody id="wd-approved-table"></tbody>
         </table>
     </div>
@@ -179,9 +183,13 @@ jQuery(document).ready(function($) {
                 var statusBadge = getStatusBadge(o.status);
                 html += '<tr><td>'+o.order_number+'</td><td>'+(o.department_name||'-')+'</td><td>'+(o.employee_name||'-')+'</td>';
                 if (!status) html += '<td>'+statusBadge+'</td>';
-                if (status === 'approved') html += '<td>'+(o.approved_by ? 'معتمد' : '-')+'</td>';
+                if (status === 'approved') {
+                    html += '<td><input type="checkbox" class="wd-approved-check" value="'+o.id+'"></td>';
+                    html += '<td>'+(o.approved_by ? 'معتمد' : '-')+'</td>';
+                }
                 html += '<td>'+o.created_at+'</td>';
                 html += '<td><button class="button" onclick="iwViewOrder('+o.id+')">عرض</button>';
+                if (o.status === 'pending') html += ' <button class="button" onclick="iwViewOrder('+o.id+')">تعديل</button>';
                 if (o.status === 'approved') html += ' <button class="button button-primary" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
                 if (o.status === 'approved') html += ' <button class="button" style="background:#46b450;color:#fff;" onclick="iwCompleteOrder('+o.id+')">تنفيذ الصرف</button>';
                 html += '</td></tr>';
@@ -316,6 +324,48 @@ jQuery(document).ready(function($) {
             w.document.write('<html dir="rtl"><head><title>إذن صرف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
             w.document.close();
             w.print();
+        });
+    };
+
+    // Bulk actions
+    window.iwWdSelectAll = function(type) {
+        var cls = '.wd-'+type+'-check';
+        var allChecked = $(cls).length === $(cls+':checked').length;
+        $(cls).prop('checked', !allChecked);
+    };
+
+    window.iwBulkPrintOrders = function() {
+        var ids = [];
+        $('.wd-approved-check:checked').each(function() { ids.push($(this).val()); });
+        if (!ids.length) { alert('اختر أوامر أولاً'); return; }
+        var printContent = '<?php echo addslashes(IW_Admin::get_print_header()); ?>';
+        var loaded = 0;
+        ids.forEach(function(id) {
+            $.post(iwAdmin.ajaxurl, {action: 'iw_get_withdrawal_order', nonce: iwAdmin.nonce, order_id: id}, function(r) {
+                if (r.success) {
+                    var o = r.data.order, items = r.data.items, sig = r.data.signature_url;
+                    printContent += '<div style="page-break-after:always;">';
+                    printContent += '<h2 style="text-align:center;">إذن صرف رقم: '+o.order_number+'</h2>';
+                    printContent += '<p><strong>القسم:</strong> '+(o.department_name||'-')+' | <strong>الموظف:</strong> '+(o.employee_name||'-')+'</p>';
+                    printContent += '<p><strong>التاريخ:</strong> '+o.created_at+'</p>';
+                    printContent += '<table border="1" cellpadding="8" cellspacing="0" width="100%" style="border-collapse:collapse;text-align:right;">';
+                    printContent += '<tr style="background:#f0f0f0;"><th>الصنف</th><th>الوحدة</th><th>الكمية</th></tr>';
+                    items.forEach(function(it) {
+                        var qty = it.approved_quantity !== null ? it.approved_quantity : it.quantity;
+                        printContent += '<tr><td>'+it.product_name+'</td><td>'+(it.product_unit||'-')+'</td><td>'+qty+'</td></tr>';
+                    });
+                    printContent += '</table>';
+                    if (sig) printContent += '<div style="margin-top:30px;text-align:left;"><p><strong>توقيع المعتمد:</strong></p><img src="'+sig+'" style="max-height:80px;" /></div>';
+                    printContent += '</div>';
+                }
+                loaded++;
+                if (loaded === ids.length) {
+                    var w = window.open('','','width=800,height=600');
+                    w.document.write('<html dir="rtl"><head><title>أوامر صرف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+                    w.document.close();
+                    w.print();
+                }
+            });
         });
     };
 

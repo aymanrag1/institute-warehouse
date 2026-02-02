@@ -55,6 +55,10 @@ class IW_Admin {
         include IW_PLUGIN_DIR . 'admin/views/permissions.php';
     }
 
+    public static function signature_page() {
+        include IW_PLUGIN_DIR . 'admin/views/signature.php';
+    }
+
     public static function print_add_permit_page() {
         include IW_PLUGIN_DIR . 'admin/views/print-add-permit.php';
     }

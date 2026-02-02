@@ -66,11 +66,39 @@ class IW_Withdrawal_Orders {
             ));
         }
 
+        // Send email to approvers
+        self::notify_approvers($order_number);
+
         wp_send_json_success(array(
             'order_id'     => $order_id,
             'order_number' => $order_number,
             'message'      => 'تم إنشاء إذن الصرف وإرساله للاعتماد',
         ));
+    }
+
+    /**
+     * Send email notification to users with approval capability
+     */
+    private static function notify_approvers($order_number) {
+        $subject = 'يوجد إذن صرف جديد يحتاج اعتمادك - رقم: ' . $order_number;
+        $admin_url = admin_url('admin.php?page=iw-withdraw-stock');
+
+        $message = "مرحباً،\n\n";
+        $message .= "تم إنشاء إذن صرف جديد برقم: " . $order_number . "\n";
+        $message .= "يرجى الدخول للنظام لمراجعته واعتماده.\n\n";
+        $message .= "رابط الصفحة: " . $admin_url . "\n\n";
+        $message .= "نظام إدارة المخازن";
+
+        $approvers = get_users(array('role__in' => array('administrator', 'iw_dean')));
+        $cap_users = get_users(array('capability' => 'iw_approve_orders'));
+        $all = array_merge($approvers, $cap_users);
+        $sent = array();
+
+        foreach ($all as $user) {
+            if (in_array($user->ID, $sent) || $user->ID === get_current_user_id()) continue;
+            wp_mail($user->user_email, $subject, $message);
+            $sent[] = $user->ID;
+        }
     }
 
     /**
@@ -147,10 +175,6 @@ class IW_Withdrawal_Orders {
     public static function update_order() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
 
-        if (!current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
-        }
-
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
@@ -163,6 +187,12 @@ class IW_Withdrawal_Orders {
 
         if (!$order || $order->status !== 'pending') {
             wp_send_json_error(array('message' => 'لا يمكن تعديل هذا الإذن'));
+        }
+
+        // Allow creator, dean, or admin to edit pending orders
+        $is_creator = ($order->created_by == get_current_user_id());
+        if (!$is_creator && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية لتعديل هذا الإذن'));
         }
 
         // Delete old items and insert updated ones
@@ -206,15 +236,16 @@ class IW_Withdrawal_Orders {
         $user_id  = get_current_user_id();
 
         $signature_url = get_user_meta($user_id, 'iw_signature_url', true);
-        if (empty($signature_url)) {
-            wp_send_json_error(array('message' => 'يجب رفع التوقيع الإلكتروني أولاً'));
+        // Admin can approve without signature, dean must have signature
+        if (empty($signature_url) && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'يجب رفع التوقيع الإلكتروني أولاً من صفحة "التوقيع الإلكتروني"'));
         }
 
         $wpdb->update($prefix . 'withdrawal_orders', array(
             'status'        => 'approved',
             'approved_by'   => $user_id,
             'approved_at'   => current_time('mysql'),
-            'signature_url' => $signature_url,
+            'signature_url' => $signature_url ?: '',
         ), array('id' => $order_id));
 
         wp_send_json_success(array('message' => 'تم اعتماد إذن الصرف'));

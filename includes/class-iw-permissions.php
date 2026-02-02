@@ -25,6 +25,7 @@ class IW_Permissions {
         add_action('wp_ajax_iw_save_permissions', array(__CLASS__, 'save_permissions'));
         add_action('wp_ajax_iw_get_user_permissions', array(__CLASS__, 'get_user_permissions'));
         add_action('wp_ajax_iw_upload_signature', array(__CLASS__, 'upload_signature'));
+        add_action('wp_ajax_iw_get_my_signature', array(__CLASS__, 'get_my_signature'));
     }
 
     public static function create_roles() {
@@ -84,32 +85,49 @@ class IW_Permissions {
      * Uses the custom permissions table first, falls back to WP capabilities.
      */
     public static function current_user_can($feature, $required_level = 'view') {
-        if (current_user_can('manage_options')) {
-            return true; // Admin can do everything
-        }
-
         $user_id = get_current_user_id();
         if (!$user_id) return false;
 
         global $wpdb;
-        $perm = $wpdb->get_var($wpdb->prepare(
-            "SELECT permission_level FROM {$wpdb->prefix}iw_permissions WHERE user_id = %d AND feature = %s",
-            $user_id, $feature
-        ));
+        $table = $wpdb->prefix . 'iw_permissions';
 
-        if ($perm === null) {
-            // Fall back to role capabilities
-            if ($required_level === 'view' || $required_level === 'read') {
-                return current_user_can('iw_view_warehouse');
-            }
-            if ($required_level === 'read_write') {
-                return current_user_can('iw_approve_orders') || current_user_can('iw_add_stock');
-            }
-            return false;
+        // Check if permissions table exists (avoid errors on fresh install)
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table}'");
+        if (!$table_exists) {
+            // Table not created yet - only allow admin
+            return current_user_can('manage_options');
         }
 
-        $levels = array('none' => 0, 'view' => 1, 'read' => 2, 'read_write' => 3);
-        return ($levels[$perm] ?? 0) >= ($levels[$required_level] ?? 0);
+        // Check if this user has ANY custom permissions set
+        $has_custom = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$table} WHERE user_id = %d", $user_id
+        ));
+
+        if ($has_custom > 0) {
+            // User has custom permissions - use those as source of truth
+            $perm = $wpdb->get_var($wpdb->prepare(
+                "SELECT permission_level FROM {$table} WHERE user_id = %d AND feature = %s",
+                $user_id, $feature
+            ));
+
+            if ($perm === null) {
+                // Feature not in their permissions = no access
+                return false;
+            }
+
+            $levels = array('none' => 0, 'view' => 1, 'read' => 2, 'read_write' => 3);
+            return ($levels[$perm] ?? 0) >= ($levels[$required_level] ?? 0);
+        }
+
+        // No custom permissions set for this user
+        // Only admin (manage_options) gets full access by default
+        if (current_user_can('manage_options')) {
+            return true;
+        }
+
+        // All other users without custom permissions = no access
+        // They need to be assigned permissions from the permissions page
+        return false;
     }
 
     public static function save_permissions() {
@@ -165,7 +183,8 @@ class IW_Permissions {
     public static function upload_signature() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
 
-        if (!current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+        // Allow any logged-in user who has warehouse access to upload signature
+        if (!current_user_can('iw_approve_orders') && !current_user_can('iw_view_warehouse') && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'ليس لديك صلاحية لرفع التوقيع'));
         }
 
@@ -188,5 +207,11 @@ class IW_Permissions {
         update_user_meta(get_current_user_id(), 'iw_signature_id', $attachment_id);
 
         wp_send_json_success(array('url' => $url, 'message' => 'تم رفع التوقيع بنجاح'));
+    }
+
+    public static function get_my_signature() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+        $url = get_user_meta(get_current_user_id(), 'iw_signature_url', true);
+        wp_send_json_success(array('url' => $url ?: ''));
     }
 }

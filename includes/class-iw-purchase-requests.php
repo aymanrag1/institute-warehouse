@@ -28,32 +28,46 @@ class IW_Purchase_Requests {
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
-        $low_stock = IW_Products::get_low_stock_products();
+        // Get products at or below min_stock (min_stock must be > 0)
+        $low_stock = $wpdb->get_results(
+            "SELECT * FROM {$prefix}products WHERE min_stock > 0 AND current_stock <= min_stock ORDER BY name ASC"
+        );
 
-        if (empty($low_stock)) return;
+        if (empty($low_stock)) {
+            return array('created' => 0, 'skipped' => 0, 'message' => 'لا توجد أصناف وصلت للحد الأدنى');
+        }
 
-        // Check if there's already a pending request for these products
+        // Check if there's already a pending/approved request for these products
         $pending_product_ids = $wpdb->get_col(
             "SELECT DISTINCT pri.product_id FROM {$prefix}purchase_request_items pri
              INNER JOIN {$prefix}purchase_requests pr ON pri.request_id = pr.id
              WHERE pr.status IN ('pending', 'approved')"
         );
+        if (!is_array($pending_product_ids)) $pending_product_ids = array();
 
         $items_to_request = array();
+        $skipped = 0;
         foreach ($low_stock as $product) {
-            if (in_array($product->id, $pending_product_ids)) continue;
+            if (in_array($product->id, $pending_product_ids)) {
+                $skipped++;
+                continue;
+            }
 
             $needed = $product->max_stock - $product->current_stock;
-            if ($needed <= 0) continue;
+            if ($needed <= 0) $needed = $product->min_stock; // fallback if max not set
 
             $items_to_request[] = array(
                 'product_id'      => $product->id,
+                'product_name'    => $product->name,
                 'quantity'        => $needed,
                 'estimated_price' => $product->price,
             );
         }
 
-        if (empty($items_to_request)) return;
+        if (empty($items_to_request)) {
+            return array('created' => 0, 'skipped' => $skipped, 'low_stock_count' => count($low_stock),
+                'message' => 'توجد ' . count($low_stock) . ' أصناف تحت الحد الأدنى لكن جميعها لديها طلبات شراء معلقة بالفعل');
+        }
 
         $request_number = self::generate_request_number();
 
@@ -74,12 +88,23 @@ class IW_Purchase_Requests {
                 'estimated_price' => $item['estimated_price'],
             ));
         }
+
+        return array(
+            'created' => count($items_to_request),
+            'skipped' => $skipped,
+            'request_number' => $request_number,
+            'items' => $items_to_request,
+            'message' => 'تم إنشاء طلب شراء رقم ' . $request_number . ' يحتوي على ' . count($items_to_request) . ' أصناف',
+        );
     }
 
     public static function ajax_auto_generate() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
-        self::auto_generate();
-        wp_send_json_success(array('message' => 'تم فحص المخزون وإنشاء طلبات الشراء'));
+        $result = self::auto_generate();
+        if (!$result) {
+            $result = array('created' => 0, 'message' => 'لا توجد أصناف وصلت للحد الأدنى');
+        }
+        wp_send_json_success($result);
     }
 
     /**
@@ -122,11 +147,39 @@ class IW_Purchase_Requests {
             ));
         }
 
+        // Send email to approvers
+        self::notify_approvers($request_number);
+
         wp_send_json_success(array(
             'request_id'     => $request_id,
             'request_number' => $request_number,
             'message'        => 'تم إنشاء طلب الشراء وإرساله للاعتماد',
         ));
+    }
+
+    /**
+     * Send email notification to users with approval capability
+     */
+    private static function notify_approvers($request_number) {
+        $subject = 'يوجد طلب شراء جديد يحتاج اعتمادك - رقم: ' . $request_number;
+        $admin_url = admin_url('admin.php?page=iw-purchase-requests');
+
+        $message = "مرحباً،\n\n";
+        $message .= "تم إنشاء طلب شراء جديد برقم: " . $request_number . "\n";
+        $message .= "يرجى الدخول للنظام لمراجعته واعتماده.\n\n";
+        $message .= "رابط الصفحة: " . $admin_url . "\n\n";
+        $message .= "نظام إدارة المخازن";
+
+        $approvers = get_users(array('role__in' => array('administrator', 'iw_dean')));
+        $cap_users = get_users(array('capability' => 'iw_approve_orders'));
+        $all = array_merge($approvers, $cap_users);
+        $sent = array();
+
+        foreach ($all as $user) {
+            if (in_array($user->ID, $sent) || $user->ID === get_current_user_id()) continue;
+            wp_mail($user->user_email, $subject, $message);
+            $sent[] = $user->ID;
+        }
     }
 
     public static function get_requests() {
@@ -190,10 +243,6 @@ class IW_Purchase_Requests {
     public static function update_request() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
 
-        if (!current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
-        }
-
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
@@ -206,6 +255,12 @@ class IW_Purchase_Requests {
 
         if (!$request || $request->status !== 'pending') {
             wp_send_json_error(array('message' => 'لا يمكن تعديل هذا الطلب'));
+        }
+
+        // Allow creator, dean, or admin to edit pending requests
+        $is_creator = ($request->created_by == get_current_user_id());
+        if (!$is_creator && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية لتعديل هذا الطلب'));
         }
 
         $wpdb->delete($prefix . 'purchase_request_items', array('request_id' => $request_id));
@@ -247,15 +302,15 @@ class IW_Purchase_Requests {
         $user_id    = get_current_user_id();
 
         $signature_url = get_user_meta($user_id, 'iw_signature_url', true);
-        if (empty($signature_url)) {
-            wp_send_json_error(array('message' => 'يجب رفع التوقيع الإلكتروني أولاً'));
+        if (empty($signature_url) && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'يجب رفع التوقيع الإلكتروني أولاً من صفحة "التوقيع الإلكتروني"'));
         }
 
         $wpdb->update($prefix . 'purchase_requests', array(
             'status'        => 'approved',
             'approved_by'   => $user_id,
             'approved_at'   => current_time('mysql'),
-            'signature_url' => $signature_url,
+            'signature_url' => $signature_url ?: '',
         ), array('id' => $request_id));
 
         wp_send_json_success(array('message' => 'تم اعتماد طلب الشراء'));

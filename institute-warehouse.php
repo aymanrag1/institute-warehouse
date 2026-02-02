@@ -291,6 +291,16 @@ class Institute_Warehouse_System {
             array('IW_Admin', 'permissions_page')
         );
 
+        // التوقيع الإلكتروني (accessible to dean and approvers)
+        add_submenu_page(
+            'institute-warehouse',
+            __('التوقيع الإلكتروني', 'institute-warehouse'),
+            __('التوقيع الإلكتروني', 'institute-warehouse'),
+            'iw_view_warehouse',
+            'iw-signature',
+            array('IW_Admin', 'signature_page')
+        );
+
         // الإعدادات
         add_submenu_page(
             'institute-warehouse',

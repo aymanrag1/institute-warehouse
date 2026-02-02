@@ -2,6 +2,7 @@
 <div class="wrap iw-wrap" dir="rtl">
     <h1>إدارة الصلاحيات</h1>
     <p>اختر المستخدم ثم حدد صلاحياته لكل بند في النظام</p>
+    <div class="notice notice-info"><p><strong>ملاحظة:</strong> يجب تعيين صلاحيات لكل مستخدم جديد. المستخدمون بدون صلاحيات لن يتمكنوا من الوصول للنظام (باستثناء مدير الموقع Admin).</p></div>
 
     <table class="form-table">
         <tr>
