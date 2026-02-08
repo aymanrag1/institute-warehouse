@@ -189,9 +189,11 @@ jQuery(document).ready(function($) {
                 }
                 html += '<td>'+o.created_at+'</td>';
                 html += '<td><button class="button" onclick="iwViewOrder('+o.id+')">عرض</button>';
-                if (o.status === 'pending') html += ' <button class="button" onclick="iwViewOrder('+o.id+')">تعديل</button>';
-                if (o.status === 'approved' || o.status === 'completed') html += ' <button class="button button-primary" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
-                if (o.status === 'approved') html += ' <button class="button" style="background:#46b450;color:#fff;" onclick="iwCompleteOrder('+o.id+')">تنفيذ الصرف</button>';
+                if (o.status === 'pending') {
+                    html += ' <button class="button" onclick="iwViewOrder('+o.id+')">تعديل</button>';
+                    html += ' <button class="button iw-btn-danger" onclick="iwDeleteOrder('+o.id+')">حذف</button>';
+                }
+                if (o.status === 'approved' || o.status === 'completed') html += ' <button class="button button-primary" onclick="iwPrintAndExecute('+o.id+')">طباعة وتنفيذ</button>';
                 html += '</td></tr>';
             });
             $(target).html(html || '<tr><td colspan="6">لا توجد أوامر</td></tr>');
@@ -212,16 +214,18 @@ jQuery(document).ready(function($) {
             var html = '<h2>إذن صرف رقم: '+o.order_number+'</h2>';
             html += '<p><strong>القسم:</strong> '+(o.department_name||'-')+' | <strong>الموظف:</strong> '+(o.employee_name||'-')+' | <strong>الحالة:</strong> '+getStatusBadge(o.status)+'</p>';
 
-            html += '<table class="wp-list-table widefat fixed striped"><thead><tr><th>الصنف</th><th>الوحدة</th><th>الكمية المطلوبة</th>';
-            if (o.status === 'pending') html += '<th>الكمية المعتمدة</th>';
+            html += '<table class="wp-list-table widefat fixed striped"><thead><tr><th>الصنف</th><th>الوحدة</th><th>الرصيد الحالي</th><th>الكمية المطلوبة</th>';
+            if (o.status === 'pending') html += '<th>الكمية المعتمدة</th><th>حذف</th>';
             else if (o.status !== 'pending' && items[0] && items[0].approved_quantity !== null) html += '<th>الكمية المعتمدة</th>';
             html += '</tr></thead><tbody>';
 
             items.forEach(function(it) {
-                html += '<tr><td>'+it.product_name+'</td><td>'+(it.product_unit||'-')+'</td>';
+                html += '<tr data-item-product="'+it.product_id+'"><td>'+it.product_name+'</td><td>'+(it.product_unit||'-')+'</td>';
+                html += '<td><strong style="color:'+(parseInt(it.current_stock||0) < parseInt(it.quantity) ? 'red' : 'green')+';">'+( it.current_stock||0)+'</strong></td>';
                 html += '<td>'+it.quantity+'</td>';
                 if (o.status === 'pending') {
                     html += '<td><input type="number" class="wd-approve-qty" data-product="'+it.product_id+'" value="'+it.quantity+'" min="0"></td>';
+                    html += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td>';
                 } else if (it.approved_quantity !== null) {
                     html += '<td>'+it.approved_quantity+'</td>';
                 }
@@ -238,14 +242,14 @@ jQuery(document).ready(function($) {
                 html += '<div style="margin-top:15px;">';
                 html += '<button class="button button-primary button-large" onclick="iwApproveOrder('+o.id+')">اعتماد</button> ';
                 html += '<button class="button iw-btn-danger button-large" onclick="iwRejectOrder('+o.id+')">رفض</button> ';
-                html += '<button class="button button-large" onclick="iwSaveOrderEdit('+o.id+')">حفظ التعديلات</button>';
+                html += '<button class="button button-large" onclick="iwSaveOrderEdit('+o.id+')">حفظ التعديلات</button> ';
+                html += '<button class="button iw-btn-danger button-large" onclick="iwDeleteOrder('+o.id+')">حذف الإذن</button>';
                 html += '</div>';
             }
 
             if (o.status === 'approved') {
                 html += '<div style="margin-top:15px;">';
-                html += '<button class="button button-primary button-large" onclick="iwPrintOrder('+o.id+')">طباعة</button> ';
-                html += '<button class="button button-large" style="background:#46b450;color:#fff;" onclick="iwCompleteOrder('+o.id+')">تنفيذ الصرف</button>';
+                html += '<button class="button button-primary button-large" onclick="iwPrintAndExecute('+o.id+')">طباعة وتنفيذ</button>';
                 html += '</div>';
             }
 
@@ -260,14 +264,29 @@ jQuery(document).ready(function($) {
         });
     };
 
-    // Save edits (Dean)
+    // Save edits (Dean) - handles deleted items too
     window.iwSaveOrderEdit = function(id) {
         var items = [];
-        $('.wd-approve-qty').each(function() {
-            items.push({product_id: $(this).data('product'), quantity: $(this).val(), approved_quantity: $(this).val()});
+        $('#iw-wd-modal-body tr[data-item-product]').each(function() {
+            var productId = $(this).data('item-product');
+            var qty = $(this).find('.wd-approve-qty').val();
+            if (productId && qty) {
+                items.push({product_id: productId, quantity: qty, approved_quantity: qty});
+            }
         });
+        if (!items.length) { alert('يجب أن يحتوي الإذن على صنف واحد على الأقل'); return; }
         $.post(iwAdmin.ajaxurl, {action: 'iw_update_withdrawal_order', nonce: iwAdmin.nonce, order_id: id, items: JSON.stringify(items)}, function(r) {
             alert(r.data.message);
+            if (r.success) iwViewOrder(id);
+        });
+    };
+
+    // Delete order
+    window.iwDeleteOrder = function(id) {
+        if (!confirm('هل أنت متأكد من حذف هذا الإذن؟')) return;
+        $.post(iwAdmin.ajaxurl, {action: 'iw_delete_withdrawal_order', nonce: iwAdmin.nonce, order_id: id}, function(r) {
+            alert(r.data.message);
+            if (r.success) { $('#iw-wd-modal').hide(); loadOrders('pending'); }
         });
     };
 
@@ -298,12 +317,67 @@ jQuery(document).ready(function($) {
     };
 
     // Complete withdrawal
-    window.iwCompleteOrder = function(id) {
-        if (!confirm('هل أنت متأكد من تنفيذ الصرف؟ سيتم خصم الكميات من المخزون.')) return;
+    window.iwCompleteOrder = function(id, callback) {
         $.post(iwAdmin.ajaxurl, {action: 'iw_complete_withdrawal_order', nonce: iwAdmin.nonce, order_id: id}, function(r) {
-            alert(r.data.message);
-            if (r.success) { $('#iw-wd-modal').hide(); loadOrders('approved'); }
+            if (callback) callback(r);
+            else {
+                alert(r.data.message);
+                if (r.success) { $('#iw-wd-modal').hide(); loadOrders('approved'); }
+            }
         });
+    };
+
+    // Print and Execute in one action
+    window.iwPrintAndExecute = function(id) {
+        $.post(iwAdmin.ajaxurl, {action: 'iw_get_withdrawal_order', nonce: iwAdmin.nonce, order_id: id}, function(r) {
+            if (!r.success) return;
+            var o = r.data.order, items = r.data.items, sig = r.data.signature_url;
+
+            // Only execute if still approved (not already completed)
+            if (o.status === 'approved') {
+                iwCompleteOrder(id, function(execResult) {
+                    if (!execResult.success) {
+                        alert(execResult.data.message);
+                        return;
+                    }
+                    doPrint(o, items, sig);
+                    alert('تم تنفيذ الصرف والطباعة بنجاح');
+                    $('#iw-wd-modal').hide();
+                    loadOrders('approved');
+                });
+            } else {
+                doPrint(o, items, sig);
+            }
+        });
+
+        function doPrint(o, items, sig) {
+            var printContent = '<?php echo addslashes(IW_Admin::get_print_header()); ?>';
+            printContent += '<h2 style="text-align:center;">إذن صرف رقم: '+o.order_number+'</h2>';
+            printContent += '<p><strong>القسم:</strong> '+(o.department_name||'-')+' | <strong>الموظف:</strong> '+(o.employee_name||'-')+'</p>';
+            printContent += '<p><strong>التاريخ:</strong> '+o.created_at+'</p>';
+            printContent += '<table border="1" cellpadding="8" cellspacing="0" width="100%" style="border-collapse:collapse;text-align:right;">';
+            printContent += '<tr style="background:#f0f0f0;"><th>الصنف</th><th>الوحدة</th><th>الكمية</th></tr>';
+            items.forEach(function(it) {
+                var qty = it.approved_quantity !== null ? it.approved_quantity : it.quantity;
+                printContent += '<tr><td>'+it.product_name+'</td><td>'+(it.product_unit||'-')+'</td><td>'+qty+'</td></tr>';
+            });
+            printContent += '</table>';
+            printContent += '<table width="100%" style="margin-top:40px;border:none;"><tr>';
+            printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع المستلم:</strong></p>';
+            printContent += '<div style="border-bottom:1px solid #000;width:200px;margin:40px auto 5px;"></div>';
+            printContent += '<p>الاسم: '+(o.employee_name||'.................')+'</p></td>';
+            if (sig) {
+                printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p>';
+                printContent += '<img src="'+sig+'" style="max-height:80px;" /></td>';
+            } else {
+                printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p><div style="height:60px;"></div></td>';
+            }
+            printContent += '</tr></table>';
+            var w = window.open('','','width=800,height=600');
+            w.document.write('<html dir="rtl"><head><title>إذن صرف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+            w.document.close();
+            w.print();
+        }
     };
 
     // Print
@@ -322,17 +396,17 @@ jQuery(document).ready(function($) {
                 printContent += '<tr><td>'+it.product_name+'</td><td>'+(it.product_unit||'-')+'</td><td>'+qty+'</td></tr>';
             });
             printContent += '</table>';
-            // Signatures section
+            // Signatures section (recipient right, approver left)
             printContent += '<table width="100%" style="margin-top:40px;border:none;"><tr>';
-            if (sig) {
-                printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المعتمد:</strong></p>';
-                printContent += '<img src="'+sig+'" style="max-height:80px;" /></td>';
-            } else {
-                printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المعتمد:</strong></p><div style="height:60px;"></div></td>';
-            }
-            printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المستلم:</strong></p>';
+            printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع المستلم:</strong></p>';
             printContent += '<div style="border-bottom:1px solid #000;width:200px;margin:40px auto 5px;"></div>';
             printContent += '<p>الاسم: '+(o.employee_name||'.................')+'</p></td>';
+            if (sig) {
+                printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p>';
+                printContent += '<img src="'+sig+'" style="max-height:80px;" /></td>';
+            } else {
+                printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p><div style="height:60px;"></div></td>';
+            }
             printContent += '</tr></table>';
             var w = window.open('','','width=800,height=600');
             w.document.write('<html dir="rtl"><head><title>إذن صرف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
@@ -370,14 +444,14 @@ jQuery(document).ready(function($) {
                     });
                     printContent += '</table>';
                     printContent += '<table width="100%" style="margin-top:40px;border:none;"><tr>';
-                    if (sig) {
-                        printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المعتمد:</strong></p><img src="'+sig+'" style="max-height:80px;" /></td>';
-                    } else {
-                        printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المعتمد:</strong></p><div style="height:60px;"></div></td>';
-                    }
-                    printContent += '<td style="text-align:center;border:none;"><p><strong>توقيع المستلم:</strong></p>';
+                    printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع المستلم:</strong></p>';
                     printContent += '<div style="border-bottom:1px solid #000;width:200px;margin:40px auto 5px;"></div>';
                     printContent += '<p>الاسم: '+(o.employee_name||'.................')+'</p></td>';
+                    if (sig) {
+                        printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p><img src="'+sig+'" style="max-height:80px;" /></td>';
+                    } else {
+                        printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p><div style="height:60px;"></div></td>';
+                    }
                     printContent += '</tr></table>';
                     printContent += '</div>';
                 }

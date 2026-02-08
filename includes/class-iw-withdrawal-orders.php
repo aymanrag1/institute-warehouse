@@ -11,6 +11,7 @@ class IW_Withdrawal_Orders {
         add_action('wp_ajax_iw_reject_withdrawal_order', array(__CLASS__, 'reject_order'));
         add_action('wp_ajax_iw_update_withdrawal_order', array(__CLASS__, 'update_order'));
         add_action('wp_ajax_iw_complete_withdrawal_order', array(__CLASS__, 'complete_order'));
+        add_action('wp_ajax_iw_delete_withdrawal_order', array(__CLASS__, 'delete_order'));
     }
 
     /**
@@ -326,5 +327,41 @@ class IW_Withdrawal_Orders {
         IW_Purchase_Requests::auto_generate();
 
         wp_send_json_success(array('message' => 'تم تنفيذ إذن الصرف بنجاح'));
+    }
+
+    /**
+     * Delete pending order
+     */
+    public static function delete_order() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        $order_id = intval($_POST['order_id']);
+        $order = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}withdrawal_orders WHERE id = %d", $order_id
+        ));
+
+        if (!$order) {
+            wp_send_json_error(array('message' => 'الإذن غير موجود'));
+        }
+
+        if ($order->status !== 'pending') {
+            wp_send_json_error(array('message' => 'لا يمكن حذف إذن معتمد أو منفذ'));
+        }
+
+        // Allow creator, dean, or admin to delete pending orders
+        $is_creator = ($order->created_by == get_current_user_id());
+        if (!$is_creator && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية لحذف هذا الإذن'));
+        }
+
+        // Delete items first
+        $wpdb->delete($prefix . 'withdrawal_order_items', array('order_id' => $order_id));
+        // Delete order
+        $wpdb->delete($prefix . 'withdrawal_orders', array('id' => $order_id));
+
+        wp_send_json_success(array('message' => 'تم حذف الإذن بنجاح'));
     }
 }

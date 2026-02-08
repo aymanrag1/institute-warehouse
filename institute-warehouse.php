@@ -3,8 +3,9 @@
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
  * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
- * Version: 2.1.0
- * Author: Your Name
+ * Version: 2.2.0
+ * Author: AYMAN RAGAB
+ * Author URI: tel:00201159230034
  * Text Domain: institute-warehouse
  * Domain Path: /languages
  */
@@ -14,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.1.0');
+define('IW_VERSION', '2.2.0');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -121,11 +122,11 @@ class Institute_Warehouse_System {
             array('IW_Admin', 'products_page')
         );
 
-        // إذن إضافة
+        // إذن إضافة مشتريات
         add_submenu_page(
             'institute-warehouse',
-            __('إذن إضافة', 'institute-warehouse'),
-            __('إذن إضافة', 'institute-warehouse'),
+            __('إذن إضافة مشتريات', 'institute-warehouse'),
+            __('إذن إضافة مشتريات', 'institute-warehouse'),
             'iw_add_stock',
             'iw-add-stock',
             array('IW_Admin', 'add_stock_page')
@@ -134,8 +135,8 @@ class Institute_Warehouse_System {
         // طباعة إذن إضافة
         add_submenu_page(
             'institute-warehouse',
-            __('طباعة إذن إضافة', 'institute-warehouse'),
-            __('طباعة إذن إضافة', 'institute-warehouse'),
+            __('طباعة إذن مشتريات', 'institute-warehouse'),
+            __('طباعة إذن مشتريات', 'institute-warehouse'),
             'iw_add_stock',
             'iw-print-add-permit',
             array('IW_Admin', 'print_add_permit_page')
