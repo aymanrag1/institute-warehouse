@@ -11,6 +11,7 @@ class IW_Purchase_Requests {
         add_action('wp_ajax_iw_reject_purchase_request', array(__CLASS__, 'reject_request'));
         add_action('wp_ajax_iw_update_purchase_request', array(__CLASS__, 'update_request'));
         add_action('wp_ajax_iw_complete_purchase_request', array(__CLASS__, 'complete_request'));
+        add_action('wp_ajax_iw_delete_purchase_request', array(__CLASS__, 'delete_request'));
         add_action('wp_ajax_iw_auto_generate_purchase_requests', array(__CLASS__, 'ajax_auto_generate'));
     }
 
@@ -385,5 +386,41 @@ class IW_Purchase_Requests {
         );
 
         wp_send_json_success(array('message' => 'تم استلام البضاعة وإضافتها للمخزون'));
+    }
+
+    /**
+     * Delete pending purchase request
+     */
+    public static function delete_request() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        $request_id = intval($_POST['request_id']);
+        $request = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}purchase_requests WHERE id = %d", $request_id
+        ));
+
+        if (!$request) {
+            wp_send_json_error(array('message' => 'الطلب غير موجود'));
+        }
+
+        if ($request->status !== 'pending') {
+            wp_send_json_error(array('message' => 'لا يمكن حذف طلب معتمد أو مكتمل'));
+        }
+
+        // Allow creator, dean, or admin to delete pending requests
+        $is_creator = ($request->created_by == get_current_user_id());
+        if (!$is_creator && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية لحذف هذا الطلب'));
+        }
+
+        // Delete items first
+        $wpdb->delete($prefix . 'purchase_request_items', array('request_id' => $request_id));
+        // Delete request
+        $wpdb->delete($prefix . 'purchase_requests', array('id' => $request_id));
+
+        wp_send_json_success(array('message' => 'تم حذف الطلب بنجاح'));
     }
 }

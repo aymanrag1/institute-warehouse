@@ -3,7 +3,7 @@
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
  * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
- * Version: 2.2.0
+ * Version: 2.2.1
  * Author: AYMAN RAGAB
  * Author URI: tel:00201159230034
  * Text Domain: institute-warehouse
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.2.0');
+define('IW_VERSION', '2.2.1');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -46,6 +46,7 @@ class Institute_Warehouse_System {
         require_once IW_PLUGIN_DIR . 'includes/class-iw-withdrawal-orders.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-purchase-requests.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-opening-balance.php';
+        require_once IW_PLUGIN_DIR . 'includes/class-iw-add-orders.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-reports.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-excel-import.php';
         require_once IW_PLUGIN_DIR . 'admin/class-iw-admin.php';
@@ -82,6 +83,7 @@ class Institute_Warehouse_System {
         IW_Withdrawal_Orders::init();
         IW_Purchase_Requests::init();
         IW_Opening_Balance::init();
+        IW_Add_Orders::init();
         IW_Reports::init();
         IW_Excel_Import::init();
     }
@@ -122,11 +124,11 @@ class Institute_Warehouse_System {
             array('IW_Admin', 'products_page')
         );
 
-        // إذن إضافة مشتريات
+        // إذن إضافة
         add_submenu_page(
             'institute-warehouse',
-            __('إذن إضافة مشتريات', 'institute-warehouse'),
-            __('إذن إضافة مشتريات', 'institute-warehouse'),
+            __('إذن إضافة', 'institute-warehouse'),
+            __('إذن إضافة', 'institute-warehouse'),
             'iw_add_stock',
             'iw-add-stock',
             array('IW_Admin', 'add_stock_page')
@@ -135,8 +137,8 @@ class Institute_Warehouse_System {
         // طباعة إذن إضافة
         add_submenu_page(
             'institute-warehouse',
-            __('طباعة إذن مشتريات', 'institute-warehouse'),
-            __('طباعة إذن مشتريات', 'institute-warehouse'),
+            __('طباعة إذن إضافة', 'institute-warehouse'),
+            __('طباعة إذن إضافة', 'institute-warehouse'),
             'iw_add_stock',
             'iw-print-add-permit',
             array('IW_Admin', 'print_add_permit_page')

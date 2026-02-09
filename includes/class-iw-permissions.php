@@ -65,6 +65,16 @@ class IW_Permissions {
             'iw_withdraw_stock' => true,
         ));
 
+        // Accountant role
+        add_role('iw_accountant', 'مدير الحسابات', array(
+            'read'              => true,
+            'iw_view_warehouse' => true,
+            'iw_view_products'  => true,
+            'iw_add_stock'      => true,
+            'iw_view_reports'   => true,
+            'iw_manage_suppliers' => true,
+        ));
+
         // Add capabilities to admin
         $admin = get_role('administrator');
         if ($admin) {

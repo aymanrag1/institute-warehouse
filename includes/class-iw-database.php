@@ -52,14 +52,47 @@ class IW_Database {
         ) $charset;";
         dbDelta($sql);
 
-        // Suppliers table
+        // Suppliers table with extended fields
         $sql = "CREATE TABLE {$prefix}suppliers (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            supplier_number varchar(50) DEFAULT '',
             name varchar(255) NOT NULL,
-            phone varchar(50) DEFAULT '',
-            email varchar(255) DEFAULT '',
             address text,
+            phone_landline varchar(50) DEFAULT '',
+            phone_mobile varchar(50) DEFAULT '',
+            email varchar(255) DEFAULT '',
+            contact_person varchar(255) DEFAULT '',
+            tax_card_number varchar(100) DEFAULT '',
+            tax_card_file varchar(500) DEFAULT '',
+            commercial_reg_number varchar(100) DEFAULT '',
+            commercial_reg_file varchar(500) DEFAULT '',
+            specialty varchar(255) DEFAULT '',
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        ) $charset;";
+        dbDelta($sql);
+
+        // Add orders (multi-product) with sequential numbering
+        $sql = "CREATE TABLE {$prefix}add_orders (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            order_number varchar(50) NOT NULL,
+            supplier_id bigint(20) UNSIGNED DEFAULT NULL,
+            notes text,
+            total_quantity int(11) NOT NULL DEFAULT 0,
+            total_value decimal(12,2) NOT NULL DEFAULT 0.00,
+            created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+        ) $charset;";
+        dbDelta($sql);
+
+        // Add order items
+        $sql = "CREATE TABLE {$prefix}add_order_items (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            order_id bigint(20) UNSIGNED NOT NULL,
+            product_id bigint(20) UNSIGNED NOT NULL,
+            quantity int(11) NOT NULL,
+            unit_price decimal(12,2) NOT NULL DEFAULT 0.00,
             PRIMARY KEY (id)
         ) $charset;";
         dbDelta($sql);
@@ -230,6 +263,43 @@ class IW_Database {
             $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}departments");
             if (!in_array('description', $columns)) {
                 $wpdb->query("ALTER TABLE {$prefix}departments ADD COLUMN description text AFTER name");
+            }
+        }
+
+        // Check suppliers table for new columns
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}suppliers'");
+        if ($table_exists) {
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}suppliers");
+            if (!in_array('supplier_number', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN supplier_number varchar(50) DEFAULT '' AFTER id");
+            }
+            if (!in_array('phone_landline', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN phone_landline varchar(50) DEFAULT '' AFTER address");
+            }
+            if (!in_array('phone_mobile', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN phone_mobile varchar(50) DEFAULT '' AFTER phone_landline");
+            }
+            if (!in_array('contact_person', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN contact_person varchar(255) DEFAULT '' AFTER email");
+            }
+            if (!in_array('tax_card_number', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN tax_card_number varchar(100) DEFAULT '' AFTER contact_person");
+            }
+            if (!in_array('tax_card_file', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN tax_card_file varchar(500) DEFAULT '' AFTER tax_card_number");
+            }
+            if (!in_array('commercial_reg_number', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN commercial_reg_number varchar(100) DEFAULT '' AFTER tax_card_file");
+            }
+            if (!in_array('commercial_reg_file', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN commercial_reg_file varchar(500) DEFAULT '' AFTER commercial_reg_number");
+            }
+            if (!in_array('specialty', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN specialty varchar(255) DEFAULT '' AFTER commercial_reg_file");
+            }
+            // Migrate old phone column if exists
+            if (in_array('phone', $columns) && !in_array('phone_mobile', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}suppliers CHANGE phone phone_mobile varchar(50) DEFAULT ''");
             }
         }
     }

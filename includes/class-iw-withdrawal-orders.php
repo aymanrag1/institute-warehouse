@@ -15,12 +15,26 @@ class IW_Withdrawal_Orders {
     }
 
     /**
-     * Generate order number
+     * Generate sequential order number
      */
     private static function generate_order_number() {
         global $wpdb;
-        $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}iw_withdrawal_orders") + 1;
-        return 'WD-' . date('Ymd') . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+        $prefix = $wpdb->prefix . 'iw_';
+        $year = date('Y');
+
+        $last = $wpdb->get_var(
+            "SELECT order_number FROM {$prefix}withdrawal_orders
+             WHERE order_number LIKE 'WD-{$year}-%'
+             ORDER BY id DESC LIMIT 1"
+        );
+
+        if ($last && preg_match('/WD-\d{4}-(\d+)/', $last, $matches)) {
+            $num = intval($matches[1]) + 1;
+        } else {
+            $num = 1;
+        }
+
+        return 'WD-' . $year . '-' . str_pad($num, 5, '0', STR_PAD_LEFT);
     }
 
     /**
@@ -44,6 +58,25 @@ class IW_Withdrawal_Orders {
 
         if (empty($items)) {
             wp_send_json_error(array('message' => 'يجب إضافة أصناف'));
+        }
+
+        // Validate stock availability - prevent zero stock withdrawal
+        $errors = array();
+        foreach ($items as $item) {
+            $product = IW_Products::get_by_id(intval($item['product_id']));
+            if (!$product) {
+                $errors[] = 'صنف غير موجود';
+                continue;
+            }
+            if (intval($product->current_stock) <= 0) {
+                $errors[] = 'الصنف "' . $product->name . '" لا يوجد به رصيد متاح';
+            } elseif (intval($item['quantity']) > intval($product->current_stock)) {
+                $errors[] = 'الكمية المطلوبة من "' . $product->name . '" (' . $item['quantity'] . ') أكبر من المتاح (' . $product->current_stock . ')';
+            }
+        }
+
+        if (!empty($errors)) {
+            wp_send_json_error(array('message' => implode("\n", $errors)));
         }
 
         $wpdb->insert($prefix . 'withdrawal_orders', array(
