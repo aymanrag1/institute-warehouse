@@ -1,6 +1,6 @@
 <?php if (!defined('ABSPATH')) exit; ?>
 <div class="wrap iw-wrap" dir="rtl">
-    <h1>تصنيفات الأصناف <button class="button button-primary" onclick="$('#iw-category-modal').show();iwResetCatForm();">+ إضافة تصنيف</button></h1>
+    <h1>تصنيفات الأصناف <button class="button button-primary" onclick="iwShowAddCategory()">+ إضافة تصنيف</button></h1>
 
     <p class="description">التصنيفات المضافة هنا ستظهر في القوائم المنسدلة في جميع الشاشات (الأصناف، طلبات الشراء، إلخ).</p>
 
@@ -20,7 +20,7 @@
 <!-- Category Modal -->
 <div id="iw-category-modal" class="iw-modal" style="display:none;">
     <div class="iw-modal-content" style="max-width:500px;">
-        <span class="iw-modal-close" onclick="$('#iw-category-modal').hide()">&times;</span>
+        <span class="iw-modal-close" onclick="iwHideCategoryModal()">&times;</span>
         <h2 id="category-modal-title">إضافة تصنيف جديد</h2>
         <form id="iw-category-form">
             <input type="hidden" id="cat_id" value="0">
@@ -64,6 +64,15 @@ jQuery(document).ready(function($) {
         $('#iw-category-form')[0].reset();
         $('#cat_id').val(0);
         $('#category-modal-title').text('إضافة تصنيف جديد');
+    };
+
+    window.iwShowAddCategory = function() {
+        iwResetCatForm();
+        $('#iw-category-modal').show();
+    };
+
+    window.iwHideCategoryModal = function() {
+        $('#iw-category-modal').hide();
     };
 
     $('#iw-category-form').on('submit', function(e) {
