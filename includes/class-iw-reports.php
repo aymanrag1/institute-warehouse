@@ -13,8 +13,16 @@ class IW_Reports {
     public static function stock_report() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
         global $wpdb;
+
+        $category = sanitize_text_field($_POST['category'] ?? '');
+
+        $where = '1=1';
+        if (!empty($category)) {
+            $where .= $wpdb->prepare(" AND category = %s", $category);
+        }
+
         $products = $wpdb->get_results(
-            "SELECT * FROM {$wpdb->prefix}iw_products ORDER BY name ASC"
+            "SELECT * FROM {$wpdb->prefix}iw_products WHERE {$where} ORDER BY name ASC"
         );
         wp_send_json_success($products);
     }
@@ -49,7 +57,18 @@ class IW_Reports {
 
     public static function low_stock_report() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
-        $products = IW_Products::get_low_stock_products();
+        global $wpdb;
+
+        $category = sanitize_text_field($_POST['category'] ?? '');
+
+        $where = 'current_stock <= min_stock AND min_stock > 0';
+        if (!empty($category)) {
+            $where .= $wpdb->prepare(" AND category = %s", $category);
+        }
+
+        $products = $wpdb->get_results(
+            "SELECT * FROM {$wpdb->prefix}iw_products WHERE {$where} ORDER BY name ASC"
+        );
         wp_send_json_success($products);
     }
 

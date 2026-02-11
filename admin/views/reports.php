@@ -9,9 +9,16 @@
 
     <div id="rep-tab-stock" class="iw-tab-content">
         <h2>تقرير المخزون الحالي</h2>
-        <button class="button" onclick="iwPrintReport('stock')">طباعة</button>
+        <div style="margin-bottom:15px;">
+            <label style="margin-left:10px;"><strong>التصنيف:</strong></label>
+            <select id="stock_category" style="min-width:200px;" onchange="loadStockReport()">
+                <option value="">جميع التصنيفات</option>
+                <?php echo IW_Categories::get_options_html(); ?>
+            </select>
+            <button class="button" onclick="iwPrintReport('stock')" style="margin-right:15px;">طباعة</button>
+        </div>
         <table class="wp-list-table widefat fixed striped" id="stock-report-table">
-            <thead><tr><th>الصنف</th><th>الكود</th><th>الوحدة</th><th>المخزون الحالي</th><th>الحد الأدنى</th><th>الحد الأقصى</th><th>السعر</th></tr></thead>
+            <thead><tr><th>الصنف</th><th>الكود</th><th>التصنيف</th><th>الوحدة</th><th>المخزون الحالي</th><th>الحد الأدنى</th><th>الحد الأقصى</th><th>السعر</th></tr></thead>
             <tbody id="stock-report-body"></tbody>
         </table>
     </div>
@@ -34,9 +41,16 @@
 
     <div id="rep-tab-lowstock" class="iw-tab-content" style="display:none;">
         <h2>أصناف تحت الحد الأدنى</h2>
-        <button class="button" onclick="iwPrintReport('lowstock')">طباعة</button>
+        <div style="margin-bottom:15px;">
+            <label style="margin-left:10px;"><strong>التصنيف:</strong></label>
+            <select id="lowstock_category" style="min-width:200px;" onchange="loadLowReport()">
+                <option value="">جميع التصنيفات</option>
+                <?php echo IW_Categories::get_options_html(); ?>
+            </select>
+            <button class="button" onclick="iwPrintReport('lowstock')" style="margin-right:15px;">طباعة</button>
+        </div>
         <table class="wp-list-table widefat fixed striped" id="low-report-table">
-            <thead><tr><th>الصنف</th><th>المخزون الحالي</th><th>الحد الأدنى</th><th>الحد الأقصى</th><th>الكمية المطلوبة</th></tr></thead>
+            <thead><tr><th>الصنف</th><th>التصنيف</th><th>المخزون الحالي</th><th>الحد الأدنى</th><th>الحد الأقصى</th><th>الكمية المطلوبة</th></tr></thead>
             <tbody id="low-report-body"></tbody>
         </table>
     </div>
@@ -50,16 +64,17 @@ jQuery(document).ready(function($) {
         if (tab === 'lowstock') loadLowReport();
     };
 
-    function loadStockReport() {
-        $.post(iwAdmin.ajaxurl, {action: 'iw_get_stock_report', nonce: iwAdmin.nonce}, function(r) {
+    window.loadStockReport = function() {
+        var category = $('#stock_category').val() || '';
+        $.post(iwAdmin.ajaxurl, {action: 'iw_get_stock_report', nonce: iwAdmin.nonce, category: category}, function(r) {
             if (!r.success) return;
             var h = '';
             r.data.forEach(function(p) {
-                h += '<tr><td>'+p.name+'</td><td>'+(p.sku||'-')+'</td><td>'+(p.unit||'-')+'</td><td>'+p.current_stock+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td><td>'+parseFloat(p.price).toFixed(2)+'</td></tr>';
+                h += '<tr><td>'+p.name+'</td><td>'+(p.sku||'-')+'</td><td>'+(p.category||'-')+'</td><td>'+(p.unit||'-')+'</td><td>'+p.current_stock+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td><td>'+parseFloat(p.price).toFixed(2)+'</td></tr>';
             });
-            $('#stock-report-body').html(h || '<tr><td colspan="7">لا توجد أصناف</td></tr>');
+            $('#stock-report-body').html(h || '<tr><td colspan="8">لا توجد أصناف</td></tr>');
         });
-    }
+    };
     loadStockReport();
 
     window.loadTransReport = function() {
@@ -75,16 +90,17 @@ jQuery(document).ready(function($) {
         });
     };
 
-    function loadLowReport() {
-        $.post(iwAdmin.ajaxurl, {action: 'iw_get_low_stock_report', nonce: iwAdmin.nonce}, function(r) {
+    window.loadLowReport = function() {
+        var category = $('#lowstock_category').val() || '';
+        $.post(iwAdmin.ajaxurl, {action: 'iw_get_low_stock_report', nonce: iwAdmin.nonce, category: category}, function(r) {
             if (!r.success) return;
             var h = '';
             r.data.forEach(function(p) {
-                h += '<tr><td>'+p.name+'</td><td>'+p.current_stock+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td><td>'+(p.max_stock-p.current_stock)+'</td></tr>';
+                h += '<tr><td>'+p.name+'</td><td>'+(p.category||'-')+'</td><td>'+p.current_stock+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td><td>'+(p.max_stock-p.current_stock)+'</td></tr>';
             });
-            $('#low-report-body').html(h || '<tr><td colspan="5">لا توجد أصناف تحت الحد الأدنى</td></tr>');
+            $('#low-report-body').html(h || '<tr><td colspan="6">لا توجد أصناف تحت الحد الأدنى</td></tr>');
         });
-    }
+    };
 
     window.iwPrintReport = function(type) {
         var tableId = type === 'stock' ? '#stock-report-table' : type === 'transactions' ? '#trans-report-table' : '#low-report-table';

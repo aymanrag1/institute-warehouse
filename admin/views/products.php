@@ -12,7 +12,7 @@
                 <table class="form-table">
                     <tr><th>اسم الصنف *</th><td><input type="text" id="product_name" class="regular-text" required></td></tr>
                     <tr><th>الكود (SKU)</th><td><input type="text" id="product_sku" class="regular-text"></td></tr>
-                    <tr><th>التصنيف</th><td><input type="text" id="product_category" class="regular-text"></td></tr>
+                    <tr><th>التصنيف</th><td><select id="product_category" class="regular-text"><?php echo IW_Categories::get_options_html(); ?></select></td></tr>
                     <tr><th>وحدة القياس</th><td><input type="text" id="product_unit" class="regular-text" placeholder="مثال: قطعة، كرتونة، متر"></td></tr>
                     <tr><th>الحد الأدنى للمخزون *</th><td><input type="number" id="product_min_stock" class="regular-text" min="0" value="0"></td></tr>
                     <tr><th>الحد الأقصى للمخزون *</th><td><input type="number" id="product_max_stock" class="regular-text" min="0" value="0"></td></tr>
