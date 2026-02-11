@@ -12,6 +12,7 @@ class IW_Purchase_Requests {
         add_action('wp_ajax_iw_update_purchase_request', array(__CLASS__, 'update_request'));
         add_action('wp_ajax_iw_complete_purchase_request', array(__CLASS__, 'complete_request'));
         add_action('wp_ajax_iw_delete_purchase_request', array(__CLASS__, 'delete_request'));
+        add_action('wp_ajax_iw_delete_purchase_request_item', array(__CLASS__, 'delete_item'));
         add_action('wp_ajax_iw_auto_generate_purchase_requests', array(__CLASS__, 'ajax_auto_generate'));
     }
 
@@ -22,20 +23,56 @@ class IW_Purchase_Requests {
     }
 
     /**
-     * Auto-generate purchase requests for products at or below min stock.
-     * Requested quantity = max_stock - current_stock
+     * Get last purchase price for a product
      */
-    public static function auto_generate() {
+    public static function get_last_purchase_price($product_id) {
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
+        // Get last add transaction price
+        $last_price = $wpdb->get_var($wpdb->prepare(
+            "SELECT unit_price FROM {$prefix}transactions
+             WHERE product_id = %d AND transaction_type = 'add'
+             ORDER BY created_at DESC LIMIT 1",
+            $product_id
+        ));
+
+        if ($last_price !== null) {
+            return floatval($last_price);
+        }
+
+        // Fallback to product price
+        $product = $wpdb->get_row($wpdb->prepare(
+            "SELECT price FROM {$prefix}products WHERE id = %d",
+            $product_id
+        ));
+
+        return $product ? floatval($product->price) : 0;
+    }
+
+    /**
+     * Auto-generate purchase requests for products at or below min stock.
+     * Requested quantity = max_stock - current_stock
+     * Can filter by category (optional)
+     */
+    public static function auto_generate($category = '') {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        // Build query with optional category filter
+        $where = "WHERE min_stock > 0 AND current_stock <= min_stock";
+        if (!empty($category)) {
+            $where .= $wpdb->prepare(" AND category = %s", $category);
+        }
+
         // Get products at or below min_stock (min_stock must be > 0)
         $low_stock = $wpdb->get_results(
-            "SELECT * FROM {$prefix}products WHERE min_stock > 0 AND current_stock <= min_stock ORDER BY name ASC"
+            "SELECT * FROM {$prefix}products {$where} ORDER BY name ASC"
         );
 
         if (empty($low_stock)) {
-            return array('created' => 0, 'skipped' => 0, 'message' => 'لا توجد أصناف وصلت للحد الأدنى');
+            $msg = empty($category) ? 'لا توجد أصناف وصلت للحد الأدنى' : 'لا توجد أصناف في تصنيف "' . $category . '" وصلت للحد الأدنى';
+            return array('created' => 0, 'skipped' => 0, 'message' => $msg);
         }
 
         // Check if there's already a pending/approved request for these products
@@ -57,11 +94,15 @@ class IW_Purchase_Requests {
             $needed = $product->max_stock - $product->current_stock;
             if ($needed <= 0) $needed = $product->min_stock; // fallback if max not set
 
+            // Get last purchase price
+            $last_price = self::get_last_purchase_price($product->id);
+
             $items_to_request[] = array(
-                'product_id'      => $product->id,
-                'product_name'    => $product->name,
-                'quantity'        => $needed,
-                'estimated_price' => $product->price,
+                'product_id'          => $product->id,
+                'product_name'        => $product->name,
+                'quantity'            => $needed,
+                'estimated_price'     => $last_price, // Use last purchase price as estimated
+                'last_purchase_price' => $last_price,
             );
         }
 
@@ -71,11 +112,12 @@ class IW_Purchase_Requests {
         }
 
         $request_number = self::generate_request_number();
+        $notes = empty($category) ? 'طلب شراء - أصناف وصلت للحد الأدنى' : 'طلب شراء - تصنيف: ' . $category;
 
         $wpdb->insert($prefix . 'purchase_requests', array(
             'request_number' => $request_number,
             'status'         => 'pending',
-            'notes'          => 'طلب شراء تلقائي - أصناف وصلت للحد الأدنى',
+            'notes'          => $notes,
             'created_by'     => get_current_user_id(),
         ));
 
@@ -83,25 +125,36 @@ class IW_Purchase_Requests {
 
         foreach ($items_to_request as $item) {
             $wpdb->insert($prefix . 'purchase_request_items', array(
-                'request_id'      => $request_id,
-                'product_id'      => $item['product_id'],
-                'quantity'        => $item['quantity'],
-                'estimated_price' => $item['estimated_price'],
+                'request_id'          => $request_id,
+                'product_id'          => $item['product_id'],
+                'quantity'            => $item['quantity'],
+                'estimated_price'     => $item['estimated_price'],
+                'last_purchase_price' => $item['last_purchase_price'],
             ));
         }
+
+        // Send email to approvers
+        self::notify_approvers($request_number);
 
         return array(
             'created' => count($items_to_request),
             'skipped' => $skipped,
+            'request_id' => $request_id,
             'request_number' => $request_number,
             'items' => $items_to_request,
             'message' => 'تم إنشاء طلب شراء رقم ' . $request_number . ' يحتوي على ' . count($items_to_request) . ' أصناف',
         );
     }
 
+    /**
+     * AJAX: Generate purchase request with category filter (manual button click)
+     */
     public static function ajax_auto_generate() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
-        $result = self::auto_generate();
+
+        $category = sanitize_text_field($_POST['category'] ?? '');
+        $result = self::auto_generate($category);
+
         if (!$result) {
             $result = array('created' => 0, 'message' => 'لا توجد أصناف وصلت للحد الأدنى');
         }
@@ -226,6 +279,13 @@ class IW_Purchase_Requests {
              WHERE i.request_id = %d", $request_id
         ));
 
+        // Add last purchase price to each item if not set
+        foreach ($items as &$item) {
+            if (empty($item->last_purchase_price) || $item->last_purchase_price == 0) {
+                $item->last_purchase_price = self::get_last_purchase_price($item->product_id);
+            }
+        }
+
         $signature_url = '';
         if ($request && $request->approved_by) {
             $signature_url = get_user_meta($request->approved_by, 'iw_signature_url', true);
@@ -239,7 +299,8 @@ class IW_Purchase_Requests {
     }
 
     /**
-     * Dean updates request items before approval
+     * Update request items before approval
+     * Allowed: creator, dean, admin, accountant
      */
     public static function update_request() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
@@ -258,21 +319,24 @@ class IW_Purchase_Requests {
             wp_send_json_error(array('message' => 'لا يمكن تعديل هذا الطلب'));
         }
 
-        // Allow creator, dean, or admin to edit pending requests
+        // Allow creator, dean, admin, or accountant to edit pending requests
         $is_creator = ($request->created_by == get_current_user_id());
-        if (!$is_creator && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+        $is_accountant = current_user_can('iw_accountant') || IW_Permissions::current_user_can('purchase_requests', 'read_write');
+        if (!$is_creator && !$is_accountant && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'ليس لديك صلاحية لتعديل هذا الطلب'));
         }
 
         $wpdb->delete($prefix . 'purchase_request_items', array('request_id' => $request_id));
 
         foreach ($items as $item) {
+            $last_price = self::get_last_purchase_price(intval($item['product_id']));
             $wpdb->insert($prefix . 'purchase_request_items', array(
-                'request_id'        => $request_id,
-                'product_id'        => intval($item['product_id']),
-                'quantity'          => intval($item['quantity']),
-                'approved_quantity' => isset($item['approved_quantity']) ? intval($item['approved_quantity']) : intval($item['quantity']),
-                'estimated_price'   => floatval($item['estimated_price'] ?? 0),
+                'request_id'          => $request_id,
+                'product_id'          => intval($item['product_id']),
+                'quantity'            => intval($item['quantity']),
+                'approved_quantity'   => isset($item['approved_quantity']) ? intval($item['approved_quantity']) : intval($item['quantity']),
+                'estimated_price'     => floatval($item['estimated_price'] ?? 0),
+                'last_purchase_price' => $last_price,
             ));
         }
 
@@ -284,6 +348,57 @@ class IW_Purchase_Requests {
         }
 
         wp_send_json_success(array('message' => 'تم تعديل طلب الشراء'));
+    }
+
+    /**
+     * Delete item from purchase request
+     */
+    public static function delete_item() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        $item_id = intval($_POST['item_id']);
+
+        // Get item and request info
+        $item = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}purchase_request_items WHERE id = %d", $item_id
+        ));
+
+        if (!$item) {
+            wp_send_json_error(array('message' => 'الصنف غير موجود'));
+        }
+
+        $request = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}purchase_requests WHERE id = %d", $item->request_id
+        ));
+
+        if (!$request || $request->status !== 'pending') {
+            wp_send_json_error(array('message' => 'لا يمكن حذف صنف من طلب معتمد'));
+        }
+
+        // Allow creator, dean, admin, or accountant
+        $is_creator = ($request->created_by == get_current_user_id());
+        $is_accountant = current_user_can('iw_accountant') || IW_Permissions::current_user_can('purchase_requests', 'read_write');
+        if (!$is_creator && !$is_accountant && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
+
+        $wpdb->delete($prefix . 'purchase_request_items', array('id' => $item_id));
+
+        // Check if request has no more items
+        $remaining = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$prefix}purchase_request_items WHERE request_id = %d", $item->request_id
+        ));
+
+        if ($remaining == 0) {
+            // Delete the request itself
+            $wpdb->delete($prefix . 'purchase_requests', array('id' => $item->request_id));
+            wp_send_json_success(array('message' => 'تم حذف الصنف وإلغاء الطلب لأنه أصبح فارغاً', 'request_deleted' => true));
+        }
+
+        wp_send_json_success(array('message' => 'تم حذف الصنف من الطلب'));
     }
 
     /**

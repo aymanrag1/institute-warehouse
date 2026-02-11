@@ -12,6 +12,8 @@ class IW_Withdrawal_Orders {
         add_action('wp_ajax_iw_update_withdrawal_order', array(__CLASS__, 'update_order'));
         add_action('wp_ajax_iw_complete_withdrawal_order', array(__CLASS__, 'complete_order'));
         add_action('wp_ajax_iw_delete_withdrawal_order', array(__CLASS__, 'delete_order'));
+        add_action('wp_ajax_iw_cancel_withdrawal_order', array(__CLASS__, 'cancel_order'));
+        add_action('wp_ajax_iw_create_custody_order', array(__CLASS__, 'create_custody_order'));
     }
 
     /**
@@ -184,7 +186,7 @@ class IW_Withdrawal_Orders {
         ));
 
         $items = $wpdb->get_results($wpdb->prepare(
-            "SELECT i.*, p.name as product_name, p.unit as product_unit, p.current_stock
+            "SELECT i.*, p.name as product_name, p.unit as product_unit, p.current_stock, i.custody_employee_name
              FROM {$prefix}withdrawal_order_items i
              LEFT JOIN {$prefix}products p ON i.product_id = p.id
              WHERE i.order_id = %d", $order_id
@@ -329,6 +331,16 @@ class IW_Withdrawal_Orders {
             wp_send_json_error(array('message' => 'الإذن غير معتمد'));
         }
 
+        // Handle custody orders differently
+        if ($order->order_type === 'custody') {
+            if (self::complete_custody_order($order_id)) {
+                wp_send_json_success(array('message' => 'تم تنفيذ إذن صرف العهدة بنجاح (بدون خصم من الرصيد)'));
+            } else {
+                wp_send_json_error(array('message' => 'حدث خطأ أثناء تنفيذ إذن العهدة'));
+            }
+            return;
+        }
+
         $items = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$prefix}withdrawal_order_items WHERE order_id = %d", $order_id
         ));
@@ -355,9 +367,6 @@ class IW_Withdrawal_Orders {
             array('status' => 'completed'),
             array('id' => $order_id)
         );
-
-        // Check for low stock and auto-generate purchase requests
-        IW_Purchase_Requests::auto_generate();
 
         wp_send_json_success(array('message' => 'تم تنفيذ إذن الصرف بنجاح'));
     }
@@ -396,5 +405,166 @@ class IW_Withdrawal_Orders {
         $wpdb->delete($prefix . 'withdrawal_orders', array('id' => $order_id));
 
         wp_send_json_success(array('message' => 'تم حذف الإذن بنجاح'));
+    }
+
+    /**
+     * Cancel approved order (return stock)
+     */
+    public static function cancel_order() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        $order_id = intval($_POST['order_id']);
+        $order = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}withdrawal_orders WHERE id = %d", $order_id
+        ));
+
+        if (!$order) {
+            wp_send_json_error(array('message' => 'الإذن غير موجود'));
+        }
+
+        if ($order->status !== 'approved') {
+            wp_send_json_error(array('message' => 'يمكن إلغاء الأذون المعتمدة فقط (قبل التنفيذ)'));
+        }
+
+        // Allow dean or admin to cancel approved orders
+        if (!current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية لإلغاء هذا الإذن'));
+        }
+
+        // Update order status to cancelled
+        $wpdb->update($prefix . 'withdrawal_orders', array(
+            'status'       => 'cancelled',
+            'cancelled_by' => get_current_user_id(),
+            'cancelled_at' => current_time('mysql'),
+        ), array('id' => $order_id));
+
+        wp_send_json_success(array('message' => 'تم إلغاء الإذن بنجاح. الرصيد لم يتم خصمه لأن الإذن لم ينفذ.'));
+    }
+
+    /**
+     * Create custody withdrawal order
+     * Custody orders don't deduct from stock
+     */
+    public static function create_custody_order() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        if (!IW_Permissions::current_user_can('withdraw_stock', 'read_write')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
+
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        $order_number  = self::generate_custody_order_number();
+        $department_id = intval($_POST['department_id']);
+        $employee_id   = intval($_POST['employee_id']);
+        $notes         = sanitize_textarea_field($_POST['notes'] ?? '');
+        $items         = json_decode(stripslashes($_POST['items']), true);
+
+        if (empty($items)) {
+            wp_send_json_error(array('message' => 'يجب إضافة أصناف'));
+        }
+
+        $wpdb->insert($prefix . 'withdrawal_orders', array(
+            'order_number'  => $order_number,
+            'order_type'    => 'custody',
+            'department_id' => $department_id,
+            'employee_id'   => $employee_id,
+            'status'        => 'pending',
+            'notes'         => $notes,
+            'created_by'    => get_current_user_id(),
+        ));
+
+        $order_id = $wpdb->insert_id;
+
+        foreach ($items as $item) {
+            $product = IW_Products::get_by_id(intval($item['product_id']));
+            $wpdb->insert($prefix . 'withdrawal_order_items', array(
+                'order_id'              => $order_id,
+                'product_id'            => intval($item['product_id']),
+                'quantity'              => intval($item['quantity']),
+                'unit_price'            => $product ? $product->price : 0,
+                'custody_employee_name' => sanitize_text_field($item['custody_employee_name'] ?? ''),
+            ));
+        }
+
+        // Send email to approvers
+        self::notify_approvers($order_number);
+
+        wp_send_json_success(array(
+            'order_id'     => $order_id,
+            'order_number' => $order_number,
+            'message'      => 'تم إنشاء إذن صرف العهدة وإرساله للاعتماد',
+        ));
+    }
+
+    /**
+     * Generate sequential custody order number
+     */
+    private static function generate_custody_order_number() {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+        $year = date('Y');
+
+        $last = $wpdb->get_var(
+            "SELECT order_number FROM {$prefix}withdrawal_orders
+             WHERE order_number LIKE 'CWD-{$year}-%'
+             ORDER BY id DESC LIMIT 1"
+        );
+
+        if ($last && preg_match('/CWD-\d{4}-(\d+)/', $last, $matches)) {
+            $num = intval($matches[1]) + 1;
+        } else {
+            $num = 1;
+        }
+
+        return 'CWD-' . $year . '-' . str_pad($num, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Complete custody order (doesn't deduct stock)
+     */
+    public static function complete_custody_order($order_id) {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        $order = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}withdrawal_orders WHERE id = %d", $order_id
+        ));
+
+        if (!$order || $order->status !== 'approved' || $order->order_type !== 'custody') {
+            return false;
+        }
+
+        $items = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$prefix}withdrawal_order_items WHERE order_id = %d", $order_id
+        ));
+
+        // Record transactions without deducting stock
+        foreach ($items as $item) {
+            $qty = $item->approved_quantity !== null ? $item->approved_quantity : $item->quantity;
+            if ($qty > 0) {
+                $wpdb->insert($prefix . 'transactions', array(
+                    'transaction_type' => 'custody',
+                    'product_id'       => $item->product_id,
+                    'quantity'         => $qty,
+                    'unit_price'       => $item->unit_price,
+                    'department_id'    => $order->department_id,
+                    'employee_id'      => $order->employee_id,
+                    'notes'            => 'إذن صرف عهدة رقم: ' . $order->order_number . ' - ' . $item->custody_employee_name,
+                    'created_by'       => get_current_user_id(),
+                ));
+            }
+        }
+
+        $wpdb->update($prefix . 'withdrawal_orders',
+            array('status' => 'completed'),
+            array('id' => $order_id)
+        );
+
+        return true;
     }
 }

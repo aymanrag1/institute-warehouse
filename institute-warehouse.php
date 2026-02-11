@@ -3,7 +3,7 @@
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
  * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
- * Version: 2.2.1
+ * Version: 2.2.2
  * Author: AYMAN RAGAB
  * Author URI: tel:00201159230034
  * Text Domain: institute-warehouse
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.2.1');
+define('IW_VERSION', '2.2.2');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -47,6 +47,7 @@ class Institute_Warehouse_System {
         require_once IW_PLUGIN_DIR . 'includes/class-iw-purchase-requests.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-opening-balance.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-add-orders.php';
+        require_once IW_PLUGIN_DIR . 'includes/class-iw-categories.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-reports.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-excel-import.php';
         require_once IW_PLUGIN_DIR . 'admin/class-iw-admin.php';
@@ -84,6 +85,7 @@ class Institute_Warehouse_System {
         IW_Purchase_Requests::init();
         IW_Opening_Balance::init();
         IW_Add_Orders::init();
+        IW_Categories::init();
         IW_Reports::init();
         IW_Excel_Import::init();
     }
@@ -272,6 +274,16 @@ class Institute_Warehouse_System {
             'iw_manage_suppliers',
             'iw-suppliers',
             array('IW_Admin', 'suppliers_page')
+        );
+
+        // التصنيفات
+        add_submenu_page(
+            'institute-warehouse',
+            __('التصنيفات', 'institute-warehouse'),
+            __('التصنيفات', 'institute-warehouse'),
+            'iw_view_products',
+            'iw-categories',
+            array('IW_Admin', 'categories_page')
         );
 
         // استيراد من Excel

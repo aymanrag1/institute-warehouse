@@ -27,6 +27,10 @@ class IW_Admin {
         include IW_PLUGIN_DIR . 'admin/views/suppliers.php';
     }
 
+    public static function categories_page() {
+        include IW_PLUGIN_DIR . 'admin/views/categories.php';
+    }
+
     public static function import_page() {
         include IW_PLUGIN_DIR . 'admin/views/import.php';
     }

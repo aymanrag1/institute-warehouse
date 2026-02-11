@@ -1,6 +1,10 @@
 <?php if (!defined('ABSPATH')) exit; wp_enqueue_media(); ?>
 <div class="wrap iw-wrap" dir="rtl">
-    <h1>الموردين <button class="button button-primary" onclick="$('#iw-supplier-modal').show();iwResetForm();">+ إضافة مورد</button> <button class="button" onclick="iwPrintSuppliers()">طباعة السجل</button></h1>
+    <h1>الموردين
+        <button class="button button-primary" onclick="$('#iw-supplier-modal').show();iwResetForm();">+ إضافة مورد</button>
+        <button class="button" onclick="iwPrintSuppliers()">طباعة السجل</button>
+        <button class="button" onclick="iwExportToExcel()">تصدير Excel</button>
+    </h1>
 
     <table class="wp-list-table widefat fixed striped">
         <thead>
@@ -67,9 +71,12 @@
 
 <script>
 jQuery(document).ready(function($) {
+    var suppliersData = [];
+
     function loadSuppliers() {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_suppliers', nonce: iwAdmin.nonce}, function(r) {
             if (!r.success) return;
+            suppliersData = r.data;
             var h = '';
             r.data.forEach(function(s) {
                 h += '<tr>';
@@ -149,14 +156,92 @@ jQuery(document).ready(function($) {
             html += '<tr><th>البريد الإلكتروني</th><td>'+(s.email||'-')+'</td></tr>';
             html += '<tr><th>اسم المسؤول</th><td>'+(s.contact_person||'-')+'</td></tr>';
             html += '<tr><th>رقم البطاقة الضريبية</th><td>'+(s.tax_card_number||'-')+'</td></tr>';
-            if (s.tax_card_file) html += '<tr><th>ملف البطاقة الضريبية</th><td><a href="'+s.tax_card_file+'" target="_blank">عرض الملف</a></td></tr>';
+            if (s.tax_card_file) {
+                html += '<tr><th>ملف البطاقة الضريبية</th><td>';
+                html += '<a href="'+s.tax_card_file+'" target="_blank" class="button">عرض الملف</a> ';
+                html += '<button class="button button-primary" onclick="iwPrintFile(\''+s.tax_card_file+'\',\'البطاقة الضريبية - '+s.name+'\')">طباعة</button>';
+                html += '</td></tr>';
+            }
             html += '<tr><th>رقم السجل التجاري</th><td>'+(s.commercial_reg_number||'-')+'</td></tr>';
-            if (s.commercial_reg_file) html += '<tr><th>ملف السجل التجاري</th><td><a href="'+s.commercial_reg_file+'" target="_blank">عرض الملف</a></td></tr>';
+            if (s.commercial_reg_file) {
+                html += '<tr><th>ملف السجل التجاري</th><td>';
+                html += '<a href="'+s.commercial_reg_file+'" target="_blank" class="button">عرض الملف</a> ';
+                html += '<button class="button button-primary" onclick="iwPrintFile(\''+s.commercial_reg_file+'\',\'السجل التجاري - '+s.name+'\')">طباعة</button>';
+                html += '</td></tr>';
+            }
             html += '<tr><th>التخصص</th><td>'+(s.specialty||'-')+'</td></tr>';
             html += '</table>';
+
+            // Print all files button
+            if (s.tax_card_file || s.commercial_reg_file) {
+                html += '<div style="margin-top:15px;">';
+                html += '<button class="button button-primary button-large" onclick="iwPrintAllSupplierFiles('+s.id+')">طباعة جميع الملفات</button>';
+                html += '</div>';
+            }
+
             $('#iw-view-supplier-body').html(html);
             $('#iw-view-supplier-modal').show();
         });
+    };
+
+    // Print a single file
+    window.iwPrintFile = function(fileUrl, title) {
+        var w = window.open('','','width=800,height=600');
+        var isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileUrl);
+        var isPdf = /\.pdf$/i.test(fileUrl);
+
+        if (isImage) {
+            w.document.write('<html dir="rtl"><head><title>'+title+'</title></head><body style="text-align:center;padding:20px;">');
+            w.document.write('<h2>'+title+'</h2>');
+            w.document.write('<img src="'+fileUrl+'" style="max-width:100%;max-height:90vh;" onload="window.print();" />');
+            w.document.write('</body></html>');
+        } else if (isPdf) {
+            w.document.write('<html dir="rtl"><head><title>'+title+'</title></head><body style="margin:0;padding:0;">');
+            w.document.write('<iframe src="'+fileUrl+'" style="width:100%;height:100vh;border:none;" onload="setTimeout(function(){window.print();},500);"></iframe>');
+            w.document.write('</body></html>');
+        } else {
+            w.location.href = fileUrl;
+        }
+        w.document.close();
+    };
+
+    // Print all supplier files
+    window.iwPrintAllSupplierFiles = function(id) {
+        var supplier = suppliersData.find(function(s) { return s.id == id; });
+        if (!supplier) return;
+
+        var w = window.open('','','width=800,height=600');
+        var content = '<html dir="rtl"><head><title>ملفات المورد - '+supplier.name+'</title>';
+        content += '<style>body{font-family:Arial,sans-serif;padding:20px;} .file-section{margin-bottom:30px;page-break-inside:avoid;} img{max-width:100%;}</style>';
+        content += '</head><body>';
+        content += '<h1 style="text-align:center;">ملفات المورد: '+supplier.name+'</h1>';
+
+        if (supplier.tax_card_file) {
+            content += '<div class="file-section">';
+            content += '<h2>البطاقة الضريبية - رقم: '+(supplier.tax_card_number||'-')+'</h2>';
+            if (/\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(supplier.tax_card_file)) {
+                content += '<img src="'+supplier.tax_card_file+'" />';
+            } else {
+                content += '<p><a href="'+supplier.tax_card_file+'" target="_blank">فتح الملف</a></p>';
+            }
+            content += '</div>';
+        }
+
+        if (supplier.commercial_reg_file) {
+            content += '<div class="file-section">';
+            content += '<h2>السجل التجاري - رقم: '+(supplier.commercial_reg_number||'-')+'</h2>';
+            if (/\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(supplier.commercial_reg_file)) {
+                content += '<img src="'+supplier.commercial_reg_file+'" />';
+            } else {
+                content += '<p><a href="'+supplier.commercial_reg_file+'" target="_blank">فتح الملف</a></p>';
+            }
+            content += '</div>';
+        }
+
+        content += '</body></html>';
+        w.document.write(content);
+        w.document.close();
+        setTimeout(function() { w.print(); }, 500);
     };
 
     window.iwEditSupplier = function(id) {
@@ -193,38 +278,71 @@ jQuery(document).ready(function($) {
 
     // Print suppliers registry
     window.iwPrintSuppliers = function() {
-        $.post(iwAdmin.ajaxurl, {action: 'iw_get_suppliers', nonce: iwAdmin.nonce}, function(r) {
-            if (!r.success) return;
-            var header = '<?php echo addslashes(IW_Admin::get_print_header()); ?>';
-            var content = header;
-            content += '<h2 style="text-align:center;">سجل الموردين</h2>';
-            content += '<table border="1" cellpadding="6" cellspacing="0" width="100%" style="border-collapse:collapse;text-align:right;font-size:11px;">';
-            content += '<tr style="background:#f0f0f0;"><th>#</th><th>رقم المورد</th><th>اسم المورد</th><th>العنوان</th>';
-            content += '<th>أرضي</th><th>محمول</th><th>إيميل</th><th>المسؤول</th>';
-            content += '<th>الضريبية</th><th>التجاري</th><th>التخصص</th></tr>';
+        var header = '<?php echo addslashes(IW_Admin::get_print_header()); ?>';
+        var content = header;
+        content += '<h2 style="text-align:center;">سجل الموردين</h2>';
+        content += '<table border="1" cellpadding="6" cellspacing="0" width="100%" style="border-collapse:collapse;text-align:right;font-size:11px;">';
+        content += '<tr style="background:#f0f0f0;"><th>#</th><th>رقم المورد</th><th>اسم المورد</th><th>العنوان</th>';
+        content += '<th>أرضي</th><th>محمول</th><th>إيميل</th><th>المسؤول</th>';
+        content += '<th>الضريبية</th><th>التجاري</th><th>التخصص</th></tr>';
 
-            r.data.forEach(function(s, idx) {
-                content += '<tr>';
-                content += '<td>'+(idx+1)+'</td>';
-                content += '<td>'+(s.supplier_number||'-')+'</td>';
-                content += '<td>'+s.name+'</td>';
-                content += '<td>'+(s.address||'-')+'</td>';
-                content += '<td>'+(s.phone_landline||'-')+'</td>';
-                content += '<td>'+(s.phone_mobile||s.phone||'-')+'</td>';
-                content += '<td>'+(s.email||'-')+'</td>';
-                content += '<td>'+(s.contact_person||'-')+'</td>';
-                content += '<td>'+(s.tax_card_number||'-')+'</td>';
-                content += '<td>'+(s.commercial_reg_number||'-')+'</td>';
-                content += '<td>'+(s.specialty||'-')+'</td>';
-                content += '</tr>';
-            });
-            content += '</table>';
-            content += '<p style="margin-top:20px;text-align:center;font-size:11px;">تاريخ الطباعة: '+new Date().toLocaleDateString('ar-EG')+'</p>';
-
-            var w = window.open('','','width=1000,height=700');
-            w.document.write('<html dir="rtl"><head><title>سجل الموردين</title><style>body{font-family:Arial,sans-serif;padding:15px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
-            w.document.close(); w.print();
+        suppliersData.forEach(function(s, idx) {
+            content += '<tr>';
+            content += '<td>'+(idx+1)+'</td>';
+            content += '<td>'+(s.supplier_number||'-')+'</td>';
+            content += '<td>'+s.name+'</td>';
+            content += '<td>'+(s.address||'-')+'</td>';
+            content += '<td>'+(s.phone_landline||'-')+'</td>';
+            content += '<td>'+(s.phone_mobile||s.phone||'-')+'</td>';
+            content += '<td>'+(s.email||'-')+'</td>';
+            content += '<td>'+(s.contact_person||'-')+'</td>';
+            content += '<td>'+(s.tax_card_number||'-')+'</td>';
+            content += '<td>'+(s.commercial_reg_number||'-')+'</td>';
+            content += '<td>'+(s.specialty||'-')+'</td>';
+            content += '</tr>';
         });
+        content += '</table>';
+        content += '<p style="margin-top:20px;text-align:center;font-size:11px;">تاريخ الطباعة: '+new Date().toLocaleDateString('ar-EG')+'</p>';
+
+        var w = window.open('','','width=1000,height=700');
+        w.document.write('<html dir="rtl"><head><title>سجل الموردين</title><style>body{font-family:Arial,sans-serif;padding:15px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
+        w.document.close(); w.print();
+    };
+
+    // Export to Excel
+    window.iwExportToExcel = function() {
+        if (!suppliersData.length) {
+            alert('لا يوجد موردين للتصدير');
+            return;
+        }
+
+        // Build CSV content
+        var headers = ['رقم المورد', 'اسم المورد', 'العنوان', 'تليفون أرضي', 'تليفون محمول', 'البريد الإلكتروني', 'المسؤول', 'رقم البطاقة الضريبية', 'رقم السجل التجاري', 'التخصص'];
+        var csvContent = '\uFEFF'; // BOM for UTF-8
+        csvContent += headers.join(',') + '\n';
+
+        suppliersData.forEach(function(s) {
+            var row = [
+                s.supplier_number || '',
+                '"' + (s.name || '').replace(/"/g, '""') + '"',
+                '"' + (s.address || '').replace(/"/g, '""').replace(/\n/g, ' ') + '"',
+                s.phone_landline || '',
+                s.phone_mobile || s.phone || '',
+                s.email || '',
+                '"' + (s.contact_person || '').replace(/"/g, '""') + '"',
+                s.tax_card_number || '',
+                s.commercial_reg_number || '',
+                '"' + (s.specialty || '').replace(/"/g, '""') + '"'
+            ];
+            csvContent += row.join(',') + '\n';
+        });
+
+        // Create download link
+        var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'suppliers_' + new Date().toISOString().slice(0,10) + '.csv';
+        link.click();
     };
 });
 </script>

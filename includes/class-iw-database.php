@@ -120,6 +120,7 @@ class IW_Database {
         $sql = "CREATE TABLE {$prefix}withdrawal_orders (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             order_number varchar(50) NOT NULL,
+            order_type varchar(20) NOT NULL DEFAULT 'normal',
             department_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
             employee_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
             status varchar(20) NOT NULL DEFAULT 'pending',
@@ -127,6 +128,8 @@ class IW_Database {
             approved_by bigint(20) UNSIGNED DEFAULT NULL,
             approved_at datetime DEFAULT NULL,
             signature_url varchar(500) DEFAULT '',
+            cancelled_by bigint(20) UNSIGNED DEFAULT NULL,
+            cancelled_at datetime DEFAULT NULL,
             created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -142,6 +145,7 @@ class IW_Database {
             quantity int(11) NOT NULL,
             approved_quantity int(11) DEFAULT NULL,
             unit_price decimal(12,2) NOT NULL DEFAULT 0.00,
+            custody_employee_name varchar(255) DEFAULT '',
             PRIMARY KEY (id)
         ) $charset;";
         dbDelta($sql);
@@ -170,6 +174,17 @@ class IW_Database {
             quantity int(11) NOT NULL,
             approved_quantity int(11) DEFAULT NULL,
             estimated_price decimal(12,2) NOT NULL DEFAULT 0.00,
+            last_purchase_price decimal(12,2) NOT NULL DEFAULT 0.00,
+            PRIMARY KEY (id)
+        ) $charset;";
+        dbDelta($sql);
+
+        // Categories table
+        $sql = "CREATE TABLE {$prefix}categories (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            name varchar(255) NOT NULL,
+            description text,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id)
         ) $charset;";
         dbDelta($sql);
@@ -300,6 +315,39 @@ class IW_Database {
             // Migrate old phone column if exists
             if (in_array('phone', $columns) && !in_array('phone_mobile', $columns)) {
                 $wpdb->query("ALTER TABLE {$prefix}suppliers CHANGE phone phone_mobile varchar(50) DEFAULT ''");
+            }
+        }
+
+        // Check withdrawal_orders table for new columns
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}withdrawal_orders'");
+        if ($table_exists) {
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}withdrawal_orders");
+            if (!in_array('order_type', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN order_type varchar(20) NOT NULL DEFAULT 'normal' AFTER order_number");
+            }
+            if (!in_array('cancelled_by', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN cancelled_by bigint(20) UNSIGNED DEFAULT NULL AFTER signature_url");
+            }
+            if (!in_array('cancelled_at', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN cancelled_at datetime DEFAULT NULL AFTER cancelled_by");
+            }
+        }
+
+        // Check withdrawal_order_items table for custody_employee_name
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}withdrawal_order_items'");
+        if ($table_exists) {
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}withdrawal_order_items");
+            if (!in_array('custody_employee_name', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}withdrawal_order_items ADD COLUMN custody_employee_name varchar(255) DEFAULT '' AFTER unit_price");
+            }
+        }
+
+        // Check purchase_request_items table for last_purchase_price
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}purchase_request_items'");
+        if ($table_exists) {
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}purchase_request_items");
+            if (!in_array('last_purchase_price', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}purchase_request_items ADD COLUMN last_purchase_price decimal(12,2) NOT NULL DEFAULT 0.00 AFTER estimated_price");
             }
         }
     }
