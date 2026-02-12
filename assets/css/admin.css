@@ -28,7 +28,10 @@
 /* Modal */
 .iw-modal { display: none; position: fixed; z-index: 100000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
 .iw-modal-content { background: #fff; margin: 5% auto; padding: 30px; width: 60%; max-width: 700px; border-radius: 8px; position: relative; overflow: visible; }
-.iw-modal-content select { position: relative; z-index: 100001; }
+.iw-modal-content select { cursor: pointer; pointer-events: auto !important; -webkit-appearance: menulist; appearance: menulist; }
+.iw-modal-content .form-table { overflow: visible; }
+.iw-modal-content .form-table td { overflow: visible; }
+.iw-modal-content .form-table select { width: 100%; min-height: 36px; padding: 5px 10px; border: 1px solid #8c8f94; border-radius: 4px; background-color: #fff; }
 .iw-modal-large { width: 80%; max-width: 1000px; }
 .iw-modal-close { position: absolute; left: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #666; }
 .iw-modal-close:hover { color: #000; }
