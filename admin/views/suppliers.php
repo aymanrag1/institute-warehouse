@@ -75,10 +75,13 @@ jQuery(document).ready(function($) {
 
     function loadSuppliers() {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_suppliers', nonce: iwAdmin.nonce}, function(r) {
-            if (!r.success) return;
-            suppliersData = r.data;
+            if (!r || !r.success) {
+                console.error('Failed to load suppliers:', r);
+                return;
+            }
+            suppliersData = r.data || [];
             var h = '';
-            r.data.forEach(function(s) {
+            suppliersData.forEach(function(s) {
                 h += '<tr>';
                 h += '<td>'+(s.supplier_number||'-')+'</td>';
                 h += '<td>'+s.name+'</td>';
@@ -92,6 +95,8 @@ jQuery(document).ready(function($) {
                 h += '</td></tr>';
             });
             $('#suppliers-list').html(h || '<tr><td colspan="6">لا يوجد موردين</td></tr>');
+        }).fail(function(xhr, status, error) {
+            console.error('AJAX Error loading suppliers:', error);
         });
     }
     loadSuppliers();
@@ -135,7 +140,7 @@ jQuery(document).ready(function($) {
 
     $('#iw-supplier-form').on('submit', function(e) {
         e.preventDefault();
-        $.post(iwAdmin.ajaxurl, {
+        var formData = {
             action: 'iw_save_supplier', nonce: iwAdmin.nonce,
             supplier_id: $('#sup_id').val(),
             name: $('#sup_name').val(),
@@ -149,9 +154,19 @@ jQuery(document).ready(function($) {
             commercial_reg_number: $('#sup_commercial_reg_number').val(),
             commercial_reg_file: $('#sup_commercial_reg_file').val(),
             specialty: $('#sup_specialty').val()
-        }, function(r) {
-            alert(r.data.message);
-            if (r.success) { $('#iw-supplier-modal').hide(); loadSuppliers(); }
+        };
+
+        $.post(iwAdmin.ajaxurl, formData, function(r) {
+            if (r && r.data && r.data.message) {
+                alert(r.data.message);
+            }
+            if (r && r.success) {
+                iwHideSupplierModal();
+                loadSuppliers();
+            }
+        }).fail(function(xhr, status, error) {
+            console.error('AJAX Error:', error);
+            alert('حدث خطأ في الاتصال بالخادم');
         });
     });
 
