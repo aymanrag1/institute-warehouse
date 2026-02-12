@@ -9,7 +9,7 @@
                 <td>
                     <div style="display:flex;gap:10px;align-items:center;">
                         <select id="ao_supplier_id" class="regular-text" style="flex:1;"><option value="">اختر المورد</option></select>
-                        <button type="button" class="button" onclick="$('#iw-new-supplier-modal').show()">+ إضافة مورد جديد</button>
+                        <button type="button" class="button" onclick="iwShowNewSupplierModal()">+ إضافة مورد جديد</button>
                     </div>
                 </td>
             </tr>
@@ -48,7 +48,7 @@
 <!-- New Supplier Modal -->
 <div id="iw-new-supplier-modal" class="iw-modal" style="display:none;">
     <div class="iw-modal-content">
-        <span class="iw-modal-close" onclick="$('#iw-new-supplier-modal').hide()">&times;</span>
+        <span class="iw-modal-close" onclick="iwHideNewSupplierModal()">&times;</span>
         <h2>إضافة مورد جديد</h2>
         <form id="iw-quick-supplier-form">
             <table class="form-table">
@@ -64,7 +64,7 @@
 <!-- View/Edit Order Modal -->
 <div id="iw-order-modal" class="iw-modal" style="display:none;">
     <div class="iw-modal-content" style="max-width:800px;">
-        <span class="iw-modal-close" onclick="$('#iw-order-modal').hide()">&times;</span>
+        <span class="iw-modal-close" onclick="iwHideOrderModal()">&times;</span>
         <div id="iw-order-modal-body"></div>
     </div>
 </div>
@@ -82,6 +82,20 @@ jQuery(document).ready(function($) {
         });
     }
     loadProducts();
+
+    // Modal functions
+    window.iwShowNewSupplierModal = function() {
+        $('#iw-quick-supplier-form')[0].reset();
+        $('#iw-new-supplier-modal').show();
+    };
+
+    window.iwHideNewSupplierModal = function() {
+        $('#iw-new-supplier-modal').hide();
+    };
+
+    window.iwHideOrderModal = function() {
+        $('#iw-order-modal').hide();
+    };
 
     function loadSuppliers() {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_suppliers', nonce: iwAdmin.nonce}, function(r) {

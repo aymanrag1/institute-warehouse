@@ -1,7 +1,7 @@
 <?php if (!defined('ABSPATH')) exit; wp_enqueue_media(); ?>
 <div class="wrap iw-wrap" dir="rtl">
     <h1>الموردين
-        <button class="button button-primary" onclick="$('#iw-supplier-modal').show();iwResetForm();">+ إضافة مورد</button>
+        <button class="button button-primary" onclick="iwShowSupplierModal()">+ إضافة مورد</button>
         <button class="button" onclick="iwPrintSuppliers()">طباعة السجل</button>
         <button class="button" onclick="iwExportToExcel()">تصدير Excel</button>
     </h1>
@@ -24,7 +24,7 @@
 <!-- Supplier Modal -->
 <div id="iw-supplier-modal" class="iw-modal" style="display:none;">
     <div class="iw-modal-content" style="max-width:700px;">
-        <span class="iw-modal-close" onclick="$('#iw-supplier-modal').hide()">&times;</span>
+        <span class="iw-modal-close" onclick="iwHideSupplierModal()">&times;</span>
         <h2 id="supplier-modal-title">إضافة مورد جديد</h2>
         <form id="iw-supplier-form">
             <input type="hidden" id="sup_id" value="0">
@@ -64,7 +64,7 @@
 <!-- View Supplier Modal -->
 <div id="iw-view-supplier-modal" class="iw-modal" style="display:none;">
     <div class="iw-modal-content" style="max-width:600px;">
-        <span class="iw-modal-close" onclick="$('#iw-view-supplier-modal').hide()">&times;</span>
+        <span class="iw-modal-close" onclick="iwHideViewSupplierModal()">&times;</span>
         <div id="iw-view-supplier-body"></div>
     </div>
 </div>
@@ -103,6 +103,19 @@ jQuery(document).ready(function($) {
         $('#supplier-modal-title').text('إضافة مورد جديد');
         $('#sup_tax_card_file, #sup_commercial_reg_file').val('');
         $('#sup_tax_card_file_name, #sup_commercial_reg_file_name').text('');
+    };
+
+    window.iwShowSupplierModal = function() {
+        iwResetForm();
+        $('#iw-supplier-modal').show();
+    };
+
+    window.iwHideSupplierModal = function() {
+        $('#iw-supplier-modal').hide();
+    };
+
+    window.iwHideViewSupplierModal = function() {
+        $('#iw-view-supplier-modal').hide();
     };
 
     // Upload file using WordPress media uploader
