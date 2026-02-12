@@ -120,9 +120,7 @@ class IW_Suppliers {
         }
 
         global $wpdb;
-
-        // Ensure table exists
-        $table = self::ensure_table_exists();
+        $table = $wpdb->prefix . 'iw_suppliers';
 
         // Validate name
         $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
@@ -130,9 +128,14 @@ class IW_Suppliers {
             wp_send_json_error(array('message' => 'اسم المورد مطلوب'));
         }
 
-        $data = array(
+        // Get existing columns in the table
+        $existing_columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}");
+
+        // All possible data fields
+        $all_data = array(
             'name'                  => $name,
             'address'               => sanitize_textarea_field($_POST['address'] ?? ''),
+            'phone'                 => sanitize_text_field($_POST['phone_mobile'] ?? ''), // old column name
             'phone_landline'        => sanitize_text_field($_POST['phone_landline'] ?? ''),
             'phone_mobile'          => sanitize_text_field($_POST['phone_mobile'] ?? ''),
             'email'                 => sanitize_email($_POST['email'] ?? ''),
@@ -142,23 +145,36 @@ class IW_Suppliers {
             'commercial_reg_number' => sanitize_text_field($_POST['commercial_reg_number'] ?? ''),
             'commercial_reg_file'   => esc_url_raw($_POST['commercial_reg_file'] ?? ''),
             'specialty'             => sanitize_text_field($_POST['specialty'] ?? ''),
+            'supplier_number'       => '', // will be set for new suppliers
         );
 
-        // Data format for wpdb
-        $format = array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');
+        // Filter to only include columns that exist in the table
+        $data = array();
+        $format = array();
+        foreach ($all_data as $col => $val) {
+            if (in_array($col, $existing_columns)) {
+                $data[$col] = $val;
+                $format[] = '%s';
+            }
+        }
 
         $id = intval($_POST['supplier_id'] ?? 0);
 
         if ($id > 0) {
-            // Update existing supplier
+            // Update existing supplier - remove supplier_number from update
+            unset($data['supplier_number']);
+            $format = array_values(array_fill(0, count($data), '%s'));
+
             $result = $wpdb->update($table, $data, array('id' => $id), $format, array('%d'));
             if ($result === false) {
                 wp_send_json_error(array('message' => 'خطأ في تحديث البيانات: ' . $wpdb->last_error));
             }
         } else {
-            // Insert new supplier
-            $data['supplier_number'] = self::generate_supplier_number();
-            $format[] = '%s'; // for supplier_number
+            // Insert new supplier - set supplier_number if column exists
+            if (in_array('supplier_number', $existing_columns)) {
+                $data['supplier_number'] = self::generate_supplier_number();
+            }
+            $format = array_values(array_fill(0, count($data), '%s'));
 
             $result = $wpdb->insert($table, $data, $format);
 
@@ -188,9 +204,7 @@ class IW_Suppliers {
         }
 
         global $wpdb;
-
-        // Ensure table exists
-        $table = self::ensure_table_exists();
+        $table = $wpdb->prefix . 'iw_suppliers';
 
         // Validate name
         $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
@@ -198,15 +212,28 @@ class IW_Suppliers {
             wp_send_json_error(array('message' => 'اسم المورد مطلوب'));
         }
 
-        $data = array(
-            'supplier_number' => self::generate_supplier_number(),
+        // Get existing columns
+        $existing_columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}");
+
+        // Build data based on existing columns
+        $all_data = array(
             'name'            => $name,
+            'supplier_number' => self::generate_supplier_number(),
+            'phone'           => sanitize_text_field($_POST['phone_mobile'] ?? $_POST['phone'] ?? ''),
             'phone_mobile'    => sanitize_text_field($_POST['phone_mobile'] ?? $_POST['phone'] ?? ''),
             'email'           => sanitize_email($_POST['email'] ?? ''),
             'address'         => sanitize_textarea_field($_POST['address'] ?? ''),
         );
 
-        $result = $wpdb->insert($table, $data, array('%s', '%s', '%s', '%s', '%s'));
+        $data = array();
+        foreach ($all_data as $col => $val) {
+            if (in_array($col, $existing_columns)) {
+                $data[$col] = $val;
+            }
+        }
+
+        $format = array_fill(0, count($data), '%s');
+        $result = $wpdb->insert($table, $data, $format);
 
         if ($result === false) {
             wp_send_json_error(array('message' => 'خطأ في حفظ المورد: ' . $wpdb->last_error));
