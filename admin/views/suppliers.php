@@ -161,8 +161,8 @@ jQuery(document).ready(function($) {
                 alert(r.data.message);
             }
             if (r && r.success) {
-                iwHideSupplierModal();
-                loadSuppliers();
+                // Reload page to ensure data is refreshed
+                window.location.reload();
             }
         }).fail(function(xhr, status, error) {
             console.error('AJAX Error:', error);
