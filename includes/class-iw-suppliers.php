@@ -63,26 +63,29 @@ class IW_Suppliers {
             // Table exists - check for missing columns and add them
             $columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}");
 
-            // Define columns that should exist
+            // Define columns that should exist (without AFTER to avoid dependency issues)
             $required_columns = array(
-                'supplier_number' => "ALTER TABLE {$table} ADD COLUMN supplier_number varchar(50) DEFAULT '' AFTER id",
-                'phone_landline' => "ALTER TABLE {$table} ADD COLUMN phone_landline varchar(50) DEFAULT '' AFTER address",
-                'phone_mobile' => "ALTER TABLE {$table} ADD COLUMN phone_mobile varchar(50) DEFAULT '' AFTER phone_landline",
-                'contact_person' => "ALTER TABLE {$table} ADD COLUMN contact_person varchar(255) DEFAULT '' AFTER email",
-                'tax_card_number' => "ALTER TABLE {$table} ADD COLUMN tax_card_number varchar(100) DEFAULT '' AFTER contact_person",
-                'tax_card_file' => "ALTER TABLE {$table} ADD COLUMN tax_card_file varchar(500) DEFAULT '' AFTER tax_card_number",
-                'commercial_reg_number' => "ALTER TABLE {$table} ADD COLUMN commercial_reg_number varchar(100) DEFAULT '' AFTER tax_card_file",
-                'commercial_reg_file' => "ALTER TABLE {$table} ADD COLUMN commercial_reg_file varchar(500) DEFAULT '' AFTER commercial_reg_number",
-                'specialty' => "ALTER TABLE {$table} ADD COLUMN specialty varchar(255) DEFAULT '' AFTER commercial_reg_file",
+                'supplier_number'       => "varchar(50) DEFAULT ''",
+                'address'               => "text",
+                'phone_landline'        => "varchar(50) DEFAULT ''",
+                'phone_mobile'          => "varchar(50) DEFAULT ''",
+                'email'                 => "varchar(255) DEFAULT ''",
+                'contact_person'        => "varchar(255) DEFAULT ''",
+                'tax_card_number'       => "varchar(100) DEFAULT ''",
+                'tax_card_file'         => "varchar(500) DEFAULT ''",
+                'commercial_reg_number' => "varchar(100) DEFAULT ''",
+                'commercial_reg_file'   => "varchar(500) DEFAULT ''",
+                'specialty'             => "varchar(255) DEFAULT ''",
             );
 
-            foreach ($required_columns as $col_name => $alter_sql) {
+            foreach ($required_columns as $col_name => $col_def) {
                 if (!in_array($col_name, $columns)) {
-                    $wpdb->query($alter_sql);
+                    $wpdb->query("ALTER TABLE {$table} ADD COLUMN {$col_name} {$col_def}");
                 }
             }
 
             // Migrate old 'phone' column to 'phone_mobile' if exists
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$table}"); // refresh
             if (in_array('phone', $columns) && !in_array('phone_mobile', $columns)) {
                 $wpdb->query("ALTER TABLE {$table} CHANGE phone phone_mobile varchar(50) DEFAULT ''");
             }
