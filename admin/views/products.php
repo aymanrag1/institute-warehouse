@@ -12,7 +12,13 @@
                 <table class="form-table">
                     <tr><th>اسم الصنف *</th><td><input type="text" id="product_name" class="regular-text" required></td></tr>
                     <tr><th>الكود (SKU)</th><td><input type="text" id="product_sku" class="regular-text"></td></tr>
-                    <tr><th>التصنيف</th><td><select id="product_category" class="regular-text"><?php echo IW_Categories::get_options_html(); ?></select></td></tr>
+                    <tr><th>التصنيف</th><td>
+                        <div style="position:relative;">
+                            <select id="product_category" name="product_category" style="width:100%;height:40px;padding:8px;border:1px solid #8c8f94;border-radius:4px;background:#fff;font-size:14px;cursor:pointer;">
+                                <option value="">-- اختر التصنيف --</option>
+                            </select>
+                        </div>
+                    </td></tr>
                     <tr><th>وحدة القياس</th><td><input type="text" id="product_unit" class="regular-text" placeholder="مثال: قطعة، كرتونة، متر"></td></tr>
                     <tr><th>الحد الأدنى للمخزون *</th><td><input type="number" id="product_min_stock" class="regular-text" min="0" value="0"></td></tr>
                     <tr><th>الحد الأقصى للمخزون *</th><td><input type="number" id="product_max_stock" class="regular-text" min="0" value="0"></td></tr>
@@ -80,10 +86,24 @@ jQuery(document).ready(function($) {
         });
     }
 
+    // Load categories into select
+    function loadCategories(selectedValue) {
+        $.post(iwAdmin.ajaxurl, {action: 'iw_get_categories', nonce: iwAdmin.nonce}, function(r) {
+            if (!r.success) return;
+            var h = '<option value="">-- اختر التصنيف --</option>';
+            r.data.forEach(function(c) {
+                var sel = (selectedValue && selectedValue === c.name) ? ' selected' : '';
+                h += '<option value="'+c.name+'"'+sel+'>'+c.name+'</option>';
+            });
+            $('#product_category').html(h);
+        });
+    }
+
     window.iwShowProductForm = function(id) {
         $('#product_id').val(0);
         $('#iw-product-form')[0].reset();
         $('#product-form-title').text('إضافة صنف جديد');
+        loadCategories('');
         $('#iw-product-modal').show();
     };
 
@@ -98,7 +118,7 @@ jQuery(document).ready(function($) {
             $('#product_id').val(p.id);
             $('#product_name').val(p.name);
             $('#product_sku').val(p.sku);
-            $('#product_category').val(p.category);
+            loadCategories(p.category);
             $('#product_unit').val(p.unit);
             $('#product_min_stock').val(p.min_stock);
             $('#product_max_stock').val(p.max_stock);
