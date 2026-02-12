@@ -44,7 +44,6 @@ class IW_Suppliers {
                 supplier_number varchar(50) DEFAULT '',
                 name varchar(255) NOT NULL,
                 address text,
-                phone_landline varchar(50) DEFAULT '',
                 phone_mobile varchar(50) DEFAULT '',
                 email varchar(255) DEFAULT '',
                 contact_person varchar(255) DEFAULT '',
@@ -67,7 +66,6 @@ class IW_Suppliers {
             $required_columns = array(
                 'supplier_number'       => "varchar(50) DEFAULT ''",
                 'address'               => "text",
-                'phone_landline'        => "varchar(50) DEFAULT ''",
                 'phone_mobile'          => "varchar(50) DEFAULT ''",
                 'email'                 => "varchar(255) DEFAULT ''",
                 'contact_person'        => "varchar(255) DEFAULT ''",
@@ -136,7 +134,6 @@ class IW_Suppliers {
             'name'                  => $name,
             'address'               => sanitize_textarea_field($_POST['address'] ?? ''),
             'phone'                 => sanitize_text_field($_POST['phone_mobile'] ?? ''), // old column name
-            'phone_landline'        => sanitize_text_field($_POST['phone_landline'] ?? ''),
             'phone_mobile'          => sanitize_text_field($_POST['phone_mobile'] ?? ''),
             'email'                 => sanitize_email($_POST['email'] ?? ''),
             'contact_person'        => sanitize_text_field($_POST['contact_person'] ?? ''),

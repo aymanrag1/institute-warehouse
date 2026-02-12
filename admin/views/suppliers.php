@@ -32,8 +32,7 @@
                 <tr><th>رقم المورد</th><td><input type="text" id="sup_number" class="regular-text" readonly disabled placeholder="(يتم توليده تلقائياً)"></td></tr>
                 <tr><th>اسم المورد *</th><td><input type="text" id="sup_name" class="regular-text" required></td></tr>
                 <tr><th>العنوان</th><td><textarea id="sup_address" class="large-text" rows="2"></textarea></td></tr>
-                <tr><th>تليفون أرضي</th><td><input type="text" id="sup_phone_landline" class="regular-text"></td></tr>
-                <tr><th>تليفون محمول</th><td><input type="text" id="sup_phone_mobile" class="regular-text"></td></tr>
+                <tr><th>رقم التليفون</th><td><input type="text" id="sup_phone_mobile" class="regular-text"></td></tr>
                 <tr><th>البريد الإلكتروني</th><td><input type="email" id="sup_email" class="regular-text"></td></tr>
                 <tr><th>اسم المسؤول</th><td><input type="text" id="sup_contact_person" class="regular-text"></td></tr>
                 <tr><th>رقم البطاقة الضريبية</th><td><input type="text" id="sup_tax_card_number" class="regular-text"></td></tr>
@@ -145,7 +144,6 @@ jQuery(document).ready(function($) {
             supplier_id: $('#sup_id').val(),
             name: $('#sup_name').val(),
             address: $('#sup_address').val(),
-            phone_landline: $('#sup_phone_landline').val(),
             phone_mobile: $('#sup_phone_mobile').val(),
             email: $('#sup_email').val(),
             contact_person: $('#sup_contact_person').val(),
@@ -179,8 +177,7 @@ jQuery(document).ready(function($) {
             html += '<tr><th>رقم المورد</th><td>'+(s.supplier_number||'-')+'</td></tr>';
             html += '<tr><th>اسم المورد</th><td>'+s.name+'</td></tr>';
             html += '<tr><th>العنوان</th><td>'+(s.address||'-')+'</td></tr>';
-            html += '<tr><th>تليفون أرضي</th><td>'+(s.phone_landline||'-')+'</td></tr>';
-            html += '<tr><th>تليفون محمول</th><td>'+(s.phone_mobile||s.phone||'-')+'</td></tr>';
+            html += '<tr><th>رقم التليفون</th><td>'+(s.phone_mobile||s.phone||'-')+'</td></tr>';
             html += '<tr><th>البريد الإلكتروني</th><td>'+(s.email||'-')+'</td></tr>';
             html += '<tr><th>اسم المسؤول</th><td>'+(s.contact_person||'-')+'</td></tr>';
             html += '<tr><th>رقم البطاقة الضريبية</th><td>'+(s.tax_card_number||'-')+'</td></tr>';
@@ -280,7 +277,6 @@ jQuery(document).ready(function($) {
             $('#sup_number').val(s.supplier_number||'');
             $('#sup_name').val(s.name);
             $('#sup_address').val(s.address||'');
-            $('#sup_phone_landline').val(s.phone_landline||'');
             $('#sup_phone_mobile').val(s.phone_mobile||s.phone||'');
             $('#sup_email').val(s.email||'');
             $('#sup_contact_person').val(s.contact_person||'');
@@ -311,7 +307,7 @@ jQuery(document).ready(function($) {
         content += '<h2 style="text-align:center;">سجل الموردين</h2>';
         content += '<table border="1" cellpadding="6" cellspacing="0" width="100%" style="border-collapse:collapse;text-align:right;font-size:11px;">';
         content += '<tr style="background:#f0f0f0;"><th>#</th><th>رقم المورد</th><th>اسم المورد</th><th>العنوان</th>';
-        content += '<th>أرضي</th><th>محمول</th><th>إيميل</th><th>المسؤول</th>';
+        content += '<th>التليفون</th><th>إيميل</th><th>المسؤول</th>';
         content += '<th>الضريبية</th><th>التجاري</th><th>التخصص</th></tr>';
 
         suppliersData.forEach(function(s, idx) {
@@ -320,7 +316,6 @@ jQuery(document).ready(function($) {
             content += '<td>'+(s.supplier_number||'-')+'</td>';
             content += '<td>'+s.name+'</td>';
             content += '<td>'+(s.address||'-')+'</td>';
-            content += '<td>'+(s.phone_landline||'-')+'</td>';
             content += '<td>'+(s.phone_mobile||s.phone||'-')+'</td>';
             content += '<td>'+(s.email||'-')+'</td>';
             content += '<td>'+(s.contact_person||'-')+'</td>';
@@ -345,7 +340,7 @@ jQuery(document).ready(function($) {
         }
 
         // Build CSV content
-        var headers = ['رقم المورد', 'اسم المورد', 'العنوان', 'تليفون أرضي', 'تليفون محمول', 'البريد الإلكتروني', 'المسؤول', 'رقم البطاقة الضريبية', 'رقم السجل التجاري', 'التخصص'];
+        var headers = ['رقم المورد', 'اسم المورد', 'العنوان', 'رقم التليفون', 'البريد الإلكتروني', 'المسؤول', 'رقم البطاقة الضريبية', 'رقم السجل التجاري', 'التخصص'];
         var csvContent = '\uFEFF'; // BOM for UTF-8
         csvContent += headers.join(',') + '\n';
 
@@ -354,7 +349,6 @@ jQuery(document).ready(function($) {
                 s.supplier_number || '',
                 '"' + (s.name || '').replace(/"/g, '""') + '"',
                 '"' + (s.address || '').replace(/"/g, '""').replace(/\n/g, ' ') + '"',
-                s.phone_landline || '',
                 s.phone_mobile || s.phone || '',
                 s.email || '',
                 '"' + (s.contact_person || '').replace(/"/g, '""') + '"',
