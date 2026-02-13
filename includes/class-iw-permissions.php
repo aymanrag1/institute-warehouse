@@ -135,8 +135,35 @@ class IW_Permissions {
             return true;
         }
 
-        // All other users without custom permissions = no access
-        // They need to be assigned permissions from the permissions page
+        // Fallback: check WordPress capabilities for users without custom permissions
+        // Map features to WordPress capabilities
+        $feature_to_cap = array(
+            'dashboard'          => 'iw_view_warehouse',
+            'products'           => 'iw_view_products',
+            'add_stock'          => 'iw_add_stock',
+            'withdraw_stock'     => 'iw_withdraw_stock',
+            'withdrawal_orders'  => 'iw_withdraw_stock',
+            'purchase_requests'  => 'iw_add_stock',
+            'approve_orders'     => 'iw_approve_orders',
+            'reports'            => 'iw_view_reports',
+            'departments'        => 'iw_manage_departments',
+            'suppliers'          => 'iw_manage_suppliers',
+            'opening_balance'    => 'iw_add_stock',
+            'import_data'        => 'iw_import_data',
+            'settings'           => 'manage_options',
+            'permissions'        => 'manage_options',
+        );
+
+        if (isset($feature_to_cap[$feature]) && current_user_can($feature_to_cap[$feature])) {
+            // User has WP capability - allow view/read, but read_write only for specific caps
+            if ($required_level === 'read_write') {
+                // For write access, check if they have the specific capability
+                return current_user_can($feature_to_cap[$feature]);
+            }
+            return true;
+        }
+
+        // All other users without custom permissions or WP capabilities = no access
         return false;
     }
 

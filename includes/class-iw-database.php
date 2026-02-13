@@ -93,7 +93,9 @@ class IW_Database {
             product_id bigint(20) UNSIGNED NOT NULL,
             quantity int(11) NOT NULL,
             unit_price decimal(12,2) NOT NULL DEFAULT 0.00,
-            PRIMARY KEY (id)
+            PRIMARY KEY (id),
+            KEY idx_order_id (order_id),
+            KEY idx_product_id (product_id)
         ) $charset;";
         dbDelta($sql);
 
@@ -112,7 +114,10 @@ class IW_Database {
             batch_number varchar(100) DEFAULT '',
             created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
+            PRIMARY KEY (id),
+            KEY idx_product_type (product_id, transaction_type),
+            KEY idx_remaining (product_id, remaining_qty),
+            KEY idx_created_at (created_at)
         ) $charset;";
         dbDelta($sql);
 
@@ -133,7 +138,10 @@ class IW_Database {
             created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
+            PRIMARY KEY (id),
+            KEY idx_status (status),
+            KEY idx_department (department_id),
+            KEY idx_created_at (created_at)
         ) $charset;";
         dbDelta($sql);
 
@@ -146,7 +154,9 @@ class IW_Database {
             approved_quantity int(11) DEFAULT NULL,
             unit_price decimal(12,2) NOT NULL DEFAULT 0.00,
             custody_employee_name varchar(255) DEFAULT '',
-            PRIMARY KEY (id)
+            PRIMARY KEY (id),
+            KEY idx_order_id (order_id),
+            KEY idx_product_id (product_id)
         ) $charset;";
         dbDelta($sql);
 

@@ -345,10 +345,32 @@ class IW_Withdrawal_Orders {
             "SELECT * FROM {$prefix}withdrawal_order_items WHERE order_id = %d", $order_id
         ));
 
+        // First pass: validate all items have sufficient stock
+        $errors = array();
         foreach ($items as $item) {
             $qty = $item->approved_quantity !== null ? $item->approved_quantity : $item->quantity;
             if ($qty > 0) {
-                IW_Transactions::withdraw_fifo($item->product_id, $qty);
+                $product = IW_Products::get_by_id($item->product_id);
+                if ($product && $product->current_stock < $qty) {
+                    $errors[] = 'الصنف "' . $product->name . '" الرصيد غير كافي (المتاح: ' . $product->current_stock . '، المطلوب: ' . $qty . ')';
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            wp_send_json_error(array('message' => implode("\n", $errors)));
+        }
+
+        // Second pass: execute withdrawals
+        foreach ($items as $item) {
+            $qty = $item->approved_quantity !== null ? $item->approved_quantity : $item->quantity;
+            if ($qty > 0) {
+                $result = IW_Transactions::withdraw_fifo($item->product_id, $qty);
+
+                // Check if withdraw_fifo returned an error
+                if (is_wp_error($result)) {
+                    wp_send_json_error(array('message' => $result->get_error_message()));
+                }
 
                 $wpdb->insert($prefix . 'transactions', array(
                     'transaction_type' => 'withdraw',

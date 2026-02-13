@@ -44,18 +44,36 @@ class IW_Transactions {
     }
 
     /**
-     * Withdraw stock using FIFO
+     * Withdraw stock using FIFO (Transaction Safe)
+     * Returns total_cost on success, or WP_Error on failure
      */
     public static function withdraw_fifo($product_id, $quantity) {
         global $wpdb;
         $table = $wpdb->prefix . 'iw_transactions';
 
+        // Start transaction
+        $wpdb->query('START TRANSACTION');
+
+        // Lock rows for update to prevent race conditions
         $batches = $wpdb->get_results($wpdb->prepare(
             "SELECT id, remaining_qty, unit_price FROM $table
              WHERE product_id = %d AND transaction_type = 'add' AND remaining_qty > 0
-             ORDER BY created_at ASC",
+             ORDER BY created_at ASC
+             FOR UPDATE",
             $product_id
         ));
+
+        // Calculate total available quantity
+        $total_available = 0;
+        foreach ($batches as $batch) {
+            $total_available += $batch->remaining_qty;
+        }
+
+        // Check if we have enough stock
+        if ($total_available < $quantity) {
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('insufficient_stock', 'الرصيد غير كافي. المتاح: ' . $total_available . '، المطلوب: ' . $quantity);
+        }
 
         $remaining = $quantity;
         $total_cost = 0;
@@ -64,15 +82,27 @@ class IW_Transactions {
             if ($remaining <= 0) break;
 
             $deduct = min($remaining, $batch->remaining_qty);
-            $wpdb->update($table,
+            $result = $wpdb->update($table,
                 array('remaining_qty' => $batch->remaining_qty - $deduct),
-                array('id' => $batch->id)
+                array('id' => $batch->id),
+                array('%d'),
+                array('%d')
             );
+
+            if ($result === false) {
+                $wpdb->query('ROLLBACK');
+                return new WP_Error('update_failed', 'فشل في تحديث الرصيد');
+            }
+
             $total_cost += $deduct * $batch->unit_price;
             $remaining -= $deduct;
         }
 
+        // Update product stock
         IW_Products::update_stock($product_id, -$quantity);
+
+        // Commit transaction
+        $wpdb->query('COMMIT');
 
         return $total_cost;
     }
