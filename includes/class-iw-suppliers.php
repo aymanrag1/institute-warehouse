@@ -118,7 +118,9 @@ class IW_Suppliers {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'iw_suppliers';
+
+        // Ensure table exists first
+        $table = self::ensure_table_exists();
 
         // Validate name
         $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
@@ -201,7 +203,9 @@ class IW_Suppliers {
         }
 
         global $wpdb;
-        $table = $wpdb->prefix . 'iw_suppliers';
+
+        // Ensure table exists first
+        $table = self::ensure_table_exists();
 
         // Validate name
         $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
