@@ -186,7 +186,7 @@ class IW_Withdrawal_Orders {
         ));
 
         $items = $wpdb->get_results($wpdb->prepare(
-            "SELECT i.*, p.name as product_name, p.unit as product_unit, p.current_stock, i.custody_employee_name
+            "SELECT i.*, p.name as product_name, p.unit as product_unit, p.current_stock
              FROM {$prefix}withdrawal_order_items i
              LEFT JOIN {$prefix}products p ON i.product_id = p.id
              WHERE i.order_id = %d", $order_id

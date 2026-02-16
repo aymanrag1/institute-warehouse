@@ -58,7 +58,6 @@ class IW_Database {
             supplier_number varchar(50) DEFAULT '',
             name varchar(255) NOT NULL,
             address text,
-            phone_landline varchar(50) DEFAULT '',
             phone_mobile varchar(50) DEFAULT '',
             email varchar(255) DEFAULT '',
             contact_person varchar(255) DEFAULT '',
@@ -298,11 +297,8 @@ class IW_Database {
             if (!in_array('supplier_number', $columns)) {
                 $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN supplier_number varchar(50) DEFAULT '' AFTER id");
             }
-            if (!in_array('phone_landline', $columns)) {
-                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN phone_landline varchar(50) DEFAULT '' AFTER address");
-            }
             if (!in_array('phone_mobile', $columns)) {
-                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN phone_mobile varchar(50) DEFAULT '' AFTER phone_landline");
+                $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN phone_mobile varchar(50) DEFAULT '' AFTER address");
             }
             if (!in_array('contact_person', $columns)) {
                 $wpdb->query("ALTER TABLE {$prefix}suppliers ADD COLUMN contact_person varchar(255) DEFAULT '' AFTER email");
