@@ -31,10 +31,18 @@
     </div>
 
     <!-- Bulk Actions -->
-    <div style="margin-bottom:10px;">
+    <div style="margin-bottom:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input type="text" id="iw-product-search" placeholder="بحث باسم الصنف..." style="width:200px;padding:5px 8px;" oninput="iwFilterProducts()">
+        <select id="iw-category-filter" onchange="iwFilterProducts()" style="padding:5px 8px;">
+            <option value="">-- جميع التصنيفات --</option>
+        </select>
         <button class="button" onclick="iwSelectAll()">تحديد الكل</button>
         <button class="button iw-btn-danger" onclick="iwBulkDeleteProducts()">حذف المحدد</button>
         <button class="button button-primary" onclick="iwPrintProducts()">طباعة المحدد</button>
+        <select id="iw-bulk-category" style="padding:5px 8px;">
+            <option value="">-- تغيير التصنيف إلى --</option>
+        </select>
+        <button class="button" onclick="iwBulkChangeCategory()">تطبيق التصنيف</button>
     </div>
 
     <!-- Products Table -->
@@ -61,30 +69,78 @@
 
 <script>
 jQuery(document).ready(function($) {
+    var allProducts = [];
     loadProducts();
 
     function loadProducts() {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(res) {
             if (!res.success) return;
-            var html = '';
-            res.data.forEach(function(p, i) {
-                var status = '';
-                if (p.min_stock > 0 && p.current_stock <= p.min_stock) {
-                    status = '<span class="iw-badge iw-badge-danger">تحت الحد الأدنى</span>';
-                } else if (p.max_stock > 0 && p.current_stock >= p.max_stock) {
-                    status = '<span class="iw-badge iw-badge-warning">وصل الحد الأقصى</span>';
-                } else {
-                    status = '<span class="iw-badge iw-badge-success">طبيعي</span>';
-                }
-                html += '<tr><td><input type="checkbox" class="iw-row-check" value="'+p.id+'"></td><td>'+(i+1)+'</td><td>'+p.name+'</td><td>'+(p.sku||'-')+'</td><td>'+(p.category||'-')+'</td>';
-                html += '<td>'+(p.unit||'-')+'</td><td>'+p.current_stock+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td>';
-                html += '<td>'+parseFloat(p.price).toFixed(2)+'</td><td>'+status+'</td>';
-                html += '<td><button class="button" onclick="iwEditProduct('+p.id+')">تعديل</button> ';
-                html += '<button class="button iw-btn-danger" onclick="iwDeleteProduct('+p.id+')">حذف</button></td></tr>';
-            });
-            $('#iw-products-table').html(html || '<tr><td colspan="12">لا توجد أصناف</td></tr>');
+            allProducts = res.data;
+            loadFilterCategories();
+            renderProducts(allProducts);
         });
     }
+
+    function loadFilterCategories() {
+        $.post(iwAdmin.ajaxurl, {action: 'iw_get_categories', nonce: iwAdmin.nonce}, function(r) {
+            if (!r.success) return;
+            var h = '<option value="">-- جميع التصنيفات --</option>';
+            var h2 = '<option value="">-- تغيير التصنيف إلى --</option>';
+            r.data.forEach(function(c) {
+                h += '<option value="'+c.name+'">'+c.name+'</option>';
+                h2 += '<option value="'+c.name+'">'+c.name+'</option>';
+            });
+            $('#iw-category-filter').html(h);
+            $('#iw-bulk-category').html(h2);
+        });
+    }
+
+    window.iwFilterProducts = function() {
+        var search = $('#iw-product-search').val().toLowerCase();
+        var cat = $('#iw-category-filter').val();
+        var filtered = allProducts.filter(function(p) {
+            var matchName = !search || p.name.toLowerCase().indexOf(search) !== -1;
+            var matchCat = !cat || (p.category || '') === cat;
+            return matchName && matchCat;
+        });
+        renderProducts(filtered);
+    };
+
+    function renderProducts(data) {
+        var html = '';
+        data.forEach(function(p, i) {
+            var status = '';
+            if (p.min_stock > 0 && p.current_stock <= p.min_stock) {
+                status = '<span class="iw-badge iw-badge-danger">تحت الحد الأدنى</span>';
+            } else if (p.max_stock > 0 && p.current_stock >= p.max_stock) {
+                status = '<span class="iw-badge iw-badge-warning">وصل الحد الأقصى</span>';
+            } else {
+                status = '<span class="iw-badge iw-badge-success">طبيعي</span>';
+            }
+            html += '<tr><td><input type="checkbox" class="iw-row-check" value="'+p.id+'"></td><td>'+(i+1)+'</td><td>'+p.name+'</td><td>'+(p.sku||'-')+'</td><td>'+(p.category||'-')+'</td>';
+            html += '<td>'+(p.unit||'-')+'</td><td>'+p.current_stock+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td>';
+            html += '<td>'+parseFloat(p.price).toFixed(2)+'</td><td>'+status+'</td>';
+            html += '<td><button class="button" onclick="iwEditProduct('+p.id+')">تعديل</button> ';
+            html += '<button class="button iw-btn-danger" onclick="iwDeleteProduct('+p.id+')">حذف</button></td></tr>';
+        });
+        $('#iw-products-table').html(html || '<tr><td colspan="12">لا توجد أصناف</td></tr>');
+    }
+
+    window.iwBulkChangeCategory = function() {
+        var newCat = $('#iw-bulk-category').val();
+        if (!newCat) { alert('اختر التصنيف أولاً'); return; }
+        var ids = [];
+        $('.iw-row-check:checked').each(function() { ids.push($(this).val()); });
+        if (!ids.length) { alert('اختر أصناف أولاً'); return; }
+        if (!confirm('هل تريد تغيير تصنيف ' + ids.length + ' أصناف إلى "' + newCat + '"؟')) return;
+        var done = 0;
+        ids.forEach(function(id) {
+            $.post(iwAdmin.ajaxurl, {action: 'iw_save_product', nonce: iwAdmin.nonce, product_id: id, category: newCat, bulk_category: 1}, function() {
+                done++;
+                if (done === ids.length) { alert('تم تغيير تصنيف ' + ids.length + ' أصناف'); loadProducts(); }
+            });
+        });
+    };
 
     // Load categories into select
     function loadCategories(selectedValue) {

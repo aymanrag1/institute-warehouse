@@ -31,13 +31,12 @@
     <!-- Auto Generate -->
     <div id="pr-tab-auto" class="iw-tab-content" style="display:none;">
         <h2>توليد طلب شراء للأصناف تحت الحد الأدنى</h2>
-        <p>اختر التصنيف ثم اضغط "توليد" لإنشاء طلب شراء للأصناف التي وصلت للحد الأدنى في هذا التصنيف.</p>
+        <p>اختر تصنيف أو أكثر ثم اضغط "توليد" لإنشاء طلب شراء للأصناف التي وصلت للحد الأدنى.</p>
         <table class="form-table" style="max-width:600px;">
             <tr>
-                <th>التصنيف</th>
+                <th>التصنيفات</th>
                 <td>
-                    <select id="auto-gen-category" class="regular-text">
-                        <option value="">-- جميع التصنيفات --</option>
+                    <select id="auto-gen-category" class="regular-text" multiple size="6" style="min-width:300px;min-height:120px;">
                         <?php
                         $categories = IW_Categories::get_all();
                         foreach ($categories as $cat) {
@@ -45,6 +44,7 @@
                         }
                         ?>
                     </select>
+                    <p class="description">اضغط Ctrl للاختيار المتعدد. عدم الاختيار = جميع التصنيفات.</p>
                 </td>
             </tr>
         </table>
@@ -155,7 +155,8 @@ jQuery(document).ready(function($) {
     });
 
     window.iwAutoGenerate = function() {
-        var category = $('#auto-gen-category').val();
+        var categories = $('#auto-gen-category').val() || [];
+        var category = Array.isArray(categories) ? categories.join(',') : categories;
         $.post(iwAdmin.ajaxurl, {action: 'iw_auto_generate_purchase_requests', nonce: iwAdmin.nonce, category: category}, function(r) {
             if (!r.success) { alert('حدث خطأ'); return; }
             var d = r.data;

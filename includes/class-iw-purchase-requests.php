@@ -147,13 +147,108 @@ class IW_Purchase_Requests {
     }
 
     /**
+     * Auto-generate for multiple categories (creates one combined request)
+     */
+    public static function auto_generate_multi($categories) {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        // Build IN clause for multiple categories
+        $placeholders = implode(',', array_fill(0, count($categories), '%s'));
+        $where = $wpdb->prepare(
+            "WHERE min_stock > 0 AND current_stock <= min_stock AND category IN ($placeholders)",
+            $categories
+        );
+
+        $low_stock = $wpdb->get_results(
+            "SELECT * FROM {$prefix}products {$where} ORDER BY name ASC"
+        );
+
+        if (empty($low_stock)) {
+            return array('created' => 0, 'skipped' => 0, 'message' => 'لا توجد أصناف في التصنيفات المحددة وصلت للحد الأدنى');
+        }
+
+        // Check pending requests
+        $pending_product_ids = $wpdb->get_col(
+            "SELECT DISTINCT pri.product_id FROM {$prefix}purchase_request_items pri
+             INNER JOIN {$prefix}purchase_requests pr ON pri.request_id = pr.id
+             WHERE pr.status IN ('pending', 'approved')"
+        );
+        if (!is_array($pending_product_ids)) $pending_product_ids = array();
+
+        $items_to_request = array();
+        $skipped = 0;
+        foreach ($low_stock as $product) {
+            if (in_array($product->id, $pending_product_ids)) {
+                $skipped++;
+                continue;
+            }
+            $needed = $product->max_stock - $product->current_stock;
+            if ($needed <= 0) $needed = $product->min_stock;
+            $last_price = self::get_last_purchase_price($product->id);
+            $items_to_request[] = array(
+                'product_id'          => $product->id,
+                'product_name'        => $product->name,
+                'quantity'            => $needed,
+                'estimated_price'     => $last_price,
+                'last_purchase_price' => $last_price,
+            );
+        }
+
+        if (empty($items_to_request)) {
+            return array('created' => 0, 'skipped' => $skipped,
+                'message' => 'جميع الأصناف في التصنيفات المحددة لديها طلبات شراء معلقة بالفعل');
+        }
+
+        $request_number = self::generate_request_number();
+        $notes = 'طلب شراء - تصنيفات: ' . implode('، ', $categories);
+
+        $wpdb->insert($prefix . 'purchase_requests', array(
+            'request_number' => $request_number,
+            'status'         => 'pending',
+            'notes'          => $notes,
+            'created_by'     => get_current_user_id(),
+        ));
+
+        $request_id = $wpdb->insert_id;
+
+        foreach ($items_to_request as $item) {
+            $wpdb->insert($prefix . 'purchase_request_items', array(
+                'request_id'          => $request_id,
+                'product_id'          => $item['product_id'],
+                'quantity'            => $item['quantity'],
+                'estimated_price'     => $item['estimated_price'],
+                'last_purchase_price' => $item['last_purchase_price'],
+            ));
+        }
+
+        self::notify_approvers($request_number);
+
+        return array(
+            'created' => count($items_to_request),
+            'skipped' => $skipped,
+            'request_id' => $request_id,
+            'request_number' => $request_number,
+            'items' => $items_to_request,
+            'message' => 'تم إنشاء طلب شراء رقم ' . $request_number . ' يحتوي على ' . count($items_to_request) . ' أصناف',
+        );
+    }
+
+    /**
      * AJAX: Generate purchase request with category filter (manual button click)
      */
     public static function ajax_auto_generate() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
 
-        $category = sanitize_text_field($_POST['category'] ?? '');
-        $result = self::auto_generate($category);
+        $category_raw = sanitize_text_field($_POST['category'] ?? '');
+        // Support multiple categories separated by comma
+        if (!empty($category_raw) && strpos($category_raw, ',') !== false) {
+            $categories = array_map('trim', explode(',', $category_raw));
+            $categories = array_filter($categories);
+            $result = self::auto_generate_multi($categories);
+        } else {
+            $result = self::auto_generate($category_raw);
+        }
 
         if (!$result) {
             $result = array('created' => 0, 'message' => 'لا توجد أصناف وصلت للحد الأدنى');

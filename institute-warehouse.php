@@ -3,7 +3,7 @@
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
  * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
- * Version: 2.2.2
+ * Version: 2.3.2
  * Author: AYMAN RAGAB
  * Author URI: tel:00201159230034
  * Text Domain: institute-warehouse
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.2.2');
+define('IW_VERSION', '2.3.2');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
 

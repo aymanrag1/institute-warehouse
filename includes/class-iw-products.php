@@ -20,6 +20,14 @@ class IW_Products {
         global $wpdb;
         $table = $wpdb->prefix . 'iw_products';
 
+        $id = intval($_POST['product_id']);
+
+        // Bulk category change - update only category field
+        if (!empty($_POST['bulk_category']) && $id > 0) {
+            $wpdb->update($table, array('category' => sanitize_text_field($_POST['category'])), array('id' => $id));
+            wp_send_json_success(array('id' => $id, 'message' => 'تم تغيير التصنيف'));
+        }
+
         $data = array(
             'name'          => sanitize_text_field($_POST['name']),
             'sku'           => sanitize_text_field($_POST['sku']),
@@ -30,8 +38,6 @@ class IW_Products {
             'price'         => floatval($_POST['price']),
             'description'   => sanitize_textarea_field($_POST['description']),
         );
-
-        $id = intval($_POST['product_id']);
 
         if ($id > 0) {
             $wpdb->update($table, $data, array('id' => $id));

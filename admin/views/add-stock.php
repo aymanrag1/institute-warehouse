@@ -153,9 +153,11 @@ jQuery(document).ready(function($) {
     // Calculate row total
     window.iwCalcRowTotal = function(el) {
         var $row = $(el).closest('tr');
-        var $product = $row.find('.ao-product');
-        var price = $product.find(':selected').data('price') || 0;
-        $row.find('.ao-price').val(parseFloat(price).toFixed(2));
+        // Only auto-fill price when product changes, not when price is manually edited
+        if ($(el).hasClass('ao-product')) {
+            var price = $(el).find(':selected').data('price') || 0;
+            $row.find('.ao-price').val(parseFloat(price).toFixed(2));
+        }
 
         var qty = parseInt($row.find('.ao-qty').val()) || 0;
         var unitPrice = parseFloat($row.find('.ao-price').val()) || 0;
@@ -276,7 +278,7 @@ jQuery(document).ready(function($) {
             content += '</tr></table>';
 
             var w = window.open('','','width=800,height=600');
-            w.document.write('<html dir="rtl"><head><title>إذن إضافة</title><style>body{font-family:Arial,sans-serif;padding:20px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
+            w.document.write('<html dir="rtl"><head><title>إذن إضافة</title><style>body{font-family:Arial,sans-serif;padding:20px;direction:rtl;text-align:right;}table{direction:rtl;text-align:right;}th{background:#f0f0f0;text-align:right;}td{text-align:right;}</style></head><body>'+content+'</body></html>');
             w.document.close(); w.print();
         });
     };
@@ -300,6 +302,7 @@ jQuery(document).ready(function($) {
                 html += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
             });
             html += '</tbody></table>';
+            html += '<p style="margin-top:10px;"><button type="button" class="button" onclick="iwAddEditItem()">+ إضافة صنف</button></p>';
             html += '<p><button type="submit" class="button button-primary">حفظ التعديلات</button></p></form>';
             $('#iw-order-modal-body').html(html);
 
@@ -316,13 +319,27 @@ jQuery(document).ready(function($) {
         });
     };
 
+    // Add new item to edit form
+    window.iwAddEditItem = function() {
+        var opts = '<option value="">اختر الصنف</option>';
+        products.forEach(function(p) { opts += '<option value="'+p.id+'" data-price="'+p.price+'">'+p.name+'</option>'; });
+        var row = '<tr class="edit-item-row">';
+        row += '<td><select class="edit-new-product regular-text" onchange="var p=$(this).find(\':selected\');$(this).closest(\'tr\').data(\'product\',$(this).val());$(this).closest(\'tr\').find(\'.edit-price\').val(p.data(\'price\')||0);">'+opts+'</select></td>';
+        row += '<td><input type="number" class="edit-qty" value="1" min="1"></td>';
+        row += '<td><input type="number" class="edit-price" value="0" min="0" step="0.01"></td>';
+        row += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
+        $('#edit-items-body').append(row);
+    };
+
     // Submit edit
     $(document).on('submit', '#iw-edit-order-form', function(e) {
         e.preventDefault();
         var items = [];
         $('.edit-item-row').each(function() {
+            var pid = $(this).data('product') || $(this).find('.edit-new-product').val();
+            if (!pid) return;
             items.push({
-                product_id: $(this).data('product'),
+                product_id: pid,
                 quantity: $(this).find('.edit-qty').val(),
                 unit_price: $(this).find('.edit-price').val()
             });
