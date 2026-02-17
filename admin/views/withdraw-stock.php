@@ -163,7 +163,7 @@ jQuery(document).ready(function($) {
         products.forEach(function(p) { opts += '<option value="'+p.id+'" data-stock="'+(p.current_stock||0)+'">'+p.name+' ('+(p.current_stock||0)+' '+(p.unit||'')+')</option>'; });
         var row = '<tr><td><select class="wd-product regular-text" onchange="iwUpdateStock(this)">'+opts+'</select></td>';
         row += '<td class="wd-available">-</td>';
-        row += '<td><input type="number" class="wd-qty" min="1" value="1"></td>';
+        row += '<td><input type="number" class="wd-qty" min="1" value="1" onchange="iwValidateQty(this)"></td>';
         row += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
         var $row = $(row);
         $('#wd-items-body').append($row);
@@ -183,19 +183,57 @@ jQuery(document).ready(function($) {
     };
 
     window.iwUpdateStock = function(sel) {
-        var stock = $(sel).find(':selected').data('stock') || 0;
-        $(sel).closest('tr').find('.wd-available').text(stock);
+        var stock = parseInt($(sel).find(':selected').data('stock')) || 0;
+        var $row = $(sel).closest('tr');
+        var $available = $row.find('.wd-available');
+        var $qty = $row.find('.wd-qty');
+
+        if (!$(sel).val()) {
+            $available.text('-').css('color', '');
+            $qty.prop('disabled', false).removeAttr('max');
+            return;
+        }
+
+        if (stock <= 0) {
+            $available.html('<span style="color:red;font-weight:bold;">0 - لا يوجد رصيد!</span>');
+            $qty.prop('disabled', true).val(0);
+        } else {
+            $available.html('<span style="color:green;font-weight:bold;">' + stock + '</span>');
+            $qty.prop('disabled', false).attr('max', stock).val(1);
+        }
+    };
+
+    // Validate quantity against available stock
+    window.iwValidateQty = function(input) {
+        var $row = $(input).closest('tr');
+        var stock = parseInt($row.find('.wd-product :selected').data('stock')) || 0;
+        var qty = parseInt($(input).val()) || 0;
+        if (stock > 0 && qty > stock) {
+            alert('الكمية المطلوبة (' + qty + ') أكبر من الرصيد المتاح (' + stock + ')');
+            $(input).val(stock);
+        }
     };
 
     // Submit withdrawal order
     $('#iw-withdrawal-form').on('submit', function(e) {
         e.preventDefault();
         var items = [];
+        var errors = [];
         $('#wd-items-body tr').each(function() {
             var pid = $(this).find('.wd-product').val();
-            var qty = $(this).find('.wd-qty').val();
-            if (pid && qty > 0) items.push({product_id: pid, quantity: qty});
+            var qty = parseInt($(this).find('.wd-qty').val()) || 0;
+            var stock = parseInt($(this).find('.wd-product :selected').data('stock')) || 0;
+            var name = $(this).find('.wd-product :selected').text();
+            if (pid && qty > 0) {
+                if (stock <= 0) {
+                    errors.push('الصنف "' + name + '" لا يوجد به رصيد متاح (الرصيد: 0) - لا يمكن صرفه');
+                } else if (qty > stock) {
+                    errors.push('الكمية المطلوبة من "' + name + '" (' + qty + ') أكبر من الرصيد المتاح (' + stock + ')');
+                }
+                items.push({product_id: pid, quantity: qty});
+            }
         });
+        if (errors.length) { alert('لا يمكن إنشاء إذن الصرف:\n\n' + errors.join('\n')); return; }
         if (!items.length) { alert('يجب إضافة أصناف'); return; }
 
         $.post(iwAdmin.ajaxurl, {

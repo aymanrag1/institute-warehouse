@@ -183,6 +183,19 @@ class IW_Add_Orders {
         $notes = sanitize_textarea_field($_POST['notes'] ?? '');
         $items = json_decode(stripslashes($_POST['items'] ?? '[]'), true);
 
+        if (empty($items)) {
+            wp_send_json_error(array('message' => 'يجب إضافة صنف واحد على الأقل'));
+        }
+
+        // Get order details
+        $order = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}add_orders WHERE id = %d", $order_id
+        ));
+
+        if (!$order) {
+            wp_send_json_error(array('message' => 'الإذن غير موجود'));
+        }
+
         // Get old items to reverse stock
         $old_items = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$prefix}add_order_items WHERE order_id = %d", $order_id
@@ -193,12 +206,20 @@ class IW_Add_Orders {
             IW_Products::update_stock($old->product_id, -intval($old->quantity));
         }
 
+        // Delete old transactions for this order
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$prefix}transactions WHERE notes = %s AND transaction_type = 'add'",
+            'إذن إضافة رقم: ' . $order->order_number
+        ));
+
         // Delete old items
         $wpdb->delete($prefix . 'add_order_items', array('order_id' => $order_id));
 
         // Calculate new totals and insert new items
         $total_qty = 0;
         $total_value = 0;
+
+        $effective_supplier = $supplier_id ?: intval($order->supplier_id);
 
         foreach ($items as $item) {
             $product_id = intval($item['product_id']);
@@ -217,6 +238,19 @@ class IW_Add_Orders {
 
             // Add new stock
             IW_Products::update_stock($product_id, $quantity);
+
+            // Create new transaction for FIFO tracking
+            $wpdb->insert($prefix . 'transactions', array(
+                'transaction_type' => 'add',
+                'product_id' => $product_id,
+                'quantity' => $quantity,
+                'unit_price' => $unit_price,
+                'remaining_qty' => $quantity,
+                'supplier_id' => $effective_supplier ?: null,
+                'notes' => 'إذن إضافة رقم: ' . $order->order_number,
+                'created_by' => get_current_user_id(),
+                'created_at' => current_time('mysql')
+            ));
         }
 
         // Update order
@@ -245,6 +279,15 @@ class IW_Add_Orders {
 
         $order_id = intval($_POST['order_id']);
 
+        // Get order details
+        $order = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}add_orders WHERE id = %d", $order_id
+        ));
+
+        if (!$order) {
+            wp_send_json_error(array('message' => 'الإذن غير موجود'));
+        }
+
         // Get items to reverse stock
         $items = $wpdb->get_results($wpdb->prepare(
             "SELECT * FROM {$prefix}add_order_items WHERE order_id = %d", $order_id
@@ -254,6 +297,12 @@ class IW_Add_Orders {
         foreach ($items as $item) {
             IW_Products::update_stock($item->product_id, -intval($item->quantity));
         }
+
+        // Delete related transactions
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$prefix}transactions WHERE notes = %s AND transaction_type = 'add'",
+            'إذن إضافة رقم: ' . $order->order_number
+        ));
 
         // Delete items and order
         $wpdb->delete($prefix . 'add_order_items', array('order_id' => $order_id));
