@@ -333,8 +333,33 @@ jQuery(document).ready(function($) {
             var isCustody = o.order_type === 'custody';
             var orderTypeLabel = isCustody ? 'إذن صرف عهدة' : 'إذن صرف';
 
+            // Check for zero stock items (only for non-custody orders)
+            var hasZeroStock = false;
+            var zeroStockItems = [];
+            if (!isCustody) {
+                items.forEach(function(it) {
+                    var qty = it.approved_quantity !== null ? parseInt(it.approved_quantity) : parseInt(it.quantity);
+                    if (qty > 0 && parseInt(it.current_stock || 0) <= 0) {
+                        hasZeroStock = true;
+                        zeroStockItems.push(it.product_name);
+                    }
+                });
+            }
+
             var html = '<h2>'+orderTypeLabel+' رقم: '+o.order_number+'</h2>';
             if (isCustody) html += '<div class="notice notice-info inline"><p>هذا إذن عهدة - لا يتم خصم من الرصيد</p></div>';
+
+            // Show warning if there are zero stock items
+            if (hasZeroStock) {
+                html += '<div class="notice notice-error inline" style="border-right-color:#dc3232;background:#fff;padding:10px;margin:10px 0;">';
+                html += '<p style="margin:0;color:#dc3232;font-weight:bold;">⚠️ تحذير: الأصناف التالية رصيدها صفر ولا يمكن صرفها:</p>';
+                html += '<ul style="margin:5px 20px;color:#dc3232;">';
+                zeroStockItems.forEach(function(name) { html += '<li>' + name + '</li>'; });
+                html += '</ul>';
+                html += '<p style="margin:5px 0 0 0;color:#666;">يجب إضافة رصيد لهذه الأصناف أو حذفها من الإذن قبل الاعتماد/التنفيذ.</p>';
+                html += '</div>';
+            }
+
             html += '<p><strong>القسم:</strong> '+(o.department_name||'-')+' | <strong>الموظف:</strong> '+(o.employee_name||'-')+' | <strong>الحالة:</strong> '+getStatusBadge(o.status)+'</p>';
 
             html += '<table class="wp-list-table widefat fixed striped"><thead><tr><th>الصنف</th><th>الوحدة</th>';
@@ -346,16 +371,27 @@ jQuery(document).ready(function($) {
             html += '</tr></thead><tbody>';
 
             items.forEach(function(it) {
-                html += '<tr data-item-product="'+it.product_id+'"><td>'+it.product_name+'</td><td>'+(it.product_unit||'-')+'</td>';
+                var stock = parseInt(it.current_stock || 0);
+                var qty = parseInt(it.quantity);
+                var isZeroStock = stock <= 0 && qty > 0;
+                var rowStyle = isZeroStock ? ' style="background-color:#ffe6e6;"' : '';
+
+                html += '<tr data-item-product="'+it.product_id+'" data-stock="'+stock+'"'+rowStyle+'><td>'+it.product_name+'</td><td>'+(it.product_unit||'-')+'</td>';
                 if (!isCustody) {
-                    html += '<td><strong style="color:'+(parseInt(it.current_stock||0) < parseInt(it.quantity) ? 'red' : 'green')+';">'+( it.current_stock||0)+'</strong></td>';
+                    if (isZeroStock) {
+                        html += '<td><strong style="color:red;">0 ❌ لا يوجد رصيد!</strong></td>';
+                    } else if (stock < qty) {
+                        html += '<td><strong style="color:orange;">'+stock+' ⚠️</strong></td>';
+                    } else {
+                        html += '<td><strong style="color:green;">'+stock+' ✓</strong></td>';
+                    }
                 }
                 html += '<td>'+it.quantity+'</td>';
                 if (isCustody) {
                     html += '<td>'+(it.custody_employee_name||'-')+'</td>';
                 }
                 if (o.status === 'pending') {
-                    html += '<td><input type="number" class="wd-approve-qty" data-product="'+it.product_id+'" value="'+it.quantity+'" min="0"></td>';
+                    html += '<td><input type="number" class="wd-approve-qty" data-product="'+it.product_id+'" value="'+it.quantity+'" min="0"'+(isZeroStock ? ' style="background:#ffe6e6;"' : '')+'></td>';
                     html += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td>';
                 } else if (it.approved_quantity !== null) {
                     html += '<td>'+it.approved_quantity+'</td>';
@@ -371,7 +407,11 @@ jQuery(document).ready(function($) {
 
             if (o.status === 'pending') {
                 html += '<div style="margin-top:15px;">';
-                html += '<button class="button button-primary button-large" onclick="iwApproveOrder('+o.id+')">اعتماد</button> ';
+                if (hasZeroStock) {
+                    html += '<button class="button button-large" disabled title="يوجد أصناف رصيدها صفر">اعتماد (غير متاح)</button> ';
+                } else {
+                    html += '<button class="button button-primary button-large" onclick="iwApproveOrder('+o.id+')">اعتماد</button> ';
+                }
                 html += '<button class="button iw-btn-danger button-large" onclick="iwRejectOrder('+o.id+')">رفض</button> ';
                 html += '<button class="button button-large" onclick="iwSaveOrderEdit('+o.id+')">حفظ التعديلات</button> ';
                 html += '<button class="button iw-btn-danger button-large" onclick="iwDeleteOrder('+o.id+')">حذف الإذن</button>';
@@ -380,7 +420,11 @@ jQuery(document).ready(function($) {
 
             if (o.status === 'approved') {
                 html += '<div style="margin-top:15px;">';
-                html += '<button class="button button-primary button-large" onclick="iwPrintAndExecute('+o.id+')">طباعة وتنفيذ</button> ';
+                if (hasZeroStock) {
+                    html += '<button class="button button-large" disabled title="يوجد أصناف رصيدها صفر">طباعة وتنفيذ (غير متاح)</button> ';
+                } else {
+                    html += '<button class="button button-primary button-large" onclick="iwPrintAndExecute('+o.id+')">طباعة وتنفيذ</button> ';
+                }
                 html += '<button class="button iw-btn-danger button-large" onclick="iwCancelOrder('+o.id+')">إلغاء الإذن</button>';
                 html += '</div>';
             }
@@ -433,6 +477,22 @@ jQuery(document).ready(function($) {
 
     // Approve
     window.iwApproveOrder = function(id) {
+        // Check for zero stock items before approval
+        var errors = [];
+        $('#iw-wd-modal-body tr[data-item-product]').each(function() {
+            var stock = parseInt($(this).data('stock')) || 0;
+            var qty = parseInt($(this).find('.wd-approve-qty').val()) || 0;
+            var name = $(this).find('td:first').text();
+            if (qty > 0 && stock <= 0) {
+                errors.push('الصنف "' + name + '" رصيده صفر - لا يمكن اعتماده');
+            } else if (qty > stock) {
+                errors.push('الكمية المطلوبة من "' + name + '" (' + qty + ') أكبر من الرصيد (' + stock + ')');
+            }
+        });
+        if (errors.length) {
+            alert('لا يمكن اعتماد الإذن:\n\n' + errors.join('\n'));
+            return;
+        }
         if (!confirm('هل أنت متأكد من اعتماد هذا الإذن؟')) return;
         var items = [];
         $('.wd-approve-qty').each(function() {

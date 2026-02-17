@@ -62,18 +62,23 @@ class IW_Withdrawal_Orders {
             wp_send_json_error(array('message' => 'يجب إضافة أصناف'));
         }
 
-        // Validate stock availability - prevent zero stock withdrawal
+        // Validate stock availability using REAL stock from transactions (source of truth)
         $errors = array();
         foreach ($items as $item) {
-            $product = IW_Products::get_by_id(intval($item['product_id']));
+            $product_id = intval($item['product_id']);
+            $product = IW_Products::get_by_id($product_id);
             if (!$product) {
                 $errors[] = 'صنف غير موجود';
                 continue;
             }
-            if (intval($product->current_stock) <= 0) {
-                $errors[] = 'الصنف "' . $product->name . '" لا يوجد به رصيد متاح';
-            } elseif (intval($item['quantity']) > intval($product->current_stock)) {
-                $errors[] = 'الكمية المطلوبة من "' . $product->name . '" (' . $item['quantity'] . ') أكبر من المتاح (' . $product->current_stock . ')';
+            // Use real stock from transactions table (FIFO remaining_qty) - this is the source of truth
+            $real_stock = IW_Products::get_real_stock($product_id);
+            $requested_qty = intval($item['quantity']);
+
+            if ($real_stock <= 0) {
+                $errors[] = 'الصنف "' . $product->name . '" لا يوجد به رصيد متاح (الرصيد الحقيقي: ' . $real_stock . ')';
+            } elseif ($requested_qty > $real_stock) {
+                $errors[] = 'الكمية المطلوبة من "' . $product->name . '" (' . $requested_qty . ') أكبر من الرصيد المتاح (' . $real_stock . ')';
             }
         }
 
@@ -192,6 +197,11 @@ class IW_Withdrawal_Orders {
              WHERE i.order_id = %d", $order_id
         ));
 
+        // Update items with REAL stock from transactions (source of truth)
+        foreach ($items as &$item) {
+            $item->current_stock = IW_Products::get_real_stock($item->product_id);
+        }
+
         // Get approver signature if approved
         $signature_url = '';
         if ($order && $order->approved_by) {
@@ -271,6 +281,43 @@ class IW_Withdrawal_Orders {
         $order_id = intval($_POST['order_id']);
         $user_id  = get_current_user_id();
 
+        // Get order and check status
+        $order = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}withdrawal_orders WHERE id = %d", $order_id
+        ));
+
+        if (!$order || $order->status !== 'pending') {
+            wp_send_json_error(array('message' => 'لا يمكن اعتماد هذا الإذن'));
+        }
+
+        // Skip stock validation for custody orders
+        if ($order->order_type !== 'custody') {
+            // Validate stock availability before approval using REAL stock
+            $items = $wpdb->get_results($wpdb->prepare(
+                "SELECT i.*, p.name as product_name FROM {$prefix}withdrawal_order_items i
+                 LEFT JOIN {$prefix}products p ON i.product_id = p.id
+                 WHERE i.order_id = %d", $order_id
+            ));
+
+            $errors = array();
+            foreach ($items as $item) {
+                $real_stock = IW_Products::get_real_stock($item->product_id);
+                $requested_qty = $item->approved_quantity !== null ? intval($item->approved_quantity) : intval($item->quantity);
+
+                if ($requested_qty > 0) {
+                    if ($real_stock <= 0) {
+                        $errors[] = 'الصنف "' . $item->product_name . '" لا يوجد به رصيد متاح (الرصيد: 0) - لا يمكن اعتماده';
+                    } elseif ($requested_qty > $real_stock) {
+                        $errors[] = 'الكمية المطلوبة من "' . $item->product_name . '" (' . $requested_qty . ') أكبر من الرصيد المتاح (' . $real_stock . ')';
+                    }
+                }
+            }
+
+            if (!empty($errors)) {
+                wp_send_json_error(array('message' => "لا يمكن اعتماد الإذن:\n" . implode("\n", $errors)));
+            }
+        }
+
         $signature_url = get_user_meta($user_id, 'iw_signature_url', true);
         // Admin can approve without signature, dean must have signature
         if (empty($signature_url) && !current_user_can('manage_options')) {
@@ -345,14 +392,15 @@ class IW_Withdrawal_Orders {
             "SELECT * FROM {$prefix}withdrawal_order_items WHERE order_id = %d", $order_id
         ));
 
-        // First pass: validate all items have sufficient stock
+        // First pass: validate all items have sufficient stock using REAL stock
         $errors = array();
         foreach ($items as $item) {
-            $qty = $item->approved_quantity !== null ? $item->approved_quantity : $item->quantity;
+            $qty = $item->approved_quantity !== null ? intval($item->approved_quantity) : intval($item->quantity);
             if ($qty > 0) {
                 $product = IW_Products::get_by_id($item->product_id);
-                if ($product && $product->current_stock < $qty) {
-                    $errors[] = 'الصنف "' . $product->name . '" الرصيد غير كافي (المتاح: ' . $product->current_stock . '، المطلوب: ' . $qty . ')';
+                $real_stock = IW_Products::get_real_stock($item->product_id);
+                if ($real_stock < $qty) {
+                    $errors[] = 'الصنف "' . ($product ? $product->name : 'غير معروف') . '" الرصيد غير كافي (المتاح: ' . $real_stock . '، المطلوب: ' . $qty . ')';
                 }
             }
         }

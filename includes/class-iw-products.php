@@ -8,6 +8,7 @@ class IW_Products {
         add_action('wp_ajax_iw_delete_product', array(__CLASS__, 'delete_product'));
         add_action('wp_ajax_iw_get_product', array(__CLASS__, 'get_product'));
         add_action('wp_ajax_iw_get_products_list', array(__CLASS__, 'get_products_list'));
+        add_action('wp_ajax_iw_sync_all_stocks', array(__CLASS__, 'ajax_sync_all_stocks'));
     }
 
     public static function save_product() {
@@ -78,6 +79,9 @@ class IW_Products {
         global $wpdb;
         $table = $wpdb->prefix . 'iw_products';
 
+        // Sync all stocks before returning the list to ensure accurate data
+        self::sync_all_stocks();
+
         // Use SELECT * to be compatible with old and new table schemas
         $products = $wpdb->get_results("SELECT * FROM {$table} ORDER BY id ASC");
 
@@ -112,6 +116,8 @@ class IW_Products {
 
     public static function get_by_id($id) {
         global $wpdb;
+        // Sync this product's stock first
+        self::sync_product_stock($id);
         return $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}iw_products WHERE id = %d", $id
         ));
@@ -130,5 +136,66 @@ class IW_Products {
         return $wpdb->get_results(
             "SELECT * FROM {$wpdb->prefix}iw_products WHERE current_stock <= min_stock AND min_stock > 0 ORDER BY name ASC"
         );
+    }
+
+    /**
+     * Get real stock from transactions table (FIFO remaining_qty)
+     * This is the source of truth for stock calculation
+     */
+    public static function get_real_stock($product_id) {
+        global $wpdb;
+        $table = $wpdb->prefix . 'iw_transactions';
+        $result = $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(SUM(remaining_qty), 0) FROM $table
+             WHERE product_id = %d AND transaction_type = 'add'",
+            $product_id
+        ));
+        return (int) $result;
+    }
+
+    /**
+     * Sync a single product's current_stock with real stock from transactions
+     */
+    public static function sync_product_stock($product_id) {
+        global $wpdb;
+        $real_stock = self::get_real_stock($product_id);
+        $wpdb->update(
+            $wpdb->prefix . 'iw_products',
+            array('current_stock' => $real_stock),
+            array('id' => $product_id),
+            array('%d'),
+            array('%d')
+        );
+        return $real_stock;
+    }
+
+    /**
+     * Sync all products' current_stock with real stock from transactions
+     * This ensures data consistency
+     */
+    public static function sync_all_stocks() {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        // Get all products
+        $products = $wpdb->get_results("SELECT id FROM {$prefix}products");
+
+        foreach ($products as $product) {
+            self::sync_product_stock($product->id);
+        }
+    }
+
+    /**
+     * AJAX handler for manual sync
+     */
+    public static function ajax_sync_all_stocks() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
+
+        self::sync_all_stocks();
+        wp_send_json_success(array('message' => 'تم مزامنة جميع الأرصدة بنجاح'));
     }
 }
