@@ -79,10 +79,7 @@ class IW_Products {
         global $wpdb;
         $table = $wpdb->prefix . 'iw_products';
 
-        // CRITICAL: First repair any missing transactions from old add orders
-        self::repair_missing_transactions();
-
-        // Then sync all stocks from transactions
+        // Sync all stocks - calculates from add_orders and completed withdrawals
         self::sync_all_stocks();
 
         // Use SELECT * to be compatible with old and new table schemas
@@ -119,9 +116,7 @@ class IW_Products {
 
     public static function get_by_id($id) {
         global $wpdb;
-        // First repair any missing transactions
-        self::repair_missing_transactions();
-        // Sync this product's stock
+        // Sync this product's stock from real data
         self::sync_product_stock($id);
         return $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM {$wpdb->prefix}iw_products WHERE id = %d", $id
@@ -144,22 +139,52 @@ class IW_Products {
     }
 
     /**
-     * Get real stock from transactions table (FIFO remaining_qty)
-     * This is the source of truth for stock calculation
+     * Get real stock by calculating from add orders and completed withdrawals
+     * This is the DEFINITIVE source of truth - no dependency on transactions table
      */
     public static function get_real_stock($product_id) {
         global $wpdb;
-        $table = $wpdb->prefix . 'iw_transactions';
-        $result = $wpdb->get_var($wpdb->prepare(
-            "SELECT COALESCE(SUM(remaining_qty), 0) FROM $table
-             WHERE product_id = %d AND transaction_type = 'add'",
+        $prefix = $wpdb->prefix . 'iw_';
+
+        // 1. Calculate total added from add_order_items
+        $total_added = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(SUM(i.quantity), 0)
+             FROM {$prefix}add_order_items i
+             WHERE i.product_id = %d",
             $product_id
         ));
-        return (int) $result;
+
+        // 2. Calculate total added from opening_balances (if table exists)
+        $opening_balance = 0;
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}opening_balances'");
+        if ($table_exists) {
+            $opening_balance = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COALESCE(SUM(quantity), 0)
+                 FROM {$prefix}opening_balances
+                 WHERE product_id = %d",
+                $product_id
+            ));
+        }
+
+        // 3. Calculate total withdrawn from completed withdrawal orders (NOT custody)
+        $total_withdrawn = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(SUM(COALESCE(i.approved_quantity, i.quantity)), 0)
+             FROM {$prefix}withdrawal_order_items i
+             INNER JOIN {$prefix}withdrawal_orders o ON i.order_id = o.id
+             WHERE i.product_id = %d
+               AND o.status = 'completed'
+               AND o.order_type != 'custody'",
+            $product_id
+        ));
+
+        // Real stock = additions + opening balance - withdrawals
+        $real_stock = $total_added + $opening_balance - $total_withdrawn;
+
+        return max(0, $real_stock);
     }
 
     /**
-     * Sync a single product's current_stock with real stock from transactions
+     * Sync a single product's current_stock with real calculated stock
      */
     public static function sync_product_stock($product_id) {
         global $wpdb;
@@ -175,107 +200,16 @@ class IW_Products {
     }
 
     /**
-     * Sync all products' current_stock with real stock from transactions
-     * This ensures data consistency
+     * Sync all products' current_stock
      */
     public static function sync_all_stocks() {
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
-        // Get all products
         $products = $wpdb->get_results("SELECT id FROM {$prefix}products");
 
         foreach ($products as $product) {
             self::sync_product_stock($product->id);
-        }
-    }
-
-    /**
-     * CRITICAL: Repair missing transactions from old add orders
-     * This fixes the root cause where add orders didn't create transaction records
-     */
-    public static function repair_missing_transactions() {
-        global $wpdb;
-        $prefix = $wpdb->prefix . 'iw_';
-
-        // Get all add orders
-        $orders = $wpdb->get_results("SELECT * FROM {$prefix}add_orders ORDER BY id ASC");
-
-        foreach ($orders as $order) {
-            $order_note = 'إذن إضافة رقم: ' . $order->order_number;
-
-            // Get items for this order
-            $items = $wpdb->get_results($wpdb->prepare(
-                "SELECT * FROM {$prefix}add_order_items WHERE order_id = %d",
-                $order->id
-            ));
-
-            foreach ($items as $item) {
-                // Check if transaction already exists for this order and product
-                $existing = $wpdb->get_var($wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$prefix}transactions
-                     WHERE notes = %s AND product_id = %d AND transaction_type = 'add'",
-                    $order_note, $item->product_id
-                ));
-
-                // If no transaction exists, create one
-                if ($existing == 0) {
-                    $wpdb->insert($prefix . 'transactions', array(
-                        'transaction_type' => 'add',
-                        'product_id'       => $item->product_id,
-                        'quantity'         => $item->quantity,
-                        'unit_price'       => $item->unit_price,
-                        'remaining_qty'    => $item->quantity, // Full quantity available
-                        'supplier_id'      => $order->supplier_id,
-                        'notes'            => $order_note,
-                        'created_by'       => $order->created_by,
-                        'created_at'       => $order->created_at
-                    ));
-                }
-            }
-        }
-
-        // Also handle opening balances that might be missing transactions
-        self::repair_opening_balance_transactions();
-    }
-
-    /**
-     * Repair missing transactions from opening balances
-     */
-    public static function repair_opening_balance_transactions() {
-        global $wpdb;
-        $prefix = $wpdb->prefix . 'iw_';
-
-        // Check if opening_balances table exists
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}opening_balances'");
-        if (!$table_exists) return;
-
-        // Get all opening balances
-        $balances = $wpdb->get_results("SELECT * FROM {$prefix}opening_balances ORDER BY id ASC");
-
-        foreach ($balances as $balance) {
-            $balance_note = 'رصيد افتتاحي - ' . $balance->balance_date;
-
-            // Check if transaction already exists
-            $existing = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$prefix}transactions
-                 WHERE notes LIKE %s AND product_id = %d AND transaction_type = 'add'",
-                '%رصيد افتتاحي%', $balance->product_id
-            ));
-
-            // If no transaction exists, create one
-            if ($existing == 0) {
-                $wpdb->insert($prefix . 'transactions', array(
-                    'transaction_type' => 'add',
-                    'product_id'       => $balance->product_id,
-                    'quantity'         => $balance->quantity,
-                    'unit_price'       => $balance->unit_price,
-                    'remaining_qty'    => $balance->quantity,
-                    'notes'            => $balance_note,
-                    'created_by'       => $balance->created_by,
-                    'created_at'       => $balance->created_at
-                ));
-            }
         }
     }
 
@@ -289,8 +223,6 @@ class IW_Products {
             wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
         }
 
-        // First repair, then sync
-        self::repair_missing_transactions();
         self::sync_all_stocks();
         wp_send_json_success(array('message' => 'تم مزامنة جميع الأرصدة بنجاح'));
     }
