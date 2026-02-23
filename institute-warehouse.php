@@ -15,9 +15,65 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.3.2');
+define('IW_VERSION', '2.4.0');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+/**
+ * Check if RSYI HR System is active
+ */
+function iw_is_hr_active() {
+    return function_exists('rsyi_hr_get_departments');
+}
+
+/**
+ * Show admin notice if HR System is not active
+ */
+add_action('admin_notices', function() {
+    if (!iw_is_hr_active()) {
+        echo '<div class="notice notice-error is-dismissible"><p>' .
+             '<strong>نظام إدارة المخازن</strong> يتطلب تفعيل ' .
+             '<strong>RSYI HR System</strong> أولاً.' .
+             '</p></div>';
+    }
+});
+
+/**
+ * Add Warehouse capabilities to HR roles
+ */
+add_action('rsyi_hr_extend_roles', function() {
+    // عميد ومدير HR: كامل الصلاحيات
+    foreach (['rsyi_dean', 'rsyi_hr_manager'] as $slug) {
+        $role = get_role($slug);
+        if ($role) {
+            $role->add_cap('iw_view_warehouse');
+            $role->add_cap('iw_view_products');
+            $role->add_cap('iw_add_stock');
+            $role->add_cap('iw_withdraw_stock');
+            $role->add_cap('iw_view_reports');
+            $role->add_cap('iw_manage_departments');
+            $role->add_cap('iw_manage_suppliers');
+            $role->add_cap('iw_import_data');
+            $role->add_cap('iw_approve_orders');
+        }
+    }
+
+    // رئيس قسم: يرى قسمه ويطلب إذونات
+    $dept_head = get_role('rsyi_dept_head');
+    if ($dept_head) {
+        $dept_head->add_cap('iw_view_warehouse');
+        $dept_head->add_cap('iw_view_products');
+        $dept_head->add_cap('iw_withdraw_stock');
+        $dept_head->add_cap('iw_view_reports');
+    }
+
+    // موظف: يرى فقط ويطلب
+    $staff = get_role('rsyi_staff');
+    if ($staff) {
+        $staff->add_cap('iw_view_warehouse');
+        $staff->add_cap('iw_view_products');
+    }
+});
 
 class Institute_Warehouse_System {
 

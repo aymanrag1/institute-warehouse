@@ -31,26 +31,9 @@ class IW_Database {
         ) $charset;";
         dbDelta($sql);
 
-        // Departments table
-        $sql = "CREATE TABLE {$prefix}departments (
-            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            name varchar(255) NOT NULL,
-            description text,
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
-        ) $charset;";
-        dbDelta($sql);
-
-        // Employees table
-        $sql = "CREATE TABLE {$prefix}employees (
-            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            name varchar(255) NOT NULL,
-            department_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
-            position varchar(255) DEFAULT '',
-            created_at datetime DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
-        ) $charset;";
-        dbDelta($sql);
+        // Note: Departments and Employees tables are now managed by RSYI HR System
+        // The old tables (iw_departments, iw_employees) are no longer created
+        // Data is read from wp_rsyi_hr_departments and wp_rsyi_hr_employees
 
         // Suppliers table with extended fields
         $sql = "CREATE TABLE {$prefix}suppliers (
@@ -281,14 +264,7 @@ class IW_Database {
             }
         }
 
-        // Check departments table
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}departments'");
-        if ($table_exists) {
-            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}departments");
-            if (!in_array('description', $columns)) {
-                $wpdb->query("ALTER TABLE {$prefix}departments ADD COLUMN description text AFTER name");
-            }
-        }
+        // Note: departments table migration removed - now using RSYI HR System
 
         // Check suppliers table for new columns
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}suppliers'");

@@ -29,53 +29,11 @@ class IW_Permissions {
     }
 
     public static function create_roles() {
-        // Dean / Director role
-        add_role('iw_dean', 'عميد المعهد / المدير', array(
-            'read'              => true,
-            'iw_view_warehouse' => true,
-            'iw_view_products'  => true,
-            'iw_add_stock'      => true,
-            'iw_withdraw_stock' => true,
-            'iw_view_reports'   => true,
-            'iw_manage_departments' => true,
-            'iw_manage_suppliers'   => true,
-            'iw_import_data'    => true,
-            'iw_approve_orders' => true,
-        ));
+        // Note: Warehouse plugin now uses roles from RSYI HR System
+        // The capabilities are added via rsyi_hr_extend_roles hook in institute-warehouse.php
+        // Legacy roles are kept for backward compatibility but not created for new installs
 
-        // Warehouse supervisor role
-        add_role('iw_warehouse_supervisor', 'مشرف المخزن', array(
-            'read'              => true,
-            'iw_view_warehouse' => true,
-            'iw_view_products'  => true,
-            'iw_add_stock'      => true,
-            'iw_withdraw_stock' => true,
-            'iw_view_reports'   => true,
-            'iw_manage_departments' => true,
-            'iw_manage_suppliers'   => true,
-            'iw_import_data'    => true,
-        ));
-
-        // Warehouse clerk role
-        add_role('iw_warehouse_clerk', 'أمين المخزن', array(
-            'read'              => true,
-            'iw_view_warehouse' => true,
-            'iw_view_products'  => true,
-            'iw_add_stock'      => true,
-            'iw_withdraw_stock' => true,
-        ));
-
-        // Accountant role
-        add_role('iw_accountant', 'مدير الحسابات', array(
-            'read'              => true,
-            'iw_view_warehouse' => true,
-            'iw_view_products'  => true,
-            'iw_add_stock'      => true,
-            'iw_view_reports'   => true,
-            'iw_manage_suppliers' => true,
-        ));
-
-        // Add capabilities to admin
+        // Only add capabilities to admin
         $admin = get_role('administrator');
         if ($admin) {
             $admin->add_cap('iw_view_warehouse');
@@ -87,6 +45,11 @@ class IW_Permissions {
             $admin->add_cap('iw_manage_suppliers');
             $admin->add_cap('iw_import_data');
             $admin->add_cap('iw_approve_orders');
+        }
+
+        // Trigger HR roles extension if HR is active
+        if (function_exists('rsyi_hr_get_departments')) {
+            do_action('rsyi_hr_extend_roles');
         }
     }
 
