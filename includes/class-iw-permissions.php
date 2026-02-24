@@ -48,7 +48,7 @@ class IW_Permissions {
         }
 
         // Trigger HR roles extension if HR is active
-        if (function_exists('rsyi_hr_get_departments')) {
+        if (iw_is_hr_active()) {
             do_action('rsyi_hr_extend_roles');
         }
     }

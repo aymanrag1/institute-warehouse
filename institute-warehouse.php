@@ -21,9 +21,85 @@ define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 /**
  * Check if RSYI HR System is active
+ * Uses multiple methods for compatibility
  */
 function iw_is_hr_active() {
-    return function_exists('rsyi_hr_get_departments');
+    // Method 1: Check if helper function exists
+    if (function_exists('rsyi_hr_get_departments')) {
+        return true;
+    }
+
+    // Method 2: Check if filter has handlers (safer approach)
+    if (has_filter('rsyi_hr_get_departments')) {
+        return true;
+    }
+
+    // Method 3: Check if plugin is active by checking for its main class
+    if (class_exists('RSYI_HR_System') || class_exists('RSYI_HR') || class_exists('RSY_HR_System')) {
+        return true;
+    }
+
+    // Method 4: Check if HR tables exist in database (most reliable)
+    global $wpdb;
+    $table = $wpdb->prefix . 'rsyi_hr_departments';
+    $exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table));
+    if ($exists) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Wrapper functions for HR API - use filters for safety
+ */
+function iw_hr_get_departments($args = []) {
+    if (function_exists('rsyi_hr_get_departments')) {
+        return rsyi_hr_get_departments($args);
+    }
+    return apply_filters('rsyi_hr_get_departments', [], $args);
+}
+
+function iw_hr_get_department($id) {
+    if (function_exists('rsyi_hr_get_department')) {
+        return rsyi_hr_get_department($id);
+    }
+    return apply_filters('rsyi_hr_get_department_by_id', null, $id);
+}
+
+function iw_hr_get_employees($args = []) {
+    if (function_exists('rsyi_hr_get_employees')) {
+        return rsyi_hr_get_employees($args);
+    }
+    return apply_filters('rsyi_hr_get_employees', [], $args);
+}
+
+function iw_hr_get_employee($id) {
+    if (function_exists('rsyi_hr_get_employee')) {
+        return rsyi_hr_get_employee($id);
+    }
+    return apply_filters('rsyi_hr_get_employee_by_id', null, $id);
+}
+
+function iw_hr_get_employee_by_user($user_id) {
+    if (function_exists('rsyi_hr_get_employee_by_user')) {
+        return rsyi_hr_get_employee_by_user($user_id);
+    }
+    return apply_filters('rsyi_hr_get_employee_by_user_id', null, $user_id);
+}
+
+function iw_hr_department_employees($dept_id) {
+    if (function_exists('rsyi_hr_department_employees')) {
+        return rsyi_hr_department_employees($dept_id);
+    }
+    return apply_filters('rsyi_hr_department_employees', [], $dept_id);
+}
+
+function iw_hr_get_job_titles($args = []) {
+    if (function_exists('rsyi_hr_get_job_titles')) {
+        return rsyi_hr_get_job_titles($args);
+    }
+    return apply_filters('rsyi_hr_get_job_titles', [], $args);
 }
 
 /**
@@ -31,9 +107,10 @@ function iw_is_hr_active() {
  */
 add_action('admin_notices', function() {
     if (!iw_is_hr_active()) {
+        $message = __('نظام إدارة المخازن يتطلب تفعيل RSYI HR System أولاً.', 'institute-warehouse');
         echo '<div class="notice notice-error is-dismissible"><p>' .
-             '<strong>نظام إدارة المخازن</strong> يتطلب تفعيل ' .
-             '<strong>RSYI HR System</strong> أولاً.' .
+             '<strong>' . esc_html__('تنبيه', 'institute-warehouse') . ':</strong> ' .
+             esc_html($message) .
              '</p></div>';
     }
 });

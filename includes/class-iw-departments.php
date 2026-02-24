@@ -43,7 +43,7 @@ class IW_Departments {
             return;
         }
 
-        $departments = rsyi_hr_get_departments(['status' => 'active']);
+        $departments = iw_hr_get_departments(['status' => 'active']);
 
         // Transform to expected format
         $result = array();
@@ -68,7 +68,7 @@ class IW_Departments {
             return array();
         }
 
-        $departments = rsyi_hr_get_departments(['status' => 'active']);
+        $departments = iw_hr_get_departments(['status' => 'active']);
 
         $result = array();
         foreach ($departments as $dept) {
@@ -92,7 +92,7 @@ class IW_Departments {
             return null;
         }
 
-        $dept = rsyi_hr_get_department($id);
+        $dept = iw_hr_get_department($id);
 
         if (!$dept) {
             return null;
@@ -118,7 +118,7 @@ class IW_Departments {
             return;
         }
 
-        $employees = rsyi_hr_get_employees(['status' => 'active']);
+        $employees = iw_hr_get_employees(['status' => 'active']);
 
         // Transform to expected format
         $result = array();
@@ -150,7 +150,7 @@ class IW_Departments {
 
         $dept_id = intval($_POST['department_id']);
 
-        $employees = rsyi_hr_department_employees($dept_id);
+        $employees = iw_hr_department_employees($dept_id);
 
         // Transform to expected format
         $result = array();
@@ -176,7 +176,7 @@ class IW_Departments {
             return array();
         }
 
-        $employees = rsyi_hr_get_employees(['status' => 'active']);
+        $employees = iw_hr_get_employees(['status' => 'active']);
 
         $result = array();
         foreach ($employees as $emp) {
@@ -202,7 +202,7 @@ class IW_Departments {
             return null;
         }
 
-        $emp = rsyi_hr_get_employee($id);
+        $emp = iw_hr_get_employee($id);
 
         if (!$emp) {
             return null;
@@ -227,7 +227,7 @@ class IW_Departments {
             return null;
         }
 
-        $emp = rsyi_hr_get_employee_by_user($user_id);
+        $emp = iw_hr_get_employee_by_user($user_id);
 
         if (!$emp) {
             return null;
@@ -260,6 +260,6 @@ class IW_Departments {
             return array();
         }
 
-        return rsyi_hr_get_job_titles([]);
+        return iw_hr_get_job_titles([]);
     }
 }
