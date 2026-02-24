@@ -164,9 +164,21 @@ class Institute_Warehouse_System {
     }
 
     private function __construct() {
+        $this->load_textdomain();
         $this->load_dependencies();
         $this->init_hooks();
         $this->init_ajax();
+    }
+
+    /**
+     * Load plugin textdomain for translations
+     */
+    private function load_textdomain() {
+        load_plugin_textdomain(
+            'institute-warehouse',
+            false,
+            dirname(plugin_basename(__FILE__)) . '/languages'
+        );
     }
 
     private function load_dependencies() {
