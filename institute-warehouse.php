@@ -54,10 +54,32 @@ function iw_is_hr_active() {
  * Wrapper functions for HR API - use filters for safety
  */
 function iw_hr_get_departments($args = []) {
+    // Method 1: Direct function call
     if (function_exists('rsyi_hr_get_departments')) {
-        return rsyi_hr_get_departments($args);
+        $result = rsyi_hr_get_departments($args);
+        if (is_array($result) && !empty($result)) {
+            return $result;
+        }
     }
-    return apply_filters('rsyi_hr_get_departments', [], $args);
+
+    // Method 2: Filter hook
+    $result = apply_filters('rsyi_hr_get_departments', [], $args);
+    if (is_array($result) && !empty($result)) {
+        return $result;
+    }
+
+    // Method 3: Direct database query fallback
+    global $wpdb;
+    $table = $wpdb->prefix . 'rsyi_hr_departments';
+    if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) !== $table) {
+        return [];
+    }
+    $sql = "SELECT * FROM `{$table}`";
+    if (!empty($args['status'])) {
+        $sql .= $wpdb->prepare(' WHERE `status` = %s', $args['status']);
+    }
+    $sql .= ' ORDER BY name ASC';
+    return $wpdb->get_results($sql, ARRAY_A) ?: [];
 }
 
 function iw_hr_get_department($id) {
@@ -68,10 +90,34 @@ function iw_hr_get_department($id) {
 }
 
 function iw_hr_get_employees($args = []) {
+    // Method 1: Direct function call
     if (function_exists('rsyi_hr_get_employees')) {
-        return rsyi_hr_get_employees($args);
+        $result = rsyi_hr_get_employees($args);
+        if (is_array($result) && !empty($result)) {
+            return $result;
+        }
     }
-    return apply_filters('rsyi_hr_get_employees', [], $args);
+
+    // Method 2: Filter hook
+    $result = apply_filters('rsyi_hr_get_employees', [], $args);
+    if (is_array($result) && !empty($result)) {
+        return $result;
+    }
+
+    // Method 3: Direct database query fallback
+    global $wpdb;
+    $emp_table  = $wpdb->prefix . 'rsyi_hr_employees';
+    $dept_table = $wpdb->prefix . 'rsyi_hr_departments';
+    if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $emp_table)) !== $emp_table) {
+        return [];
+    }
+    $sql = "SELECT e.*, d.name AS department_name
+            FROM `{$emp_table}` e
+            LEFT JOIN `{$dept_table}` d ON e.department_id = d.id";
+    if (!empty($args['status'])) {
+        $sql .= $wpdb->prepare(' WHERE e.`status` = %s', $args['status']);
+    }
+    return $wpdb->get_results($sql, ARRAY_A) ?: [];
 }
 
 function iw_hr_get_employee($id) {
@@ -89,10 +135,33 @@ function iw_hr_get_employee_by_user($user_id) {
 }
 
 function iw_hr_department_employees($dept_id) {
+    // Method 1: Direct function call
     if (function_exists('rsyi_hr_department_employees')) {
-        return rsyi_hr_department_employees($dept_id);
+        $result = rsyi_hr_department_employees($dept_id);
+        if (is_array($result) && !empty($result)) {
+            return $result;
+        }
     }
-    return apply_filters('rsyi_hr_department_employees', [], $dept_id);
+
+    // Method 2: Filter hook
+    $result = apply_filters('rsyi_hr_department_employees', [], $dept_id);
+    if (is_array($result) && !empty($result)) {
+        return $result;
+    }
+
+    // Method 3: Direct database query fallback
+    global $wpdb;
+    $emp_table = $wpdb->prefix . 'rsyi_hr_employees';
+    if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $emp_table)) !== $emp_table) {
+        return [];
+    }
+    return $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT * FROM `{$emp_table}` WHERE department_id = %d AND `status` = 'active'",
+            $dept_id
+        ),
+        ARRAY_A
+    ) ?: [];
 }
 
 function iw_hr_get_job_titles($args = []) {
