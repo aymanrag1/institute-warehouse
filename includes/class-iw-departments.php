@@ -33,6 +33,47 @@ class IW_Departments {
     }
 
     /**
+     * Normalize a raw department row (array or object) to a standard array.
+     */
+    private static function normalize_dept($dept) {
+        if (is_object($dept)) {
+            $dept = (array) $dept;
+        }
+        $name = $dept['name'] ?? $dept['department_name'] ?? $dept['dept_name'] ?? $dept['title'] ?? '';
+        return array(
+            'id'           => $dept['id'] ?? $dept['dept_id'] ?? null,
+            'name'         => $name,
+            'description'  => $dept['description'] ?? $dept['dept_description'] ?? '',
+            'code'         => $dept['code'] ?? $dept['dept_code'] ?? '',
+            'manager_name' => $dept['manager_name'] ?? $dept['manager'] ?? '',
+        );
+    }
+
+    /**
+     * Normalize a raw employee row (array or object) to a standard array.
+     */
+    private static function normalize_emp($emp) {
+        if (is_object($emp)) {
+            $emp = (array) $emp;
+        }
+        $name = $emp['full_name'] ?? $emp['name'] ?? '';
+        if (empty($name)) {
+            $first = $emp['first_name'] ?? '';
+            $last  = $emp['last_name'] ?? '';
+            $name  = trim("$first $last");
+        }
+        return array(
+            'id'              => $emp['id'] ?? $emp['employee_id'] ?? null,
+            'name'            => $name,
+            'department_id'   => $emp['department_id'] ?? $emp['dept_id'] ?? null,
+            'department_name' => $emp['department_name'] ?? $emp['dept_name'] ?? '',
+            'position'        => $emp['job_title_name'] ?? $emp['job_title'] ?? $emp['position'] ?? $emp['title'] ?? '',
+            'employee_number' => $emp['employee_number'] ?? $emp['emp_number'] ?? $emp['emp_no'] ?? '',
+            'user_id'         => $emp['user_id'] ?? null,
+        );
+    }
+
+    /**
      * Get all departments from HR System
      */
     public static function get_departments() {
@@ -45,16 +86,9 @@ class IW_Departments {
 
         $departments = iw_hr_get_departments(['status' => 'active']);
 
-        // Transform to expected format
         $result = array();
         foreach ($departments as $dept) {
-            $result[] = (object) array(
-                'id' => $dept['id'],
-                'name' => $dept['name'],
-                'description' => $dept['description'] ?? '',
-                'code' => $dept['code'] ?? '',
-                'manager_name' => $dept['manager_name'] ?? ''
-            );
+            $result[] = (object) self::normalize_dept($dept);
         }
 
         wp_send_json_success($result);
@@ -72,13 +106,7 @@ class IW_Departments {
 
         $result = array();
         foreach ($departments as $dept) {
-            $result[] = (object) array(
-                'id' => $dept['id'],
-                'name' => $dept['name'],
-                'description' => $dept['description'] ?? '',
-                'code' => $dept['code'] ?? '',
-                'manager_name' => $dept['manager_name'] ?? ''
-            );
+            $result[] = (object) self::normalize_dept($dept);
         }
 
         return $result;
@@ -98,13 +126,7 @@ class IW_Departments {
             return null;
         }
 
-        return (object) array(
-            'id' => $dept['id'],
-            'name' => $dept['name'],
-            'description' => $dept['description'] ?? '',
-            'code' => $dept['code'] ?? '',
-            'manager_name' => $dept['manager_name'] ?? ''
-        );
+        return (object) self::normalize_dept($dept);
     }
 
     /**
@@ -120,18 +142,9 @@ class IW_Departments {
 
         $employees = iw_hr_get_employees(['status' => 'active']);
 
-        // Transform to expected format
         $result = array();
         foreach ($employees as $emp) {
-            $result[] = (object) array(
-                'id' => $emp['id'],
-                'name' => $emp['full_name'],
-                'department_id' => $emp['department_id'],
-                'department_name' => $emp['department_name'] ?? '',
-                'position' => $emp['job_title_name'] ?? '',
-                'employee_number' => $emp['employee_number'] ?? '',
-                'user_id' => $emp['user_id'] ?? null
-            );
+            $result[] = (object) self::normalize_emp($emp);
         }
 
         wp_send_json_success($result);
@@ -152,17 +165,9 @@ class IW_Departments {
 
         $employees = iw_hr_department_employees($dept_id);
 
-        // Transform to expected format
         $result = array();
         foreach ($employees as $emp) {
-            $result[] = (object) array(
-                'id' => $emp['id'],
-                'name' => $emp['full_name'],
-                'department_id' => $emp['department_id'],
-                'position' => $emp['job_title_name'] ?? '',
-                'employee_number' => $emp['employee_number'] ?? '',
-                'user_id' => $emp['user_id'] ?? null
-            );
+            $result[] = (object) self::normalize_emp($emp);
         }
 
         wp_send_json_success($result);
@@ -180,15 +185,7 @@ class IW_Departments {
 
         $result = array();
         foreach ($employees as $emp) {
-            $result[] = (object) array(
-                'id' => $emp['id'],
-                'name' => $emp['full_name'],
-                'department_id' => $emp['department_id'],
-                'department_name' => $emp['department_name'] ?? '',
-                'position' => $emp['job_title_name'] ?? '',
-                'employee_number' => $emp['employee_number'] ?? '',
-                'user_id' => $emp['user_id'] ?? null
-            );
+            $result[] = (object) self::normalize_emp($emp);
         }
 
         return $result;
@@ -208,15 +205,7 @@ class IW_Departments {
             return null;
         }
 
-        return (object) array(
-            'id' => $emp['id'],
-            'name' => $emp['full_name'],
-            'department_id' => $emp['department_id'],
-            'department_name' => $emp['department_name'] ?? '',
-            'position' => $emp['job_title_name'] ?? '',
-            'employee_number' => $emp['employee_number'] ?? '',
-            'user_id' => $emp['user_id'] ?? null
-        );
+        return (object) self::normalize_emp($emp);
     }
 
     /**
@@ -233,15 +222,7 @@ class IW_Departments {
             return null;
         }
 
-        return (object) array(
-            'id' => $emp['id'],
-            'name' => $emp['full_name'],
-            'department_id' => $emp['department_id'],
-            'department_name' => $emp['department_name'] ?? '',
-            'position' => $emp['job_title_name'] ?? '',
-            'employee_number' => $emp['employee_number'] ?? '',
-            'user_id' => $emp['user_id'] ?? null
-        );
+        return (object) self::normalize_emp($emp);
     }
 
     /**
