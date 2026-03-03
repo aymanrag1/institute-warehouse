@@ -549,12 +549,13 @@ class Institute_Warehouse_System {
         wp_enqueue_script('xlsx-js', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', array(), '0.18.5', true);
 
         wp_localize_script('iw-admin-js', 'iwAdmin', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('iw_admin_nonce'),
-            'strings' => array(
+            'ajaxurl'  => admin_url('admin-ajax.php'),
+            'nonce'    => wp_create_nonce('iw_admin_nonce'),
+            'isAdmin'  => current_user_can('manage_options') ? 1 : 0,
+            'strings'  => array(
                 'confirm_delete' => __('هل أنت متأكد من الحذف؟', 'institute-warehouse'),
-                'error' => __('حدث خطأ، يرجى المحاولة مرة أخرى', 'institute-warehouse'),
-                'success' => __('تمت العملية بنجاح', 'institute-warehouse'),
+                'error'          => __('حدث خطأ، يرجى المحاولة مرة أخرى', 'institute-warehouse'),
+                'success'        => __('تمت العملية بنجاح', 'institute-warehouse'),
             )
         ));
     }

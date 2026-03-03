@@ -310,6 +310,9 @@ jQuery(document).ready(function($) {
                 }
                 if (o.status === 'approved') {
                     html += ' <button class="button button-primary" onclick="iwPrintAndExecute('+o.id+')">طباعة وتنفيذ</button>';
+                    if (iwAdmin.isAdmin) {
+                        html += ' <button class="button" onclick="iwViewOrder('+o.id+')">تعديل</button>';
+                    }
                     html += ' <button class="button iw-btn-danger" onclick="iwCancelOrder('+o.id+')">إلغاء</button>';
                 }
                 if (o.status === 'completed') html += ' <button class="button button-primary" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
@@ -424,6 +427,9 @@ jQuery(document).ready(function($) {
                     html += '<button class="button button-large" disabled title="يوجد أصناف رصيدها صفر">طباعة وتنفيذ (غير متاح)</button> ';
                 } else {
                     html += '<button class="button button-primary button-large" onclick="iwPrintAndExecute('+o.id+')">طباعة وتنفيذ</button> ';
+                }
+                if (iwAdmin.isAdmin) {
+                    html += '<button class="button button-large" onclick="iwSaveOrderEdit('+o.id+')">حفظ التعديلات</button> ';
                 }
                 html += '<button class="button iw-btn-danger button-large" onclick="iwCancelOrder('+o.id+')">إلغاء الإذن</button>';
                 html += '</div>';

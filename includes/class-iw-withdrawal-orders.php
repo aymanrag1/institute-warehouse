@@ -280,13 +280,20 @@ class IW_Withdrawal_Orders {
             "SELECT * FROM {$prefix}withdrawal_orders WHERE id = %d", $order_id
         ));
 
-        if (!$order || $order->status !== 'pending') {
+        $is_admin = current_user_can('manage_options');
+
+        if (!$order || !in_array($order->status, array('pending', 'approved'))) {
             wp_send_json_error(array('message' => 'لا يمكن تعديل هذا الإذن'));
         }
 
-        // Allow creator, dean, or admin to edit pending orders
+        // Approved orders: admin only
+        if ($order->status === 'approved' && !$is_admin) {
+            wp_send_json_error(array('message' => 'تعديل الأذون المعتمدة متاح للمدير فقط'));
+        }
+
+        // Pending orders: creator, dean, or admin
         $is_creator = ($order->created_by == get_current_user_id());
-        if (!$is_creator && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+        if ($order->status === 'pending' && !$is_creator && !current_user_can('iw_approve_orders') && !$is_admin) {
             wp_send_json_error(array('message' => 'ليس لديك صلاحية لتعديل هذا الإذن'));
         }
 
