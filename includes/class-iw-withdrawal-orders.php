@@ -156,21 +156,22 @@ class IW_Withdrawal_Orders {
             $where = $wpdb->prepare(" AND o.status = %s", $status);
         }
 
-        $hr_emp_table  = $wpdb->prefix . 'rsyi_hr_employees';
-        $hr_dept_table = $wpdb->prefix . 'rsyi_hr_departments';
-
         $orders = $wpdb->get_results(
-            "SELECT o.*,
-                    COALESCE(d.name, '') as department_name,
-                    COALESCE(e.full_name, e.name, '') as employee_name,
-                    u.display_name as created_by_name
+            "SELECT o.*, u.display_name as created_by_name
              FROM {$prefix}withdrawal_orders o
-             LEFT JOIN {$hr_dept_table} d ON o.department_id = d.id
-             LEFT JOIN {$hr_emp_table} e ON o.employee_id = e.id
              LEFT JOIN {$wpdb->users} u ON o.created_by = u.ID
              WHERE 1=1 $where
              ORDER BY o.created_at DESC"
         );
+
+        // Enrich orders with department and employee names from HR System
+        foreach ($orders as $order) {
+            $dept = IW_Departments::get_by_id($order->department_id);
+            $order->department_name = $dept ? $dept->name : '';
+
+            $emp = IW_Departments::get_employee_by_id($order->employee_id);
+            $order->employee_name = $emp ? $emp->name : '';
+        }
 
         wp_send_json_success($orders);
     }
@@ -185,20 +186,21 @@ class IW_Withdrawal_Orders {
 
         $order_id = intval($_POST['order_id']);
 
-        $hr_emp_table  = $wpdb->prefix . 'rsyi_hr_employees';
-        $hr_dept_table = $wpdb->prefix . 'rsyi_hr_departments';
-
         $order = $wpdb->get_row($wpdb->prepare(
-            "SELECT o.*,
-                    COALESCE(d.name, '') as department_name,
-                    COALESCE(e.full_name, e.name, '') as employee_name,
-                    u.display_name as created_by_name
+            "SELECT o.*, u.display_name as created_by_name
              FROM {$prefix}withdrawal_orders o
-             LEFT JOIN {$hr_dept_table} d ON o.department_id = d.id
-             LEFT JOIN {$hr_emp_table} e ON o.employee_id = e.id
              LEFT JOIN {$wpdb->users} u ON o.created_by = u.ID
              WHERE o.id = %d", $order_id
         ));
+
+        // Enrich with department and employee names from HR System
+        if ($order) {
+            $dept = IW_Departments::get_by_id($order->department_id);
+            $order->department_name = $dept ? $dept->name : '';
+
+            $emp = IW_Departments::get_employee_by_id($order->employee_id);
+            $order->employee_name = $emp ? $emp->name : '';
+        }
 
         $items = $wpdb->get_results($wpdb->prepare(
             "SELECT i.*, p.name as product_name, p.unit as product_unit, p.current_stock
