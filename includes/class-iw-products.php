@@ -140,14 +140,19 @@ class IW_Products {
     }
 
     /**
-     * Get real stock by calculating from add orders and completed withdrawals
-     * This is the DEFINITIVE source of truth - no dependency on transactions table
+     * Get real available stock.
+     * Counts: total_added + opening_balance - (approved + completed withdrawals, excluding custody).
+     * Both approved and completed orders are deducted because approved = physically reserved.
+     *
+     * @param int $product_id
+     * @param int $exclude_order_id  Pass the current order_id in complete_order() so we don't
+     *                               double-deduct the order being completed (it's already 'approved').
      */
-    public static function get_real_stock($product_id) {
+    public static function get_real_stock($product_id, $exclude_order_id = 0) {
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
-        // 1. Calculate total added from add_order_items
+        // 1. Total added from add_order_items
         $total_added = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COALESCE(SUM(i.quantity), 0)
              FROM {$prefix}add_order_items i
@@ -155,7 +160,7 @@ class IW_Products {
             $product_id
         ));
 
-        // 2. Calculate total added from opening_balances (if table exists)
+        // 2. Opening balances
         $opening_balance = 0;
         $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}opening_balances'");
         if ($table_exists) {
@@ -167,65 +172,40 @@ class IW_Products {
             ));
         }
 
-        // 3. Calculate total withdrawn from completed withdrawal orders (NOT custody)
-        // IMPORTANT: Use COALESCE for order_type because NULL != 'custody' = NULL in MySQL
-        // which would wrongly exclude rows with NULL order_type from the sum.
+        // 3. Withdrawn: count BOTH approved (reserved) and completed (dispensed).
+        //    Exclude custody orders. Use COALESCE(order_type) because NULL != 'custody' = NULL in MySQL
+        //    which would wrongly exclude rows where order_type was not set.
+        $exclude_clause = ($exclude_order_id > 0)
+            ? $wpdb->prepare(" AND o.id != %d", $exclude_order_id)
+            : '';
+
         $total_withdrawn = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COALESCE(SUM(COALESCE(i.approved_quantity, i.quantity)), 0)
              FROM {$prefix}withdrawal_order_items i
              INNER JOIN {$prefix}withdrawal_orders o ON i.order_id = o.id
              WHERE i.product_id = %d
-               AND o.status = 'completed'
-               AND COALESCE(o.order_type, 'normal') != 'custody'",
+               AND o.status IN ('approved', 'completed')
+               AND COALESCE(o.order_type, 'normal') != 'custody'" . $exclude_clause,
             $product_id
         ));
 
-        // Real stock = additions + opening balance - withdrawals
-        $real_stock = $total_added + $opening_balance - $total_withdrawn;
-
-        return max(0, $real_stock);
+        return max(0, $total_added + $opening_balance - $total_withdrawn);
     }
 
     /**
-     * Get available stock for new orders.
-     * = get_real_stock() minus approved (committed but not yet dispensed) withdrawals.
-     * Use this for display and new-order validation so approved reservations show as deducted.
-     * Use get_real_stock() only for complete_order() validation (physical check).
-     */
-    public static function get_available_stock($product_id) {
-        global $wpdb;
-        $prefix = $wpdb->prefix . 'iw_';
-
-        $real_stock = self::get_real_stock($product_id);
-
-        // Subtract approved-but-not-completed withdrawals (reserved stock)
-        $approved_reserved = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COALESCE(SUM(COALESCE(i.approved_quantity, i.quantity)), 0)
-             FROM {$prefix}withdrawal_order_items i
-             INNER JOIN {$prefix}withdrawal_orders o ON i.order_id = o.id
-             WHERE i.product_id = %d
-               AND o.status = 'approved'
-               AND COALESCE(o.order_type, 'normal') != 'custody'",
-            $product_id
-        ));
-
-        return max(0, $real_stock - $approved_reserved);
-    }
-
-    /**
-     * Sync a single product's current_stock with available stock
+     * Sync a single product's current_stock with real stock
      */
     public static function sync_product_stock($product_id) {
         global $wpdb;
-        $available_stock = self::get_available_stock($product_id);
+        $stock = self::get_real_stock($product_id);
         $wpdb->update(
             $wpdb->prefix . 'iw_products',
-            array('current_stock' => $available_stock),
+            array('current_stock' => $stock),
             array('id' => $product_id),
             array('%d'),
             array('%d')
         );
-        return $available_stock;
+        return $stock;
     }
 
     /**
@@ -281,7 +261,7 @@ class IW_Products {
                     'name'            => $p->name,
                     'current_stock_db'=> $p->current_stock,
                     'real_stock'      => self::get_real_stock($p->id),
-                    'available_stock' => self::get_available_stock($p->id),
+                    'available_stock' => self::get_real_stock($p->id),
                 );
             }
             wp_send_json_success($result);
@@ -318,7 +298,7 @@ class IW_Products {
             'opening_balances'=> $balances,
             'withdrawals'     => $withdrawals,
             'real_stock'      => self::get_real_stock($product_id),
-            'available_stock' => self::get_available_stock($product_id),
+            'available_stock' => self::get_real_stock($product_id),
         ));
     }
 }

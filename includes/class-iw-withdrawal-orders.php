@@ -62,7 +62,7 @@ class IW_Withdrawal_Orders {
             wp_send_json_error(array('message' => 'يجب إضافة أصناف'));
         }
 
-        // Validate stock availability using AVAILABLE stock (excludes approved reservations)
+        // Validate stock availability
         $errors = array();
         foreach ($items as $item) {
             $product_id = intval($item['product_id']);
@@ -71,7 +71,7 @@ class IW_Withdrawal_Orders {
                 $errors[] = 'صنف غير موجود';
                 continue;
             }
-            $available_stock = IW_Products::get_available_stock($product_id);
+            $available_stock = IW_Products::get_real_stock($product_id);
             $requested_qty = intval($item['quantity']);
 
             if ($available_stock <= 0) {
@@ -313,8 +313,8 @@ class IW_Withdrawal_Orders {
 
             $errors = array();
             foreach ($items as $item) {
-                // get_available_stock already excludes this order's qty (it's still pending, not approved)
-                $available_stock = IW_Products::get_available_stock($item->product_id);
+                // Order is still 'pending', so get_real_stock() doesn't include it yet — correct check
+                $available_stock = IW_Products::get_real_stock($item->product_id);
                 $requested_qty = $item->approved_quantity !== null ? intval($item->approved_quantity) : intval($item->quantity);
 
                 if ($requested_qty > 0) {
@@ -413,13 +413,15 @@ class IW_Withdrawal_Orders {
             "SELECT * FROM {$prefix}withdrawal_order_items WHERE order_id = %d", $order_id
         ));
 
-        // First pass: validate all items have sufficient stock using REAL stock
+        // First pass: validate all items have sufficient stock.
+        // Pass $order_id so get_real_stock() excludes THIS order's approved qty —
+        // completing an approved order is a status change, not an additional deduction.
         $errors = array();
         foreach ($items as $item) {
             $qty = $item->approved_quantity !== null ? intval($item->approved_quantity) : intval($item->quantity);
             if ($qty > 0) {
                 $product = IW_Products::get_by_id($item->product_id);
-                $real_stock = IW_Products::get_real_stock($item->product_id);
+                $real_stock = IW_Products::get_real_stock($item->product_id, $order_id);
                 if ($real_stock < $qty) {
                     $errors[] = 'الصنف "' . ($product ? $product->name : 'غير معروف') . '" الرصيد غير كافي (المتاح: ' . $real_stock . '، المطلوب: ' . $qty . ')';
                 }
