@@ -1,0 +1,765 @@
+# Institute Warehouse System - English Translation
+# Copyright (C) 2026 AYMAN RAGAB
+# This file is distributed under the same license as the plugin.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Institute Warehouse 2.4.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-02-24 00:00+0000\n"
+"PO-Revision-Date: 2026-02-24 00:00+0000\n"
+"Last-Translator: AYMAN RAGAB\n"
+"Language-Team: English\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: institute-warehouse.php
+msgid "نظام إدارة المخازن يتطلب تفعيل RSYI HR System أولاً."
+msgstr "Warehouse Management System requires RSYI HR System to be activated first."
+
+#: institute-warehouse.php
+msgid "تنبيه"
+msgstr "Warning"
+
+#: institute-warehouse.php
+msgid "إدارة المخازن"
+msgstr "Warehouse Management"
+
+#: institute-warehouse.php
+msgid "الأصناف"
+msgstr "Products"
+
+#: institute-warehouse.php
+msgid "إذن إضافة"
+msgstr "Add Permit"
+
+#: institute-warehouse.php
+msgid "طباعة إذن إضافة"
+msgstr "Print Add Permit"
+
+#: institute-warehouse.php
+msgid "إذن صرف"
+msgstr "Withdrawal Permit"
+
+#: institute-warehouse.php
+msgid "طباعة إذن صرف"
+msgstr "Print Withdrawal Permit"
+
+#: institute-warehouse.php
+msgid "طلبات الشراء"
+msgstr "Purchase Requests"
+
+#: institute-warehouse.php
+msgid "الرصيد الافتتاحي"
+msgstr "Opening Balance"
+
+#: institute-warehouse.php
+msgid "التقارير"
+msgstr "Reports"
+
+#: institute-warehouse.php
+msgid "تقرير المخزون"
+msgstr "Stock Report"
+
+#: institute-warehouse.php
+msgid "- تقرير المخزون"
+msgstr "- Stock Report"
+
+#: institute-warehouse.php
+msgid "أصناف تحت الحد الأدنى"
+msgstr "Low Stock Items"
+
+#: institute-warehouse.php
+msgid "- أصناف تحت الحد الأدنى"
+msgstr "- Low Stock Items"
+
+#: institute-warehouse.php
+msgid "أصناف منتهية"
+msgstr "Out of Stock"
+
+#: institute-warehouse.php
+msgid "- أصناف منتهية"
+msgstr "- Out of Stock"
+
+#: institute-warehouse.php
+msgid "تقرير الحركات"
+msgstr "Transactions Report"
+
+#: institute-warehouse.php
+msgid "- تقرير الحركات"
+msgstr "- Transactions Report"
+
+#: institute-warehouse.php
+msgid "استهلاك الأقسام"
+msgstr "Department Consumption"
+
+#: institute-warehouse.php
+msgid "- استهلاك الأقسام"
+msgstr "- Department Consumption"
+
+#: institute-warehouse.php
+msgid "حركة صنف"
+msgstr "Product Movement"
+
+#: institute-warehouse.php
+msgid "- حركة صنف"
+msgstr "- Product Movement"
+
+#: institute-warehouse.php
+msgid "الأقسام والموظفين"
+msgstr "Departments & Employees"
+
+#: institute-warehouse.php
+msgid "الموردين"
+msgstr "Suppliers"
+
+#: institute-warehouse.php
+msgid "التصنيفات"
+msgstr "Categories"
+
+#: institute-warehouse.php
+msgid "استيراد"
+msgstr "Import"
+
+#: institute-warehouse.php
+msgid "الصلاحيات"
+msgstr "Permissions"
+
+#: institute-warehouse.php
+msgid "التوقيع"
+msgstr "Signature"
+
+#: institute-warehouse.php
+msgid "الإعدادات"
+msgstr "Settings"
+
+#: institute-warehouse.php
+msgid "لوحة تحكم المخازن"
+msgstr "Warehouse Dashboard"
+
+#: admin/views/dashboard.php
+msgid "إجمالي الأصناف"
+msgstr "Total Products"
+
+#: admin/views/dashboard.php
+msgid "أصناف تحت الحد الأدنى"
+msgstr "Low Stock Items"
+
+#: admin/views/dashboard.php
+msgid "أوامر صرف معلقة"
+msgstr "Pending Withdrawal Orders"
+
+#: admin/views/dashboard.php
+msgid "طلبات شراء معلقة"
+msgstr "Pending Purchase Requests"
+
+#: admin/views/dashboard.php
+msgid "أصناف وصلت للحد الأدنى"
+msgstr "Items at Minimum Stock"
+
+#: admin/views/products.php
+msgid "اسم الصنف"
+msgstr "Product Name"
+
+#: admin/views/products.php
+msgid "الكود"
+msgstr "SKU"
+
+#: admin/views/products.php
+msgid "الفئة"
+msgstr "Category"
+
+#: admin/views/products.php
+msgid "الوحدة"
+msgstr "Unit"
+
+#: admin/views/products.php
+msgid "الحد الأدنى"
+msgstr "Min Stock"
+
+#: admin/views/products.php
+msgid "الحد الأقصى"
+msgstr "Max Stock"
+
+#: admin/views/products.php
+msgid "الرصيد الحالي"
+msgstr "Current Stock"
+
+#: admin/views/products.php
+msgid "السعر"
+msgstr "Price"
+
+#: admin/views/products.php
+msgid "إضافة صنف"
+msgstr "Add Product"
+
+#: admin/views/products.php
+msgid "تعديل"
+msgstr "Edit"
+
+#: admin/views/products.php
+msgid "حذف"
+msgstr "Delete"
+
+#: admin/views/products.php
+msgid "حفظ"
+msgstr "Save"
+
+#: admin/views/products.php
+msgid "إلغاء"
+msgstr "Cancel"
+
+#: admin/views/withdraw-stock.php
+msgid "إنشاء إذن صرف"
+msgstr "Create Withdrawal Permit"
+
+#: admin/views/withdraw-stock.php
+msgid "إذن صرف عهدة"
+msgstr "Custody Withdrawal Permit"
+
+#: admin/views/withdraw-stock.php
+msgid "أوامر معلقة"
+msgstr "Pending Orders"
+
+#: admin/views/withdraw-stock.php
+msgid "أوامر معتمدة"
+msgstr "Approved Orders"
+
+#: admin/views/withdraw-stock.php
+msgid "جميع الأوامر"
+msgstr "All Orders"
+
+#: admin/views/withdraw-stock.php
+msgid "القسم"
+msgstr "Department"
+
+#: admin/views/withdraw-stock.php
+msgid "الموظف"
+msgstr "Employee"
+
+#: admin/views/withdraw-stock.php
+msgid "ملاحظات"
+msgstr "Notes"
+
+#: admin/views/withdraw-stock.php
+msgid "الأصناف المراد صرفها"
+msgstr "Items to Withdraw"
+
+#: admin/views/withdraw-stock.php
+msgid "الصنف"
+msgstr "Product"
+
+#: admin/views/withdraw-stock.php
+msgid "المخزون المتاح"
+msgstr "Available Stock"
+
+#: admin/views/withdraw-stock.php
+msgid "الكمية المطلوبة"
+msgstr "Requested Quantity"
+
+#: admin/views/withdraw-stock.php
+msgid "إجراء"
+msgstr "Action"
+
+#: admin/views/withdraw-stock.php
+msgid "+ إضافة صنف"
+msgstr "+ Add Item"
+
+#: admin/views/withdraw-stock.php
+msgid "إرسال للاعتماد"
+msgstr "Submit for Approval"
+
+#: admin/views/withdraw-stock.php
+msgid "اختر القسم"
+msgstr "Select Department"
+
+#: admin/views/withdraw-stock.php
+msgid "اختر الموظف"
+msgstr "Select Employee"
+
+#: admin/views/withdraw-stock.php
+msgid "اختر الصنف"
+msgstr "Select Product"
+
+#: admin/views/withdraw-stock.php
+msgid "عرض"
+msgstr "View"
+
+#: admin/views/withdraw-stock.php
+msgid "طباعة وتنفيذ"
+msgstr "Print & Execute"
+
+#: admin/views/withdraw-stock.php
+msgid "طباعة"
+msgstr "Print"
+
+#: admin/views/withdraw-stock.php
+msgid "اعتماد"
+msgstr "Approve"
+
+#: admin/views/withdraw-stock.php
+msgid "رفض"
+msgstr "Reject"
+
+#: admin/views/withdraw-stock.php
+msgid "معلق"
+msgstr "Pending"
+
+#: admin/views/withdraw-stock.php
+msgid "معتمد"
+msgstr "Approved"
+
+#: admin/views/withdraw-stock.php
+msgid "مرفوض"
+msgstr "Rejected"
+
+#: admin/views/withdraw-stock.php
+msgid "منفذ"
+msgstr "Completed"
+
+#: admin/views/withdraw-stock.php
+msgid "ملغي"
+msgstr "Cancelled"
+
+#: admin/views/withdraw-stock.php
+msgid "عادي"
+msgstr "Normal"
+
+#: admin/views/withdraw-stock.php
+msgid "عهدة"
+msgstr "Custody"
+
+#: admin/views/withdraw-stock.php
+msgid "رقم الإذن"
+msgstr "Permit No."
+
+#: admin/views/withdraw-stock.php
+msgid "النوع"
+msgstr "Type"
+
+#: admin/views/withdraw-stock.php
+msgid "التاريخ"
+msgstr "Date"
+
+#: admin/views/withdraw-stock.php
+msgid "الحالة"
+msgstr "Status"
+
+#: admin/views/withdraw-stock.php
+msgid "إجراءات"
+msgstr "Actions"
+
+#: admin/views/add-stock.php
+msgid "إنشاء إذن إضافة"
+msgstr "Create Add Permit"
+
+#: admin/views/add-stock.php
+msgid "المورد"
+msgstr "Supplier"
+
+#: admin/views/add-stock.php
+msgid "اختر المورد"
+msgstr "Select Supplier"
+
+#: admin/views/add-stock.php
+msgid "الكمية"
+msgstr "Quantity"
+
+#: admin/views/add-stock.php
+msgid "سعر الوحدة"
+msgstr "Unit Price"
+
+#: admin/views/suppliers.php
+msgid "إضافة مورد"
+msgstr "Add Supplier"
+
+#: admin/views/suppliers.php
+msgid "رقم المورد"
+msgstr "Supplier No."
+
+#: admin/views/suppliers.php
+msgid "اسم المورد"
+msgstr "Supplier Name"
+
+#: admin/views/suppliers.php
+msgid "العنوان"
+msgstr "Address"
+
+#: admin/views/suppliers.php
+msgid "الهاتف"
+msgstr "Phone"
+
+#: admin/views/suppliers.php
+msgid "البريد الإلكتروني"
+msgstr "Email"
+
+#: admin/views/suppliers.php
+msgid "جهة الاتصال"
+msgstr "Contact Person"
+
+#: admin/views/suppliers.php
+msgid "رقم البطاقة الضريبية"
+msgstr "Tax Card Number"
+
+#: admin/views/suppliers.php
+msgid "رقم السجل التجاري"
+msgstr "Commercial Reg. Number"
+
+#: admin/views/suppliers.php
+msgid "التخصص"
+msgstr "Specialty"
+
+#: admin/views/departments.php
+msgid "الأقسام"
+msgstr "Departments"
+
+#: admin/views/departments.php
+msgid "الموظفين"
+msgstr "Employees"
+
+#: admin/views/departments.php
+msgid "اسم القسم"
+msgstr "Department Name"
+
+#: admin/views/departments.php
+msgid "الوصف"
+msgstr "Description"
+
+#: admin/views/departments.php
+msgid "المدير"
+msgstr "Manager"
+
+#: admin/views/departments.php
+msgid "اسم الموظف"
+msgstr "Employee Name"
+
+#: admin/views/departments.php
+msgid "المسمى الوظيفي"
+msgstr "Job Title"
+
+#: admin/views/departments.php
+msgid "فلترة حسب القسم"
+msgstr "Filter by Department"
+
+#: admin/views/departments.php
+msgid "جميع الأقسام"
+msgstr "All Departments"
+
+#: admin/views/departments.php
+msgid "إدارة الأقسام والموظفين"
+msgstr "Manage Departments & Employees"
+
+#: admin/views/departments.php
+msgid "نظام الموارد البشرية غير مفعل"
+msgstr "HR System is not active"
+
+#: admin/views/settings.php
+msgid "إعدادات النظام"
+msgstr "System Settings"
+
+#: admin/views/settings.php
+msgid "شعار المعهد"
+msgstr "Institute Logo"
+
+#: admin/views/settings.php
+msgid "اسم المعهد"
+msgstr "Institute Name"
+
+#: admin/views/settings.php
+msgid "حفظ الإعدادات"
+msgstr "Save Settings"
+
+#: admin/views/permissions.php
+msgid "إدارة الصلاحيات"
+msgstr "Manage Permissions"
+
+#: admin/views/permissions.php
+msgid "اختر المستخدم"
+msgstr "Select User"
+
+#: admin/views/permissions.php
+msgid "الميزة"
+msgstr "Feature"
+
+#: admin/views/permissions.php
+msgid "مستوى الصلاحية"
+msgstr "Permission Level"
+
+#: admin/views/permissions.php
+msgid "بدون صلاحية"
+msgstr "No Access"
+
+#: admin/views/permissions.php
+msgid "عرض فقط"
+msgstr "View Only"
+
+#: admin/views/permissions.php
+msgid "قراءة"
+msgstr "Read"
+
+#: admin/views/permissions.php
+msgid "قراءة وكتابة"
+msgstr "Read & Write"
+
+#: admin/views/permissions.php
+msgid "حفظ الصلاحيات"
+msgstr "Save Permissions"
+
+#: admin/views/signature.php
+msgid "التوقيع الإلكتروني"
+msgstr "Electronic Signature"
+
+#: admin/views/signature.php
+msgid "رفع التوقيع"
+msgstr "Upload Signature"
+
+#: admin/views/signature.php
+msgid "التوقيع الحالي"
+msgstr "Current Signature"
+
+#: admin/views/reports.php
+msgid "اختر التقرير"
+msgstr "Select Report"
+
+#: admin/views/reports/stock-report.php
+msgid "تقرير المخزون الحالي"
+msgstr "Current Stock Report"
+
+#: admin/views/reports/low-stock-report.php
+msgid "تقرير الأصناف تحت الحد الأدنى"
+msgstr "Low Stock Items Report"
+
+#: admin/views/reports/out-of-stock-report.php
+msgid "تقرير الأصناف النافدة"
+msgstr "Out of Stock Report"
+
+#: admin/views/reports/transactions-report.php
+msgid "تقرير الحركات"
+msgstr "Transactions Report"
+
+#: admin/views/reports/department-consumption-report.php
+msgid "تقرير استهلاك الأقسام"
+msgstr "Department Consumption Report"
+
+#: admin/views/reports/product-movement-report.php
+msgid "تقرير حركة صنف"
+msgstr "Product Movement Report"
+
+#: admin/views/purchase-requests.php
+msgid "طلب شراء جديد"
+msgstr "New Purchase Request"
+
+#: admin/views/purchase-requests.php
+msgid "توليد تلقائي"
+msgstr "Auto Generate"
+
+#: admin/views/purchase-requests.php
+msgid "طلبات معلقة"
+msgstr "Pending Requests"
+
+#: admin/views/purchase-requests.php
+msgid "جميع الطلبات"
+msgstr "All Requests"
+
+#: admin/views/purchase-requests.php
+msgid "رقم الطلب"
+msgstr "Request No."
+
+#: admin/views/opening-balance.php
+msgid "إدارة الرصيد الافتتاحي"
+msgstr "Opening Balance Management"
+
+#: admin/views/opening-balance.php
+msgid "تاريخ الرصيد"
+msgstr "Balance Date"
+
+#: admin/views/opening-balance.php
+msgid "إضافة رصيد افتتاحي"
+msgstr "Add Opening Balance"
+
+#: admin/views/import.php
+msgid "استيراد البيانات"
+msgstr "Import Data"
+
+#: admin/views/import.php
+msgid "استيراد الأصناف"
+msgstr "Import Products"
+
+#: admin/views/import.php
+msgid "اختر ملف Excel"
+msgstr "Select Excel File"
+
+#: admin/views/import.php
+msgid "رفع واستيراد"
+msgstr "Upload & Import"
+
+#: admin/views/categories.php
+msgid "إدارة التصنيفات"
+msgstr "Manage Categories"
+
+#: admin/views/categories.php
+msgid "إضافة تصنيف"
+msgstr "Add Category"
+
+#: admin/views/categories.php
+msgid "اسم التصنيف"
+msgstr "Category Name"
+
+#: includes/class-iw-permissions.php
+msgid "لوحة التحكم"
+msgstr "Dashboard"
+
+#: includes/class-iw-permissions.php
+msgid "أوامر الصرف"
+msgstr "Withdrawal Orders"
+
+#: includes/class-iw-permissions.php
+msgid "اعتماد الأوامر"
+msgstr "Approve Orders"
+
+#: includes/class-iw-permissions.php
+msgid "استيراد البيانات"
+msgstr "Import Data"
+
+#: includes/class-iw-departments.php
+msgid "إدارة الأقسام والموظفين متاحة الآن من نظام الموارد البشرية (RSYI HR System)"
+msgstr "Departments and employees management is now available from HR System (RSYI HR System)"
+
+#: includes/class-iw-products.php
+msgid "تم حفظ الصنف بنجاح"
+msgstr "Product saved successfully"
+
+#: includes/class-iw-products.php
+msgid "تم حذف الصنف بنجاح"
+msgstr "Product deleted successfully"
+
+#: includes/class-iw-products.php
+msgid "تم مزامنة الأرصدة بنجاح"
+msgstr "Stock synchronized successfully"
+
+#: includes/class-iw-products.php
+msgid "ليس لديك صلاحية"
+msgstr "You do not have permission"
+
+#: includes/class-iw-withdrawal-orders.php
+msgid "تم إنشاء إذن الصرف بنجاح"
+msgstr "Withdrawal permit created successfully"
+
+#: includes/class-iw-withdrawal-orders.php
+msgid "تم اعتماد الإذن بنجاح"
+msgstr "Permit approved successfully"
+
+#: includes/class-iw-withdrawal-orders.php
+msgid "تم رفض الإذن"
+msgstr "Permit rejected"
+
+#: includes/class-iw-withdrawal-orders.php
+msgid "تم تنفيذ الإذن بنجاح"
+msgstr "Permit executed successfully"
+
+#: includes/class-iw-withdrawal-orders.php
+msgid "تم إلغاء الإذن"
+msgstr "Permit cancelled"
+
+#: includes/class-iw-withdrawal-orders.php
+msgid "تم حذف الإذن"
+msgstr "Permit deleted"
+
+#: includes/class-iw-withdrawal-orders.php
+msgid "الرصيد غير كافي"
+msgstr "Insufficient stock"
+
+#: includes/class-iw-add-orders.php
+msgid "تم إنشاء إذن الإضافة بنجاح"
+msgstr "Add permit created successfully"
+
+#: includes/class-iw-add-orders.php
+msgid "تم تحديث الإذن بنجاح"
+msgstr "Permit updated successfully"
+
+#: includes/class-iw-add-orders.php
+msgid "تم حذف الإذن بنجاح"
+msgstr "Permit deleted successfully"
+
+#: includes/class-iw-suppliers.php
+msgid "تم حفظ المورد بنجاح"
+msgstr "Supplier saved successfully"
+
+#: includes/class-iw-suppliers.php
+msgid "تم حذف المورد بنجاح"
+msgstr "Supplier deleted successfully"
+
+#: includes/class-iw-categories.php
+msgid "تم حفظ التصنيف بنجاح"
+msgstr "Category saved successfully"
+
+#: includes/class-iw-categories.php
+msgid "تم حذف التصنيف بنجاح"
+msgstr "Category deleted successfully"
+
+#: includes/class-iw-purchase-requests.php
+msgid "تم إنشاء طلب الشراء بنجاح"
+msgstr "Purchase request created successfully"
+
+#: includes/class-iw-purchase-requests.php
+msgid "تم اعتماد الطلب بنجاح"
+msgstr "Request approved successfully"
+
+#: includes/class-iw-purchase-requests.php
+msgid "تم رفض الطلب"
+msgstr "Request rejected"
+
+#: includes/class-iw-opening-balance.php
+msgid "تم حفظ الرصيد الافتتاحي بنجاح"
+msgstr "Opening balance saved successfully"
+
+#: includes/class-iw-opening-balance.php
+msgid "تم حذف الرصيد الافتتاحي"
+msgstr "Opening balance deleted"
+
+#: general
+msgid "نعم"
+msgstr "Yes"
+
+#: general
+msgid "لا"
+msgstr "No"
+
+#: general
+msgid "موافق"
+msgstr "OK"
+
+#: general
+msgid "إغلاق"
+msgstr "Close"
+
+#: general
+msgid "تحميل..."
+msgstr "Loading..."
+
+#: general
+msgid "جاري الحفظ..."
+msgstr "Saving..."
+
+#: general
+msgid "هل أنت متأكد؟"
+msgstr "Are you sure?"
+
+#: general
+msgid "لا توجد بيانات"
+msgstr "No data available"
+
+#: general
+msgid "خطأ في الاتصال"
+msgstr "Connection error"
+
+#: general
+msgid "تمت العملية بنجاح"
+msgstr "Operation completed successfully"
+
+#: general
+msgid "حدث خطأ"
+msgstr "An error occurred"

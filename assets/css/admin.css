@@ -1,0 +1,57 @@
+/* Institute Warehouse Admin Styles */
+.iw-wrap { direction: rtl; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+
+/* Dashboard Cards */
+.iw-dashboard-cards { display: flex; gap: 15px; flex-wrap: wrap; margin: 20px 0; }
+.iw-card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; min-width: 200px; flex: 1; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.iw-card h3 { margin: 0 0 10px; color: #333; font-size: 14px; }
+.iw-card span { font-size: 32px; font-weight: bold; color: #0073aa; }
+.iw-card-warning span { color: #d63638; }
+
+/* Badges */
+.iw-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+.iw-badge-success { background: #d4edda; color: #155724; }
+.iw-badge-warning { background: #fff3cd; color: #856404; }
+.iw-badge-danger { background: #f8d7da; color: #721c24; }
+.iw-badge-info { background: #d1ecf1; color: #0c5460; }
+
+/* Buttons */
+.iw-btn-danger { background: #d63638 !important; color: #fff !important; border-color: #d63638 !important; }
+.iw-btn-danger:hover { background: #b32d2e !important; }
+
+/* Tabs */
+.iw-tabs { border-bottom: 2px solid #0073aa; margin-bottom: 20px; }
+.iw-tab { background: none; border: none; padding: 10px 20px; cursor: pointer; font-size: 14px; border-bottom: 3px solid transparent; margin-bottom: -2px; }
+.iw-tab.active { border-bottom-color: #0073aa; font-weight: bold; color: #0073aa; }
+.iw-tab:hover { background: #f0f0f0; }
+
+/* Modal */
+.iw-modal { display: none; position: fixed; z-index: 100000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow-y: auto; }
+.iw-modal-content { background: #fff; margin: 5% auto; padding: 30px; width: 60%; max-width: 700px; border-radius: 8px; position: relative; overflow: visible; }
+.iw-modal-content select { cursor: pointer; pointer-events: auto !important; -webkit-appearance: menulist; appearance: menulist; }
+.iw-modal-content .form-table { overflow: visible; }
+.iw-modal-content .form-table td { overflow: visible; }
+.iw-modal-content .form-table select { width: 100%; min-height: 36px; padding: 5px 10px; border: 1px solid #8c8f94; border-radius: 4px; background-color: #fff; }
+.iw-modal-large { width: 80%; max-width: 1000px; }
+.iw-modal-close { position: absolute; left: 15px; top: 10px; font-size: 28px; cursor: pointer; color: #666; }
+.iw-modal-close:hover { color: #000; }
+
+/* Tables */
+.iw-wrap .wp-list-table th { text-align: right; }
+
+/* Print styles */
+@media print {
+    .iw-tabs, .button, .iw-modal-close, #adminmenumain, #wpadminbar, #wpfooter { display: none !important; }
+    .iw-wrap { margin: 0; padding: 0; }
+}
+
+/* Section */
+.iw-section { background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+
+/* Select2 RTL fixes */
+.iw-wrap .select2-container { min-width: 250px; }
+.iw-wrap .select2-container--default .select2-selection--single { height: 36px; border: 1px solid #8c8f94; border-radius: 4px; }
+.iw-wrap .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 36px; padding-right: 10px; padding-left: 30px; }
+.iw-wrap .select2-container--default .select2-selection--single .select2-selection__arrow { left: 5px; right: auto; height: 34px; }
+.select2-dropdown { direction: rtl; }
+.select2-search--dropdown .select2-search__field { direction: rtl; }

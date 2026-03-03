@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>توثيق نظام إدارة المخازن - Institute Warehouse</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            line-height: 1.8;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a5f7a;
+            text-align: center;
+            border-bottom: 3px solid #1a5f7a;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #1a5f7a;
+            background: #e8f4f8;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-top: 40px;
+            border-right: 5px solid #1a5f7a;
+        }
+        h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        h4 {
+            color: #34495e;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: right;
+        }
+        th {
+            background: #1a5f7a;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        tr:hover {
+            background: #f0f7fa;
+        }
+        .feature-box {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .feature-box h4 {
+            margin-top: 0;
+            color: #1a5f7a;
+        }
+        ul {
+            padding-right: 25px;
+        }
+        li {
+            margin: 8px 0;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            border-right: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        .info-box {
+            background: #d1ecf1;
+            padding: 15px;
+            border-radius: 5px;
+            border-right: 4px solid #17a2b8;
+            margin: 15px 0;
+        }
+        .success-box {
+            background: #d4edda;
+            padding: 15px;
+            border-radius: 5px;
+            border-right: 4px solid #28a745;
+            margin: 15px 0;
+        }
+        .workflow {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .workflow h4 {
+            color: white;
+            margin-top: 0;
+        }
+        .workflow ol {
+            padding-right: 25px;
+        }
+        .status-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        .status-badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+        .status-pending { background: #ffc107; color: #000; }
+        .status-approved { background: #17a2b8; color: #fff; }
+        .status-completed { background: #28a745; color: #fff; }
+        .status-rejected { background: #dc3545; color: #fff; }
+        .arrow { font-size: 20px; color: #666; }
+        code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: Consolas, monospace;
+            direction: ltr;
+            display: inline-block;
+        }
+        .toc {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .toc h3 {
+            margin-top: 0;
+            border: none;
+        }
+        .toc ul {
+            list-style: none;
+            padding: 0;
+        }
+        .toc li {
+            margin: 10px 0;
+        }
+        .toc a {
+            color: #1a5f7a;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        .version-info {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        @media print {
+            body { background: white; }
+            .container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>توثيق نظام إدارة المخازن<br>Institute Warehouse System</h1>
+
+        <div class="version-info">
+            <p>الإصدار: 1.0.0 | تاريخ التحديث: فبراير 2026</p>
+        </div>
+
+        <div class="toc">
+            <h3>فهرس المحتويات</h3>
+            <ul>
+                <li><a href="#overview">1. نظرة عامة على النظام</a></li>
+                <li><a href="#features">2. الميزات الرئيسية</a></li>
+                <li><a href="#pages">3. صفحات لوحة التحكم</a></li>
+                <li><a href="#products">4. إدارة الأصناف</a></li>
+                <li><a href="#add-orders">5. أذونات الإضافة</a></li>
+                <li><a href="#withdrawal">6. أذونات الصرف</a></li>
+                <li><a href="#custody">7. أذونات العهدة</a></li>
+                <li><a href="#purchase-requests">8. طلبات الشراء</a></li>
+                <li><a href="#opening-balance">9. الأرصدة الافتتاحية</a></li>
+                <li><a href="#reports">10. التقارير</a></li>
+                <li><a href="#departments">11. الأقسام والموظفين</a></li>
+                <li><a href="#suppliers">12. الموردين</a></li>
+                <li><a href="#permissions">13. الصلاحيات</a></li>
+                <li><a href="#fifo">14. نظام FIFO</a></li>
+                <li><a href="#database">15. قاعدة البيانات</a></li>
+                <li><a href="#workflows">16. سير العمل</a></li>
+            </ul>
+        </div>
+
+        <!-- 1. Overview -->
+        <h2 id="overview">1. نظرة عامة على النظام</h2>
+        <p>نظام إدارة المخازن (Institute Warehouse) هو إضافة WordPress متكاملة مصممة خصيصاً للمؤسسات التعليمية والمعاهد لإدارة المخازن والمستودعات بشكل احترافي.</p>
+
+        <div class="info-box">
+            <strong>المميزات الرئيسية:</strong>
+            <ul>
+                <li>إدارة كاملة للأصناف والمخزون</li>
+                <li>نظام أذونات الإضافة والصرف مع سير عمل الموافقات</li>
+                <li>نظام FIFO لتتبع الدفعات (الوارد أولاً يُصرف أولاً)</li>
+                <li>تقارير شاملة ومتنوعة</li>
+                <li>نظام صلاحيات متقدم</li>
+                <li>واجهة عربية بالكامل</li>
+            </ul>
+        </div>
+
+        <!-- 2. Features -->
+        <h2 id="features">2. الميزات الرئيسية</h2>
+
+        <div class="feature-box">
+            <h4>إدارة المخزون</h4>
+            <ul>
+                <li>إضافة وتعديل وحذف الأصناف</li>
+                <li>تصنيف الأصناف في فئات</li>
+                <li>تحديد حد أدنى وأقصى للمخزون</li>
+                <li>استيراد الأصناف من Excel</li>
+                <li>مزامنة الأرصدة تلقائياً</li>
+            </ul>
+        </div>
+
+        <div class="feature-box">
+            <h4>أذونات الإضافة والصرف</h4>
+            <ul>
+                <li>إنشاء أذونات إضافة متعددة الأصناف</li>
+                <li>إنشاء أذونات صرف مع سير عمل الموافقة</li>
+                <li>دعم أذونات العهدة (لا تخصم من الرصيد)</li>
+                <li>التوقيع الإلكتروني على الأذونات</li>
+                <li>طباعة الأذونات</li>
+            </ul>
+        </div>
+
+        <div class="feature-box">
+            <h4>التقارير والإحصائيات</h4>
+            <ul>
+                <li>تقرير المخزون الحالي</li>
+                <li>تقرير الأصناف منخفضة المخزون</li>
+                <li>تقرير الأصناف النافدة</li>
+                <li>تقرير الحركات (إضافة/صرف)</li>
+                <li>تقرير استهلاك الأقسام</li>
+                <li>تقرير حركة صنف محدد</li>
+            </ul>
+        </div>
+
+        <!-- 3. Pages -->
+        <h2 id="pages">3. صفحات لوحة التحكم</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>الصفحة</th>
+                    <th>الوظيفة</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>لوحة التحكم</td>
+                    <td>نظرة عامة على النظام، إحصائيات سريعة، تنبيهات المخزون المنخفض</td>
+                </tr>
+                <tr>
+                    <td>الأصناف</td>
+                    <td>إدارة الأصناف (إضافة/تعديل/حذف)</td>
+                </tr>
+                <tr>
+                    <td>إضافة مخزون</td>
+                    <td>إنشاء أذونات الإضافة (المشتريات)</td>
+                </tr>
+                <tr>
+                    <td>طباعة إذن الإضافة</td>
+                    <td>عرض وطباعة أذونات الإضافة</td>
+                </tr>
+                <tr>
+                    <td>صرف مخزون</td>
+                    <td>إنشاء واعتماد أذونات الصرف</td>
+                </tr>
+                <tr>
+                    <td>طباعة إذن الصرف</td>
+                    <td>عرض وطباعة أذونات الصرف</td>
+                </tr>
+                <tr>
+                    <td>طلبات الشراء</td>
+                    <td>إدارة طلبات الشراء والتوليد التلقائي</td>
+                </tr>
+                <tr>
+                    <td>الرصيد الافتتاحي</td>
+                    <td>تسجيل الأرصدة الافتتاحية</td>
+                </tr>
+                <tr>
+                    <td>التقارير</td>
+                    <td>جميع تقارير النظام</td>
+                </tr>
+                <tr>
+                    <td>الأقسام</td>
+                    <td>إدارة الأقسام والموظفين</td>
+                </tr>
+                <tr>
+                    <td>الموردين</td>
+                    <td>إدارة بيانات الموردين</td>
+                </tr>
+                <tr>
+                    <td>الفئات</td>
+                    <td>تصنيف الأصناف</td>
+                </tr>
+                <tr>
+                    <td>الاستيراد</td>
+                    <td>استيراد الأصناف من Excel</td>
+                </tr>
+                <tr>
+                    <td>الصلاحيات</td>
+                    <td>إدارة صلاحيات المستخدمين</td>
+                </tr>
+                <tr>
+                    <td>التوقيع</td>
+                    <td>رفع التوقيع الإلكتروني</td>
+                </tr>
+                <tr>
+                    <td>الإعدادات</td>
+                    <td>إعدادات النظام (الشعار، اسم المؤسسة)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 4. Products -->
+        <h2 id="products">4. إدارة الأصناف</h2>
+
+        <h3>بيانات الصنف</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>الحقل</th>
+                    <th>الوصف</th>
+                    <th>مطلوب</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>اسم الصنف</td>
+                    <td>اسم الصنف بالعربية</td>
+                    <td>نعم</td>
+                </tr>
+                <tr>
+                    <td>الكود (SKU)</td>
+                    <td>رمز تعريفي فريد للصنف</td>
+                    <td>لا</td>
+                </tr>
+                <tr>
+                    <td>الفئة</td>
+                    <td>تصنيف الصنف</td>
+                    <td>لا</td>
+                </tr>
+                <tr>
+                    <td>الوحدة</td>
+                    <td>وحدة القياس (قطعة، كيلو، علبة...)</td>
+                    <td>نعم</td>
+                </tr>
+                <tr>
+                    <td>الحد الأدنى</td>
+                    <td>الحد الأدنى للمخزون (للتنبيهات)</td>
+                    <td>لا</td>
+                </tr>
+                <tr>
+                    <td>الحد الأقصى</td>
+                    <td>الحد الأقصى للمخزون</td>
+                    <td>لا</td>
+                </tr>
+                <tr>
+                    <td>السعر</td>
+                    <td>سعر الوحدة</td>
+                    <td>لا</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="highlight">
+            <strong>ملاحظة:</strong> الرصيد الحالي يُحسب تلقائياً من أذونات الإضافة والصرف المكتملة، ولا يمكن تعديله يدوياً.
+        </div>
+
+        <!-- 5. Add Orders -->
+        <h2 id="add-orders">5. أذونات الإضافة</h2>
+
+        <p>أذونات الإضافة تُستخدم لتسجيل الأصناف الواردة للمخزن (المشتريات).</p>
+
+        <h3>ترقيم الأذونات</h3>
+        <p>الصيغة: <code>ADD-YYYY-XXXXX</code></p>
+        <p>مثال: <code>ADD-2026-00001</code></p>
+
+        <h3>بيانات إذن الإضافة</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>الحقل</th>
+                    <th>الوصف</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>رقم الإذن</td>
+                    <td>يُنشأ تلقائياً</td>
+                </tr>
+                <tr>
+                    <td>المورد</td>
+                    <td>المورد الذي تم الشراء منه</td>
+                </tr>
+                <tr>
+                    <td>الأصناف</td>
+                    <td>قائمة الأصناف المُضافة مع الكميات والأسعار</td>
+                </tr>
+                <tr>
+                    <td>ملاحظات</td>
+                    <td>أي ملاحظات إضافية</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="success-box">
+            <strong>عند إنشاء إذن الإضافة:</strong>
+            <ul>
+                <li>يتم تحديث رصيد الأصناف تلقائياً</li>
+                <li>يتم إنشاء سجلات في جدول الحركات (transactions) لنظام FIFO</li>
+            </ul>
+        </div>
+
+        <!-- 6. Withdrawal -->
+        <h2 id="withdrawal">6. أذونات الصرف</h2>
+
+        <p>أذونات الصرف تُستخدم لتسجيل الأصناف المصروفة من المخزن للأقسام المختلفة.</p>
+
+        <h3>ترقيم الأذونات</h3>
+        <p>الصيغة: <code>WD-YYYY-XXXXX</code></p>
+        <p>مثال: <code>WD-2026-00001</code></p>
+
+        <h3>حالات إذن الصرف</h3>
+        <div class="status-flow">
+            <span class="status-badge status-pending">قيد الانتظار</span>
+            <span class="arrow">←</span>
+            <span class="status-badge status-approved">معتمد</span>
+            <span class="arrow">←</span>
+            <span class="status-badge status-completed">مكتمل</span>
+        </div>
+        <div class="status-flow">
+            <span class="status-badge status-pending">قيد الانتظار</span>
+            <span class="arrow">←</span>
+            <span class="status-badge status-rejected">مرفوض</span>
+        </div>
+
+        <h3>سير عمل إذن الصرف</h3>
+        <div class="workflow">
+            <h4>خطوات إنشاء واعتماد إذن الصرف:</h4>
+            <ol>
+                <li>أمين المخزن يُنشئ إذن الصرف (الحالة: قيد الانتظار)</li>
+                <li>يتم إرسال إشعار للمعتمدين</li>
+                <li>المدير/العميد يراجع الإذن (يمكنه تعديل الكميات)</li>
+                <li>المدير يعتمد الإذن بالتوقيع الإلكتروني (الحالة: معتمد)</li>
+                <li>أمين المخزن ينفذ الإذن (الحالة: مكتمل)</li>
+                <li>يتم خصم الأصناف من المخزون بنظام FIFO</li>
+                <li>طباعة الإذن مع التوقيعات</li>
+            </ol>
+        </div>
+
+        <div class="highlight">
+            <strong>تحقق الرصيد:</strong> النظام يتحقق من توفر الرصيد الكافي في كل خطوة:
+            <ul>
+                <li>عند إنشاء الإذن</li>
+                <li>عند الاعتماد</li>
+                <li>عند التنفيذ (طباعة وتنفيذ)</li>
+            </ul>
+        </div>
+
+        <!-- 7. Custody -->
+        <h2 id="custody">7. أذونات العهدة</h2>
+
+        <p>أذونات العهدة هي نوع خاص من أذونات الصرف للأصناف التي تُسلم للموظفين كعهدة (مثل الأجهزة والمعدات).</p>
+
+        <h3>ترقيم الأذونات</h3>
+        <p>الصيغة: <code>CWD-YYYY-XXXXX</code></p>
+
+        <div class="info-box">
+            <strong>الفرق بين الصرف العادي والعهدة:</strong>
+            <table>
+                <tr>
+                    <th>الصرف العادي</th>
+                    <th>العهدة</th>
+                </tr>
+                <tr>
+                    <td>يُخصم من الرصيد</td>
+                    <td>لا يُخصم من الرصيد</td>
+                </tr>
+                <tr>
+                    <td>للاستهلاك</td>
+                    <td>للمتابعة والإرجاع</td>
+                </tr>
+                <tr>
+                    <td>ترقيم WD-</td>
+                    <td>ترقيم CWD-</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 8. Purchase Requests -->
+        <h2 id="purchase-requests">8. طلبات الشراء</h2>
+
+        <p>طلبات الشراء لتسجيل الأصناف المطلوب شراؤها مع إمكانية التوليد التلقائي.</p>
+
+        <h3>ترقيم الطلبات</h3>
+        <p>الصيغة: <code>PR-YYYY-XXXXX</code></p>
+
+        <h3>التوليد التلقائي</h3>
+        <div class="feature-box">
+            <p>يمكن للنظام توليد طلبات شراء تلقائياً للأصناف التي وصلت للحد الأدنى:</p>
+            <ul>
+                <li>يبحث عن الأصناف التي رصيدها ≤ الحد الأدنى</li>
+                <li>يستثني الأصناف الموجودة في طلبات معلقة أو معتمدة</li>
+                <li>يحسب الكمية المطلوبة = الحد الأقصى - الرصيد الحالي</li>
+                <li>يضيف آخر سعر شراء كسعر تقديري</li>
+            </ul>
+        </div>
+
+        <h3>حالات طلب الشراء</h3>
+        <div class="status-flow">
+            <span class="status-badge status-pending">قيد الانتظار</span>
+            <span class="arrow">←</span>
+            <span class="status-badge status-approved">معتمد</span>
+            <span class="arrow">←</span>
+            <span class="status-badge status-completed">مكتمل</span>
+        </div>
+
+        <!-- 9. Opening Balance -->
+        <h2 id="opening-balance">9. الأرصدة الافتتاحية</h2>
+
+        <p>لتسجيل الرصيد الافتتاحي للأصناف في بداية الفترة المحاسبية أو عند بدء استخدام النظام.</p>
+
+        <div class="highlight">
+            <strong>ملاحظة هامة:</strong> الرصيد الافتتاحي يُستبدل ولا يُضاف. أي تسجيل رصيد افتتاحي جديد يحل محل القديم.
+        </div>
+
+        <!-- 10. Reports -->
+        <h2 id="reports">10. التقارير</h2>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>التقرير</th>
+                    <th>الوصف</th>
+                    <th>الفلاتر</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>تقرير المخزون</td>
+                    <td>عرض جميع الأصناف وأرصدتها</td>
+                    <td>الفئة</td>
+                </tr>
+                <tr>
+                    <td>الأصناف منخفضة المخزون</td>
+                    <td>الأصناف التي وصلت للحد الأدنى أو أقل</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>الأصناف النافدة</td>
+                    <td>الأصناف التي رصيدها = 0</td>
+                    <td>-</td>
+                </tr>
+                <tr>
+                    <td>تقرير الحركات</td>
+                    <td>جميع حركات الإضافة والصرف</td>
+                    <td>النوع، التاريخ</td>
+                </tr>
+                <tr>
+                    <td>استهلاك الأقسام</td>
+                    <td>ما صُرف لكل قسم</td>
+                    <td>القسم، التاريخ</td>
+                </tr>
+                <tr>
+                    <td>حركة صنف</td>
+                    <td>تفاصيل حركة صنف محدد</td>
+                    <td>الصنف</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 11. Departments -->
+        <h2 id="departments">11. الأقسام والموظفين</h2>
+
+        <h3>الأقسام</h3>
+        <p>تُستخدم الأقسام لتحديد الجهة المستلمة في أذونات الصرف وتقارير الاستهلاك.</p>
+        <ul>
+            <li>اسم القسم</li>
+            <li>وصف القسم</li>
+        </ul>
+
+        <h3>الموظفون</h3>
+        <p>يُربط كل موظف بقسم محدد.</p>
+        <ul>
+            <li>اسم الموظف</li>
+            <li>القسم</li>
+            <li>المسمى الوظيفي</li>
+        </ul>
+
+        <!-- 12. Suppliers -->
+        <h2 id="suppliers">12. الموردين</h2>
+
+        <h3>بيانات المورد</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>الحقل</th>
+                    <th>الوصف</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>رقم المورد</td>
+                    <td>رقم تعريفي فريد</td>
+                </tr>
+                <tr>
+                    <td>اسم المورد</td>
+                    <td>الاسم التجاري</td>
+                </tr>
+                <tr>
+                    <td>العنوان</td>
+                    <td>عنوان المورد</td>
+                </tr>
+                <tr>
+                    <td>الهاتف/الموبايل</td>
+                    <td>أرقام التواصل</td>
+                </tr>
+                <tr>
+                    <td>البريد الإلكتروني</td>
+                    <td>البريد الإلكتروني</td>
+                </tr>
+                <tr>
+                    <td>جهة الاتصال</td>
+                    <td>اسم الشخص المسؤول</td>
+                </tr>
+                <tr>
+                    <td>رقم البطاقة الضريبية</td>
+                    <td>مع إمكانية رفع صورة</td>
+                </tr>
+                <tr>
+                    <td>رقم السجل التجاري</td>
+                    <td>مع إمكانية رفع صورة</td>
+                </tr>
+                <tr>
+                    <td>التخصص</td>
+                    <td>نوع المنتجات/الخدمات</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 13. Permissions -->
+        <h2 id="permissions">13. الصلاحيات</h2>
+
+        <h3>مستويات الصلاحية</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>المستوى</th>
+                    <th>الوصف</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>none (لا شيء)</td>
+                    <td>لا يمكن الوصول</td>
+                </tr>
+                <tr>
+                    <td>view (عرض)</td>
+                    <td>عرض فقط بدون تعديل</td>
+                </tr>
+                <tr>
+                    <td>read (قراءة)</td>
+                    <td>عرض مع إمكانيات محدودة</td>
+                </tr>
+                <tr>
+                    <td>read_write (قراءة وكتابة)</td>
+                    <td>صلاحيات كاملة</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>الأدوار المعرفة مسبقاً</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>الدور</th>
+                    <th>الصلاحيات الرئيسية</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>العميد/المدير (iw_dean)</td>
+                    <td>صلاحيات كاملة + الاعتماد</td>
+                </tr>
+                <tr>
+                    <td>مشرف المخزن (iw_warehouse_supervisor)</td>
+                    <td>الإضافة والصرف والتقارير</td>
+                </tr>
+                <tr>
+                    <td>أمين المخزن (iw_warehouse_clerk)</td>
+                    <td>الإضافة والصرف الأساسية</td>
+                </tr>
+                <tr>
+                    <td>المحاسب (iw_accountant)</td>
+                    <td>العرض، الإضافة، التقارير، الموردين</td>
+                </tr>
+                <tr>
+                    <td>مدير الموقع (Administrator)</td>
+                    <td>صلاحيات كاملة</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>الميزات القابلة للتحكم</h3>
+        <ul>
+            <li>products - الأصناف</li>
+            <li>add_stock - إضافة مخزون</li>
+            <li>withdraw_stock - صرف مخزون</li>
+            <li>purchase_requests - طلبات الشراء</li>
+            <li>reports - التقارير</li>
+            <li>departments - الأقسام</li>
+            <li>suppliers - الموردين</li>
+            <li>categories - الفئات</li>
+            <li>import - الاستيراد</li>
+            <li>settings - الإعدادات</li>
+            <li>permissions - الصلاحيات</li>
+            <li>opening_balance - الرصيد الافتتاحي</li>
+            <li>approve - الاعتماد</li>
+        </ul>
+
+        <!-- 14. FIFO -->
+        <h2 id="fifo">14. نظام FIFO (الوارد أولاً يُصرف أولاً)</h2>
+
+        <p>يستخدم النظام طريقة FIFO لإدارة المخزون، مما يعني أن الأصناف التي دخلت المخزن أولاً تُصرف أولاً.</p>
+
+        <div class="feature-box">
+            <h4>كيف يعمل FIFO؟</h4>
+            <ol>
+                <li>عند إضافة مخزون، يُنشأ سجل في جدول الحركات (transactions) مع الكمية الكاملة في remaining_qty</li>
+                <li>عند الصرف، يبحث النظام عن أقدم الدفعات (حسب تاريخ الإنشاء)</li>
+                <li>يُخصم من الدفعة الأقدم أولاً حتى تنفذ، ثم ينتقل للتالية</li>
+                <li>يُحدث remaining_qty في كل دفعة</li>
+            </ol>
+        </div>
+
+        <div class="info-box">
+            <strong>مثال:</strong>
+            <p>لنفترض لدينا صنف "ورق A4":</p>
+            <ul>
+                <li>إضافة 1: 100 وحدة بتاريخ 1/1/2026</li>
+                <li>إضافة 2: 50 وحدة بتاريخ 15/1/2026</li>
+            </ul>
+            <p>عند صرف 120 وحدة:</p>
+            <ul>
+                <li>يُخصم 100 من الإضافة 1 (تصبح remaining_qty = 0)</li>
+                <li>يُخصم 20 من الإضافة 2 (تصبح remaining_qty = 30)</li>
+            </ul>
+        </div>
+
+        <!-- 15. Database -->
+        <h2 id="database">15. قاعدة البيانات</h2>
+
+        <p>يستخدم النظام 14 جدولاً في قاعدة البيانات مع البادئة <code>wp_iw_</code></p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>الجدول</th>
+                    <th>الوظيفة</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>products</td>
+                    <td>بيانات الأصناف</td>
+                </tr>
+                <tr>
+                    <td>transactions</td>
+                    <td>سجل حركات FIFO</td>
+                </tr>
+                <tr>
+                    <td>add_orders</td>
+                    <td>أذونات الإضافة</td>
+                </tr>
+                <tr>
+                    <td>add_order_items</td>
+                    <td>أصناف أذونات الإضافة</td>
+                </tr>
+                <tr>
+                    <td>withdrawal_orders</td>
+                    <td>أذونات الصرف</td>
+                </tr>
+                <tr>
+                    <td>withdrawal_order_items</td>
+                    <td>أصناف أذونات الصرف</td>
+                </tr>
+                <tr>
+                    <td>purchase_requests</td>
+                    <td>طلبات الشراء</td>
+                </tr>
+                <tr>
+                    <td>purchase_request_items</td>
+                    <td>أصناف طلبات الشراء</td>
+                </tr>
+                <tr>
+                    <td>departments</td>
+                    <td>الأقسام</td>
+                </tr>
+                <tr>
+                    <td>employees</td>
+                    <td>الموظفين</td>
+                </tr>
+                <tr>
+                    <td>suppliers</td>
+                    <td>الموردين</td>
+                </tr>
+                <tr>
+                    <td>categories</td>
+                    <td>فئات الأصناف</td>
+                </tr>
+                <tr>
+                    <td>opening_balances</td>
+                    <td>الأرصدة الافتتاحية</td>
+                </tr>
+                <tr>
+                    <td>permissions</td>
+                    <td>صلاحيات المستخدمين</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- 16. Workflows -->
+        <h2 id="workflows">16. سير العمل</h2>
+
+        <div class="workflow">
+            <h4>سير عمل إضافة المخزون (المشتريات)</h4>
+            <ol>
+                <li>المستخدم يدخل صفحة "إضافة مخزون"</li>
+                <li>يختار المورد</li>
+                <li>يضيف الأصناف مع الكميات والأسعار</li>
+                <li>يحفظ الإذن</li>
+                <li>النظام يُنشئ رقم إذن تلقائي (ADD-YYYY-XXXXX)</li>
+                <li>يتم تحديث رصيد الأصناف</li>
+                <li>يمكن طباعة الإذن</li>
+            </ol>
+        </div>
+
+        <div class="workflow">
+            <h4>سير عمل صرف المخزون</h4>
+            <ol>
+                <li>أمين المخزن يدخل صفحة "صرف مخزون"</li>
+                <li>يختار القسم والموظف</li>
+                <li>يضيف الأصناف المطلوبة (النظام يتحقق من الرصيد)</li>
+                <li>يحفظ الإذن (الحالة: قيد الانتظار)</li>
+                <li>المدير يراجع ويعتمد (الحالة: معتمد)</li>
+                <li>أمين المخزن ينفذ الإذن (الحالة: مكتمل)</li>
+                <li>يتم خصم الأصناف بنظام FIFO</li>
+                <li>طباعة الإذن مع التوقيعات</li>
+            </ol>
+        </div>
+
+        <div class="workflow">
+            <h4>سير عمل طلبات الشراء</h4>
+            <ol>
+                <li>توليد تلقائي أو إنشاء يدوي</li>
+                <li>مراجعة الكميات والأسعار التقديرية</li>
+                <li>إرسال للاعتماد</li>
+                <li>المدير يراجع ويعدل الكميات المعتمدة</li>
+                <li>الاعتماد بالتوقيع الإلكتروني</li>
+                <li>تنفيذ عملية الشراء</li>
+                <li>إنشاء إذن إضافة بالمشتريات</li>
+            </ol>
+        </div>
+
+        <hr style="margin-top: 50px;">
+        <p style="text-align: center; color: #666;">
+            تم إنشاء هذا التوثيق لنظام إدارة المخازن - Institute Warehouse<br>
+            جميع الحقوق محفوظة &copy; 2026
+        </p>
+    </div>
+</body>
+</html>
