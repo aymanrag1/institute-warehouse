@@ -2,6 +2,13 @@
 <div class="wrap iw-wrap" dir="rtl">
     <h1>إدارة الأصناف <button class="button button-primary" onclick="iwShowProductForm()">إضافة صنف جديد</button></h1>
 
+    <!-- Auto stock diagnostic notice -->
+    <div id="iw-auto-diag" style="background:#fff;border:2px solid #2271b1;padding:15px;margin:10px 0;border-radius:4px;display:none;">
+        <strong>🔍 تشخيص تلقائي للرصيد:</strong>
+        <div id="iw-auto-diag-body" style="margin-top:8px;font-family:monospace;font-size:13px;"></div>
+        <button onclick="document.getElementById('iw-auto-diag').style.display='none'" class="button" style="margin-top:8px;">إخفاء</button>
+    </div>
+
     <!-- Product Form Modal -->
     <div id="iw-product-modal" class="iw-modal" style="display:none;">
         <div class="iw-modal-content">
@@ -83,6 +90,23 @@
 jQuery(document).ready(function($) {
     var allProducts = [];
     loadProducts();
+    runAutoStockDiag();
+
+    function runAutoStockDiag() {
+        $.post(iwAdmin.ajaxurl, {action: 'iw_stock_debug', nonce: iwAdmin.nonce}, function(res) {
+            if (!res.success || !res.data) return;
+            var lines = [];
+            res.data.forEach(function(p) {
+                lines.push('<b>' + p.name + '</b>: DB=' + p.current_stock_db
+                    + ' | حقيقي(approved+completed)=' + p.real_stock
+                    + (p.current_stock_db != p.real_stock ? ' <span style="color:red">⚠ فرق: ' + (p.current_stock_db - p.real_stock) + '</span>' : ' ✓'));
+            });
+            if (lines.length) {
+                document.getElementById('iw-auto-diag-body').innerHTML = lines.join('<br>');
+                document.getElementById('iw-auto-diag').style.display = 'block';
+            }
+        });
+    }
 
     function loadProducts() {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(res) {

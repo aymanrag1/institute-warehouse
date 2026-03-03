@@ -172,9 +172,10 @@ class IW_Products {
             ));
         }
 
-        // 3. Withdrawn: count BOTH approved (reserved) and completed (dispensed).
-        //    Exclude custody orders. Use COALESCE(order_type) because NULL != 'custody' = NULL in MySQL
-        //    which would wrongly exclude rows where order_type was not set.
+        // 3. Withdrawn: count ALL active orders (pending, approved, completed).
+        //    Only exclude rejected and cancelled — they do not affect physical stock.
+        //    Use COALESCE(order_type,'normal') because NULL != 'custody' = NULL in MySQL
+        //    which would wrongly exclude rows where order_type column has no value.
         $exclude_clause = ($exclude_order_id > 0)
             ? $wpdb->prepare(" AND o.id != %d", $exclude_order_id)
             : '';
@@ -184,7 +185,7 @@ class IW_Products {
              FROM {$prefix}withdrawal_order_items i
              INNER JOIN {$prefix}withdrawal_orders o ON i.order_id = o.id
              WHERE i.product_id = %d
-               AND o.status IN ('approved', 'completed')
+               AND o.status NOT IN ('rejected', 'cancelled')
                AND COALESCE(o.order_type, 'normal') != 'custody'" . $exclude_clause,
             $product_id
         ));
