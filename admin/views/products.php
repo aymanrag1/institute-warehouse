@@ -334,6 +334,14 @@ function iwStockDebugProduct(productId) {
             var color = w.status === 'completed' ? '#008a20' : (w.status === 'approved' ? '#d63638' : '#666');
             return '<tr><td>' + w.order_number + '</td><td style="color:' + color + '">' + w.status + '</td><td>' + (w.order_type || 'normal') + '</td><td>' + w.qty + '</td></tr>';
         }).join('');
+        // Orders in withdrawal_orders table (with or without items)
+        var owRows = (d.orders_without_items || []).map(function(o) {
+            var itemsLabel = o.items_count > 0
+                ? '<span style="color:green">' + o.items_count + ' بند</span>'
+                : '<span style="color:red;font-weight:bold">0 بنود ← مشكلة!</span>';
+            return '<tr><td>' + o.order_number + '</td><td>' + o.status + '</td><td>' + (o.order_type || 'normal') + '</td><td>' + itemsLabel + '</td><td>' + o.created_at + '</td></tr>';
+        }).join('');
+
         document.getElementById('iw-stock-debug-content').innerHTML =
             '<button onclick="iwStockDebugAll()" class="button" style="margin-bottom:10px">← رجوع للكل</button>'
             + '<h4>' + d.product.name + '</h4>'
@@ -341,8 +349,10 @@ function iwStockDebugProduct(productId) {
             + '<h5>أذونات الإضافة (add_order_items):</h5>'
             + '<table class="wp-list-table widefat" style="margin-bottom:15px"><thead><tr><th>رقم الإذن</th><th>الكمية</th><th>التاريخ</th></tr></thead><tbody>' + (addRows || '<tr><td colspan=3>لا يوجد</td></tr>') + '</tbody></table>'
             + '<h5>الأرصدة الافتتاحية:</h5><p>' + (d.opening_balances.length ? d.opening_balances.map(function(b){return b.quantity + ' (' + b.balance_date + ')';}).join(', ') : 'لا يوجد') + '</p>'
-            + '<h5>أذونات الصرف (بجميع الحالات):</h5>'
-            + '<table class="wp-list-table widefat"><thead><tr><th>رقم الإذن</th><th>الحالة</th><th>النوع</th><th>الكمية</th></tr></thead><tbody>' + (wdRows || '<tr><td colspan=4>لا يوجد</td></tr>') + '</tbody></table>';
+            + '<h5>أذونات الصرف (في withdrawal_order_items):</h5>'
+            + '<table class="wp-list-table widefat" style="margin-bottom:15px"><thead><tr><th>رقم الإذن</th><th>الحالة</th><th>النوع</th><th>الكمية</th></tr></thead><tbody>' + (wdRows || '<tr><td colspan=4 style="color:red">لا يوجد بنود في جدول withdrawal_order_items لهذا الصنف</td></tr>') + '</tbody></table>'
+            + '<h5>جميع أذونات الصرف في النظام (آخر 20) - لكشف أذونات بدون بنود:</h5>'
+            + '<table class="wp-list-table widefat"><thead><tr><th>رقم الإذن</th><th>الحالة</th><th>النوع</th><th>عدد البنود</th><th>التاريخ</th></tr></thead><tbody>' + (owRows || '<tr><td colspan=5 style="color:red">لا يوجد أذونات صرف في النظام نهائياً!</td></tr>') + '</tbody></table>';
     });
 }
 </script>

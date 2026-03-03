@@ -284,7 +284,7 @@ class IW_Products {
             "SELECT quantity, balance_date FROM {$prefix}opening_balances WHERE product_id = %d", $product_id
         ));
 
-        // Withdrawal orders by status
+        // Withdrawal orders by status (from items joined to orders)
         $withdrawals = $wpdb->get_results($wpdb->prepare(
             "SELECT wo.order_number, wo.status, wo.order_type,
                     COALESCE(woi.approved_quantity, woi.quantity) as qty
@@ -293,13 +293,22 @@ class IW_Products {
              WHERE woi.product_id = %d ORDER BY wo.created_at ASC", $product_id
         ));
 
+        // Orders in withdrawal_orders that mention this product (even without items)
+        $orders_without_items = $wpdb->get_results($wpdb->prepare(
+            "SELECT wo.id, wo.order_number, wo.status, wo.order_type, wo.created_at,
+                    (SELECT COUNT(*) FROM {$prefix}withdrawal_order_items woi2 WHERE woi2.order_id = wo.id) as items_count
+             FROM {$prefix}withdrawal_orders wo
+             ORDER BY wo.created_at DESC LIMIT 20"
+        ));
+
         wp_send_json_success(array(
-            'product'         => $product,
-            'add_items'       => $add_items,
-            'opening_balances'=> $balances,
-            'withdrawals'     => $withdrawals,
-            'real_stock'      => self::get_real_stock($product_id),
-            'available_stock' => self::get_real_stock($product_id),
+            'product'              => $product,
+            'add_items'            => $add_items,
+            'opening_balances'     => $balances,
+            'withdrawals'          => $withdrawals,
+            'orders_without_items' => $orders_without_items,
+            'real_stock'           => self::get_real_stock($product_id),
+            'available_stock'      => self::get_real_stock($product_id),
         ));
     }
 }
