@@ -115,6 +115,7 @@ class IW_Database {
             approved_by bigint(20) UNSIGNED DEFAULT NULL,
             approved_at datetime DEFAULT NULL,
             signature_url varchar(500) DEFAULT '',
+            rejection_reason text,
             cancelled_by bigint(20) UNSIGNED DEFAULT NULL,
             cancelled_at datetime DEFAULT NULL,
             created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
@@ -312,6 +313,9 @@ class IW_Database {
             }
             if (!in_array('cancelled_at', $columns)) {
                 $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN cancelled_at datetime DEFAULT NULL AFTER cancelled_by");
+            }
+            if (!in_array('rejection_reason', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN rejection_reason text AFTER notes");
             }
         }
 

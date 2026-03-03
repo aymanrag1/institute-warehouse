@@ -9,6 +9,7 @@ class IW_Products {
         add_action('wp_ajax_iw_get_product', array(__CLASS__, 'get_product'));
         add_action('wp_ajax_iw_get_products_list', array(__CLASS__, 'get_products_list'));
         add_action('wp_ajax_iw_sync_all_stocks', array(__CLASS__, 'ajax_sync_all_stocks'));
+        add_action('wp_ajax_iw_stock_debug', array(__CLASS__, 'ajax_stock_debug'));
     }
 
     public static function save_product() {
@@ -167,13 +168,15 @@ class IW_Products {
         }
 
         // 3. Calculate total withdrawn from completed withdrawal orders (NOT custody)
+        // IMPORTANT: Use COALESCE for order_type because NULL != 'custody' = NULL in MySQL
+        // which would wrongly exclude rows with NULL order_type from the sum.
         $total_withdrawn = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COALESCE(SUM(COALESCE(i.approved_quantity, i.quantity)), 0)
              FROM {$prefix}withdrawal_order_items i
              INNER JOIN {$prefix}withdrawal_orders o ON i.order_id = o.id
              WHERE i.product_id = %d
                AND o.status = 'completed'
-               AND o.order_type != 'custody'",
+               AND COALESCE(o.order_type, 'normal') != 'custody'",
             $product_id
         ));
 
@@ -202,7 +205,7 @@ class IW_Products {
              INNER JOIN {$prefix}withdrawal_orders o ON i.order_id = o.id
              WHERE i.product_id = %d
                AND o.status = 'approved'
-               AND (o.order_type != 'custody' OR o.order_type IS NULL)",
+               AND COALESCE(o.order_type, 'normal') != 'custody'",
             $product_id
         ));
 
@@ -251,5 +254,71 @@ class IW_Products {
 
         self::sync_all_stocks();
         wp_send_json_success(array('message' => 'تم مزامنة جميع الأرصدة بنجاح'));
+    }
+
+    /**
+     * AJAX: Diagnostic breakdown of stock for a specific product (admin only)
+     * Returns detailed data to diagnose stock discrepancies
+     */
+    public static function ajax_stock_debug() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
+
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+        $product_id = intval($_POST['product_id'] ?? 0);
+
+        if (!$product_id) {
+            // Return diagnostics for ALL products if no product_id given
+            $products = $wpdb->get_results("SELECT id, name, current_stock FROM {$prefix}products ORDER BY name ASC");
+            $result = array();
+            foreach ($products as $p) {
+                $result[] = array(
+                    'id'              => $p->id,
+                    'name'            => $p->name,
+                    'current_stock_db'=> $p->current_stock,
+                    'real_stock'      => self::get_real_stock($p->id),
+                    'available_stock' => self::get_available_stock($p->id),
+                );
+            }
+            wp_send_json_success($result);
+            return;
+        }
+
+        $product = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$prefix}products WHERE id = %d", $product_id));
+
+        // Add order items
+        $add_items = $wpdb->get_results($wpdb->prepare(
+            "SELECT ao.order_number, aoi.quantity, ao.created_at
+             FROM {$prefix}add_order_items aoi
+             JOIN {$prefix}add_orders ao ON aoi.order_id = ao.id
+             WHERE aoi.product_id = %d ORDER BY ao.created_at ASC", $product_id
+        ));
+
+        // Opening balances
+        $balances = $wpdb->get_results($wpdb->prepare(
+            "SELECT quantity, balance_date FROM {$prefix}opening_balances WHERE product_id = %d", $product_id
+        ));
+
+        // Withdrawal orders by status
+        $withdrawals = $wpdb->get_results($wpdb->prepare(
+            "SELECT wo.order_number, wo.status, wo.order_type,
+                    COALESCE(woi.approved_quantity, woi.quantity) as qty
+             FROM {$prefix}withdrawal_order_items woi
+             JOIN {$prefix}withdrawal_orders wo ON woi.order_id = wo.id
+             WHERE woi.product_id = %d ORDER BY wo.created_at ASC", $product_id
+        ));
+
+        wp_send_json_success(array(
+            'product'         => $product,
+            'add_items'       => $add_items,
+            'opening_balances'=> $balances,
+            'withdrawals'     => $withdrawals,
+            'real_stock'      => self::get_real_stock($product_id),
+            'available_stock' => self::get_available_stock($product_id),
+        ));
     }
 }

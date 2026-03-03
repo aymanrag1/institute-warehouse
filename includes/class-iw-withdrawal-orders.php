@@ -358,12 +358,20 @@ class IW_Withdrawal_Orders {
         }
 
         global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
         $order_id = intval($_POST['order_id']);
-        $wpdb->update($wpdb->prefix . 'iw_withdrawal_orders', array(
-            'status'      => 'rejected',
-            'approved_by' => get_current_user_id(),
-            'approved_at' => current_time('mysql'),
-            'notes'       => sanitize_textarea_field($_POST['rejection_reason'] ?? ''),
+
+        $order = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$prefix}withdrawal_orders WHERE id = %d", $order_id));
+        if (!$order || !in_array($order->status, array('pending', 'approved'))) {
+            wp_send_json_error(array('message' => 'لا يمكن رفض هذا الإذن بحالته الحالية'));
+        }
+
+        $rejection_reason = sanitize_textarea_field($_POST['rejection_reason'] ?? '');
+        $wpdb->update($prefix . 'withdrawal_orders', array(
+            'status'           => 'rejected',
+            'approved_by'      => get_current_user_id(),
+            'approved_at'      => current_time('mysql'),
+            'rejection_reason' => $rejection_reason,
         ), array('id' => $order_id));
 
         wp_send_json_success(array('message' => 'تم رفض الإذن'));

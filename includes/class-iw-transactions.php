@@ -182,11 +182,11 @@ class IW_Transactions {
             $remaining -= $deduct;
         }
 
-        // Update product stock
-        IW_Products::update_stock($product_id, -$quantity);
-
-        // Commit transaction
+        // Commit FIFO remaining_qty changes first, then update stock
         $wpdb->query('COMMIT');
+
+        // Update product stock AFTER commit so it's consistent with committed data
+        IW_Products::update_stock($product_id, -$quantity);
 
         return $total_cost;
     }
