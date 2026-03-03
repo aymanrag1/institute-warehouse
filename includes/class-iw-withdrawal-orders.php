@@ -62,7 +62,7 @@ class IW_Withdrawal_Orders {
             wp_send_json_error(array('message' => 'يجب إضافة أصناف'));
         }
 
-        // Validate stock availability using REAL stock from transactions (source of truth)
+        // Validate stock availability using AVAILABLE stock (excludes approved reservations)
         $errors = array();
         foreach ($items as $item) {
             $product_id = intval($item['product_id']);
@@ -71,14 +71,13 @@ class IW_Withdrawal_Orders {
                 $errors[] = 'صنف غير موجود';
                 continue;
             }
-            // Use real stock from transactions table (FIFO remaining_qty) - this is the source of truth
-            $real_stock = IW_Products::get_real_stock($product_id);
+            $available_stock = IW_Products::get_available_stock($product_id);
             $requested_qty = intval($item['quantity']);
 
-            if ($real_stock <= 0) {
-                $errors[] = 'الصنف "' . $product->name . '" لا يوجد به رصيد متاح (الرصيد الحقيقي: ' . $real_stock . ')';
-            } elseif ($requested_qty > $real_stock) {
-                $errors[] = 'الكمية المطلوبة من "' . $product->name . '" (' . $requested_qty . ') أكبر من الرصيد المتاح (' . $real_stock . ')';
+            if ($available_stock <= 0) {
+                $errors[] = 'الصنف "' . $product->name . '" لا يوجد به رصيد متاح (الرصيد المتاح: ' . $available_stock . ')';
+            } elseif ($requested_qty > $available_stock) {
+                $errors[] = 'الكمية المطلوبة من "' . $product->name . '" (' . $requested_qty . ') أكبر من الرصيد المتاح (' . $available_stock . ')';
             }
         }
 
@@ -304,7 +303,8 @@ class IW_Withdrawal_Orders {
 
         // Skip stock validation for custody orders
         if ($order->order_type !== 'custody') {
-            // Validate stock availability before approval using REAL stock
+            // Validate stock availability before approval using AVAILABLE stock
+            // (available = real stock minus other approved-but-not-completed reservations)
             $items = $wpdb->get_results($wpdb->prepare(
                 "SELECT i.*, p.name as product_name FROM {$prefix}withdrawal_order_items i
                  LEFT JOIN {$prefix}products p ON i.product_id = p.id
@@ -313,14 +313,15 @@ class IW_Withdrawal_Orders {
 
             $errors = array();
             foreach ($items as $item) {
-                $real_stock = IW_Products::get_real_stock($item->product_id);
+                // get_available_stock already excludes this order's qty (it's still pending, not approved)
+                $available_stock = IW_Products::get_available_stock($item->product_id);
                 $requested_qty = $item->approved_quantity !== null ? intval($item->approved_quantity) : intval($item->quantity);
 
                 if ($requested_qty > 0) {
-                    if ($real_stock <= 0) {
+                    if ($available_stock <= 0) {
                         $errors[] = 'الصنف "' . $item->product_name . '" لا يوجد به رصيد متاح (الرصيد: 0) - لا يمكن اعتماده';
-                    } elseif ($requested_qty > $real_stock) {
-                        $errors[] = 'الكمية المطلوبة من "' . $item->product_name . '" (' . $requested_qty . ') أكبر من الرصيد المتاح (' . $real_stock . ')';
+                    } elseif ($requested_qty > $available_stock) {
+                        $errors[] = 'الكمية المطلوبة من "' . $item->product_name . '" (' . $requested_qty . ') أكبر من الرصيد المتاح (' . $available_stock . ')';
                     }
                 }
             }

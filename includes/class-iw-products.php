@@ -184,19 +184,45 @@ class IW_Products {
     }
 
     /**
-     * Sync a single product's current_stock with real calculated stock
+     * Get available stock for new orders.
+     * = get_real_stock() minus approved (committed but not yet dispensed) withdrawals.
+     * Use this for display and new-order validation so approved reservations show as deducted.
+     * Use get_real_stock() only for complete_order() validation (physical check).
+     */
+    public static function get_available_stock($product_id) {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        $real_stock = self::get_real_stock($product_id);
+
+        // Subtract approved-but-not-completed withdrawals (reserved stock)
+        $approved_reserved = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(SUM(COALESCE(i.approved_quantity, i.quantity)), 0)
+             FROM {$prefix}withdrawal_order_items i
+             INNER JOIN {$prefix}withdrawal_orders o ON i.order_id = o.id
+             WHERE i.product_id = %d
+               AND o.status = 'approved'
+               AND (o.order_type != 'custody' OR o.order_type IS NULL)",
+            $product_id
+        ));
+
+        return max(0, $real_stock - $approved_reserved);
+    }
+
+    /**
+     * Sync a single product's current_stock with available stock
      */
     public static function sync_product_stock($product_id) {
         global $wpdb;
-        $real_stock = self::get_real_stock($product_id);
+        $available_stock = self::get_available_stock($product_id);
         $wpdb->update(
             $wpdb->prefix . 'iw_products',
-            array('current_stock' => $real_stock),
+            array('current_stock' => $available_stock),
             array('id' => $product_id),
             array('%d'),
             array('%d')
         );
-        return $real_stock;
+        return $available_stock;
     }
 
     /**
