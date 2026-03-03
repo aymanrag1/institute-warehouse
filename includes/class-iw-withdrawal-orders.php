@@ -85,13 +85,18 @@ class IW_Withdrawal_Orders {
             wp_send_json_error(array('message' => implode("\n", $errors)));
         }
 
+        $dept_obj = IW_Departments::get_by_id($department_id);
+        $emp_obj  = IW_Departments::get_employee_by_id($employee_id);
+
         $wpdb->insert($prefix . 'withdrawal_orders', array(
-            'order_number'  => $order_number,
-            'department_id' => $department_id,
-            'employee_id'   => $employee_id,
-            'status'        => 'pending',
-            'notes'         => $notes,
-            'created_by'    => get_current_user_id(),
+            'order_number'    => $order_number,
+            'department_id'   => $department_id,
+            'department_name' => $dept_obj ? $dept_obj->name : '',
+            'employee_id'     => $employee_id,
+            'employee_name'   => $emp_obj  ? $emp_obj->name  : '',
+            'status'          => 'pending',
+            'notes'           => $notes,
+            'created_by'      => get_current_user_id(),
         ));
 
         $order_id = $wpdb->insert_id;
@@ -163,13 +168,30 @@ class IW_Withdrawal_Orders {
              ORDER BY o.created_at DESC"
         );
 
-        // Enrich orders with department and employee names from HR System
+        // Use stored names (saved at creation time) with live lookup fallback
         foreach ($orders as $order) {
-            $dept = IW_Departments::get_by_id($order->department_id);
-            $order->department_name = $dept ? $dept->name : '';
+            $update = array();
 
-            $emp = IW_Departments::get_employee_by_id($order->employee_id);
-            $order->employee_name = $emp ? $emp->name : '';
+            if (empty($order->department_name) && $order->department_id) {
+                $dept = IW_Departments::get_by_id($order->department_id);
+                if ($dept) {
+                    $order->department_name = $dept->name;
+                    $update['department_name'] = $dept->name;
+                }
+            }
+
+            if (empty($order->employee_name) && $order->employee_id) {
+                $emp = IW_Departments::get_employee_by_id($order->employee_id);
+                if ($emp) {
+                    $order->employee_name = $emp->name;
+                    $update['employee_name'] = $emp->name;
+                }
+            }
+
+            // Backfill the stored name for future requests
+            if (!empty($update)) {
+                $wpdb->update($prefix . 'withdrawal_orders', $update, array('id' => $order->id));
+            }
         }
 
         wp_send_json_success($orders);
@@ -192,13 +214,29 @@ class IW_Withdrawal_Orders {
              WHERE o.id = %d", $order_id
         ));
 
-        // Enrich with department and employee names from HR System
+        // Use stored names with live lookup fallback (backfills missing old records)
         if ($order) {
-            $dept = IW_Departments::get_by_id($order->department_id);
-            $order->department_name = $dept ? $dept->name : '';
+            $update = array();
 
-            $emp = IW_Departments::get_employee_by_id($order->employee_id);
-            $order->employee_name = $emp ? $emp->name : '';
+            if (empty($order->department_name) && $order->department_id) {
+                $dept = IW_Departments::get_by_id($order->department_id);
+                if ($dept) {
+                    $order->department_name = $dept->name;
+                    $update['department_name'] = $dept->name;
+                }
+            }
+
+            if (empty($order->employee_name) && $order->employee_id) {
+                $emp = IW_Departments::get_employee_by_id($order->employee_id);
+                if ($emp) {
+                    $order->employee_name = $emp->name;
+                    $update['employee_name'] = $emp->name;
+                }
+            }
+
+            if (!empty($update)) {
+                $wpdb->update($prefix . 'withdrawal_orders', $update, array('id' => $order->id));
+            }
         }
 
         $items = $wpdb->get_results($wpdb->prepare(
@@ -561,14 +599,19 @@ class IW_Withdrawal_Orders {
             wp_send_json_error(array('message' => 'يجب إضافة أصناف'));
         }
 
+        $dept_obj = IW_Departments::get_by_id($department_id);
+        $emp_obj  = IW_Departments::get_employee_by_id($employee_id);
+
         $wpdb->insert($prefix . 'withdrawal_orders', array(
-            'order_number'  => $order_number,
-            'order_type'    => 'custody',
-            'department_id' => $department_id,
-            'employee_id'   => $employee_id,
-            'status'        => 'pending',
-            'notes'         => $notes,
-            'created_by'    => get_current_user_id(),
+            'order_number'    => $order_number,
+            'order_type'      => 'custody',
+            'department_id'   => $department_id,
+            'department_name' => $dept_obj ? $dept_obj->name : '',
+            'employee_id'     => $employee_id,
+            'employee_name'   => $emp_obj  ? $emp_obj->name  : '',
+            'status'          => 'pending',
+            'notes'           => $notes,
+            'created_by'      => get_current_user_id(),
         ));
 
         $order_id = $wpdb->insert_id;

@@ -317,6 +317,12 @@ class IW_Database {
             if (!in_array('rejection_reason', $columns)) {
                 $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN rejection_reason text AFTER notes");
             }
+            if (!in_array('department_name', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN department_name varchar(255) NOT NULL DEFAULT '' AFTER department_id");
+            }
+            if (!in_array('employee_name', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN employee_name varchar(255) NOT NULL DEFAULT '' AFTER employee_id");
+            }
         }
 
         // Check withdrawal_order_items table for custody_employee_name
