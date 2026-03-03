@@ -16,12 +16,12 @@
         <form id="iw-withdrawal-form">
             <table class="form-table">
                 <tr>
-                    <th>القسم *</th>
-                    <td><select id="wd_department_id" class="regular-text" required><option value="">اختر القسم</option></select></td>
+                    <th>القسم</th>
+                    <td><select id="wd_department_id" class="regular-text"><option value="">— اختياري —</option></select></td>
                 </tr>
                 <tr>
-                    <th>الموظف *</th>
-                    <td><select id="wd_employee_id" class="regular-text" required><option value="">اختر الموظف</option></select></td>
+                    <th>الموظف</th>
+                    <td><select id="wd_employee_id" class="regular-text"><option value="">— اختياري —</option></select></td>
                 </tr>
                 <tr><th>ملاحظات</th><td><textarea id="wd_notes" class="large-text" rows="2"></textarea></td></tr>
             </table>
@@ -46,12 +46,12 @@
         <form id="iw-custody-form">
             <table class="form-table">
                 <tr>
-                    <th>القسم *</th>
-                    <td><select id="cust_department_id" class="regular-text" required><option value="">اختر القسم</option></select></td>
+                    <th>القسم</th>
+                    <td><select id="cust_department_id" class="regular-text"><option value="">— اختياري —</option></select></td>
                 </tr>
                 <tr>
-                    <th>الموظف *</th>
-                    <td><select id="cust_employee_id" class="regular-text" required><option value="">اختر الموظف</option></select></td>
+                    <th>الموظف</th>
+                    <td><select id="cust_employee_id" class="regular-text"><option value="">— اختياري —</option></select></td>
                 </tr>
                 <tr><th>ملاحظات</th><td><textarea id="cust_notes" class="large-text" rows="2"></textarea></td></tr>
             </table>
@@ -408,6 +408,18 @@ jQuery(document).ready(function($) {
                 html += '<img src="'+sig+'" style="max-height:100px;" /></div>';
             }
 
+            // Admin: edit employee/department name on any order regardless of status
+            if (iwAdmin.isAdmin) {
+                html += '<div style="margin-top:15px;padding:12px;background:#f0f6fc;border:1px solid #c3d4e4;border-radius:4px;">';
+                html += '<strong>تعديل بيانات الموظف (أدمن)</strong>';
+                html += '<table style="margin-top:8px;width:100%"><tr>';
+                html += '<td style="width:50%;padding:4px;">القسم: <input type="text" id="emp-edit-dept" class="regular-text" value="'+((o.department_name||''))+'"></td>';
+                html += '<td style="padding:4px;">الموظف: <input type="text" id="emp-edit-name" class="regular-text" value="'+((o.employee_name||''))+'"></td>';
+                html += '</tr></table>';
+                html += '<button class="button" style="margin-top:8px;" onclick="iwSaveEmployeeInfo('+o.id+')">حفظ البيانات</button>';
+                html += '</div>';
+            }
+
             if (o.status === 'pending') {
                 html += '<div style="margin-top:15px;">';
                 if (hasZeroStock) {
@@ -458,6 +470,19 @@ jQuery(document).ready(function($) {
         });
         if (!items.length) { alert('يجب أن يحتوي الإذن على صنف واحد على الأقل'); return; }
         $.post(iwAdmin.ajaxurl, {action: 'iw_update_withdrawal_order', nonce: iwAdmin.nonce, order_id: id, items: JSON.stringify(items)}, function(r) {
+            alert(r.data.message);
+            if (r.success) iwViewOrder(id);
+        });
+    };
+
+    // Admin: save employee/department name only (any order status)
+    window.iwSaveEmployeeInfo = function(id) {
+        var deptName = $('#emp-edit-dept').val();
+        var empName  = $('#emp-edit-name').val();
+        $.post(iwAdmin.ajaxurl, {
+            action: 'iw_update_order_employee', nonce: iwAdmin.nonce,
+            order_id: id, department_name: deptName, employee_name: empName
+        }, function(r) {
             alert(r.data.message);
             if (r.success) iwViewOrder(id);
         });

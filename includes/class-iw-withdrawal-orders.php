@@ -4,16 +4,17 @@ if (!defined('ABSPATH')) exit;
 class IW_Withdrawal_Orders {
 
     public static function init() {
-        add_action('wp_ajax_iw_create_withdrawal_order', array(__CLASS__, 'create_order'));
-        add_action('wp_ajax_iw_get_withdrawal_orders', array(__CLASS__, 'get_orders'));
-        add_action('wp_ajax_iw_get_withdrawal_order', array(__CLASS__, 'get_order'));
-        add_action('wp_ajax_iw_approve_withdrawal_order', array(__CLASS__, 'approve_order'));
-        add_action('wp_ajax_iw_reject_withdrawal_order', array(__CLASS__, 'reject_order'));
-        add_action('wp_ajax_iw_update_withdrawal_order', array(__CLASS__, 'update_order'));
-        add_action('wp_ajax_iw_complete_withdrawal_order', array(__CLASS__, 'complete_order'));
-        add_action('wp_ajax_iw_delete_withdrawal_order', array(__CLASS__, 'delete_order'));
-        add_action('wp_ajax_iw_cancel_withdrawal_order', array(__CLASS__, 'cancel_order'));
-        add_action('wp_ajax_iw_create_custody_order', array(__CLASS__, 'create_custody_order'));
+        add_action('wp_ajax_iw_create_withdrawal_order',      array(__CLASS__, 'create_order'));
+        add_action('wp_ajax_iw_get_withdrawal_orders',        array(__CLASS__, 'get_orders'));
+        add_action('wp_ajax_iw_get_withdrawal_order',         array(__CLASS__, 'get_order'));
+        add_action('wp_ajax_iw_approve_withdrawal_order',     array(__CLASS__, 'approve_order'));
+        add_action('wp_ajax_iw_reject_withdrawal_order',      array(__CLASS__, 'reject_order'));
+        add_action('wp_ajax_iw_update_withdrawal_order',      array(__CLASS__, 'update_order'));
+        add_action('wp_ajax_iw_update_order_employee',        array(__CLASS__, 'update_order_employee'));
+        add_action('wp_ajax_iw_complete_withdrawal_order',    array(__CLASS__, 'complete_order'));
+        add_action('wp_ajax_iw_delete_withdrawal_order',      array(__CLASS__, 'delete_order'));
+        add_action('wp_ajax_iw_cancel_withdrawal_order',      array(__CLASS__, 'cancel_order'));
+        add_action('wp_ajax_iw_create_custody_order',         array(__CLASS__, 'create_custody_order'));
     }
 
     /**
@@ -709,5 +710,47 @@ class IW_Withdrawal_Orders {
         );
 
         return true;
+    }
+
+    /**
+     * Admin-only: update department_name / employee_name on any order regardless of status.
+     * Does NOT touch items, quantities, or status — only the human-readable name fields.
+     */
+    public static function update_order_employee() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'هذه الميزة للمدير فقط'));
+        }
+
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        $order_id        = intval($_POST['order_id']);
+        $department_name = sanitize_text_field($_POST['department_name'] ?? '');
+        $employee_name   = sanitize_text_field($_POST['employee_name']   ?? '');
+
+        if (!$order_id) {
+            wp_send_json_error(array('message' => 'رقم إذن غير صحيح'));
+        }
+
+        $order = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM {$prefix}withdrawal_orders WHERE id = %d", $order_id
+        ));
+
+        if (!$order) {
+            wp_send_json_error(array('message' => 'الإذن غير موجود'));
+        }
+
+        $wpdb->update(
+            $prefix . 'withdrawal_orders',
+            array(
+                'department_name' => $department_name,
+                'employee_name'   => $employee_name,
+            ),
+            array('id' => $order_id)
+        );
+
+        wp_send_json_success(array('message' => 'تم تحديث بيانات الموظف'));
     }
 }
