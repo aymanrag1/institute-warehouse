@@ -293,13 +293,13 @@ class IW_Products {
              WHERE woi.product_id = %d ORDER BY wo.created_at ASC", $product_id
         ));
 
-        // Orders in withdrawal_orders that mention this product (even without items)
-        $orders_without_items = $wpdb->get_results($wpdb->prepare(
+        // Orders in withdrawal_orders (no prepare needed — no user input in query)
+        $orders_without_items = $wpdb->get_results(
             "SELECT wo.id, wo.order_number, wo.status, wo.order_type, wo.created_at,
                     (SELECT COUNT(*) FROM {$prefix}withdrawal_order_items woi2 WHERE woi2.order_id = wo.id) as items_count
              FROM {$prefix}withdrawal_orders wo
              ORDER BY wo.created_at DESC LIMIT 20"
-        ));
+        );
 
         wp_send_json_success(array(
             'product'              => $product,
