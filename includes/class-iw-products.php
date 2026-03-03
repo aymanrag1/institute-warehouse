@@ -141,56 +141,49 @@ class IW_Products {
 
     /**
      * Get real available stock.
-     * Counts: total_added + opening_balance - (approved + completed withdrawals, excluding custody).
-     * Both approved and completed orders are deducted because approved = physically reserved.
+     *
+     * Uses the FIFO transactions table as the single source of truth for completed stock:
+     *   SUM(remaining_qty) from transactions = physical stock after all completed withdrawals.
+     *
+     * Then subtracts pending/approved orders (reserved but not yet physically withdrawn).
      *
      * @param int $product_id
-     * @param int $exclude_order_id  Pass the current order_id in complete_order() so we don't
-     *                               double-deduct the order being completed (it's already 'approved').
+     * @param int $exclude_order_id  Order to exclude from pending/approved deduction
+     *                               (used in complete_order() to avoid double-deducting).
      */
     public static function get_real_stock($product_id, $exclude_order_id = 0) {
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
-        // 1. Total added from add_order_items
-        $total_added = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COALESCE(SUM(i.quantity), 0)
-             FROM {$prefix}add_order_items i
-             WHERE i.product_id = %d",
+        // 1. Ensure FIFO transaction records exist for this product
+        //    (creates them from add_order_items + opening_balances if not yet present)
+        IW_Transactions::ensure_product_transactions($product_id);
+
+        // 2. Physical stock = sum of remaining_qty across all 'add' transactions
+        //    remaining_qty is reduced by withdraw_fifo() on each completed order
+        $remaining = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(SUM(remaining_qty), 0)
+             FROM {$prefix}transactions
+             WHERE product_id = %d AND transaction_type = 'add'",
             $product_id
         ));
 
-        // 2. Opening balances
-        $opening_balance = 0;
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}opening_balances'");
-        if ($table_exists) {
-            $opening_balance = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COALESCE(SUM(quantity), 0)
-                 FROM {$prefix}opening_balances
-                 WHERE product_id = %d",
-                $product_id
-            ));
-        }
-
-        // 3. Withdrawn: count ALL active orders (pending, approved, completed).
-        //    Only exclude rejected and cancelled — they do not affect physical stock.
-        //    Use COALESCE(order_type,'normal') because NULL != 'custody' = NULL in MySQL
-        //    which would wrongly exclude rows where order_type column has no value.
+        // 3. Reserved stock = pending + approved orders not yet physically executed
         $exclude_clause = ($exclude_order_id > 0)
             ? $wpdb->prepare(" AND o.id != %d", $exclude_order_id)
             : '';
 
-        $total_withdrawn = (int) $wpdb->get_var($wpdb->prepare(
+        $reserved = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COALESCE(SUM(COALESCE(i.approved_quantity, i.quantity)), 0)
              FROM {$prefix}withdrawal_order_items i
              INNER JOIN {$prefix}withdrawal_orders o ON i.order_id = o.id
              WHERE i.product_id = %d
-               AND o.status NOT IN ('rejected', 'cancelled')
+               AND o.status IN ('pending', 'approved')
                AND COALESCE(o.order_type, 'normal') != 'custody'" . $exclude_clause,
             $product_id
         ));
 
-        return max(0, $total_added + $opening_balance - $total_withdrawn);
+        return max(0, $remaining - $reserved);
     }
 
     /**
