@@ -102,6 +102,10 @@ class IW_Withdrawal_Orders {
 
         $order_id = $wpdb->insert_id;
 
+        if (!$order_id) {
+            wp_send_json_error(array('message' => 'فشل حفظ الإذن في قاعدة البيانات: ' . $wpdb->last_error));
+        }
+
         foreach ($items as $item) {
             $product = IW_Products::get_by_id(intval($item['product_id']));
             $wpdb->insert($prefix . 'withdrawal_order_items', array(
@@ -623,6 +627,10 @@ class IW_Withdrawal_Orders {
         ));
 
         $order_id = $wpdb->insert_id;
+
+        if (!$order_id) {
+            wp_send_json_error(array('message' => 'فشل حفظ إذن العهدة في قاعدة البيانات: ' . $wpdb->last_error));
+        }
 
         foreach ($items as $item) {
             $product = IW_Products::get_by_id(intval($item['product_id']));
