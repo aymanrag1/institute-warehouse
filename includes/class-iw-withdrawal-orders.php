@@ -156,12 +156,17 @@ class IW_Withdrawal_Orders {
             $where = $wpdb->prepare(" AND o.status = %s", $status);
         }
 
+        $hr_emp_table  = $wpdb->prefix . 'rsyi_hr_employees';
+        $hr_dept_table = $wpdb->prefix . 'rsyi_hr_departments';
+
         $orders = $wpdb->get_results(
-            "SELECT o.*, d.name as department_name, e.name as employee_name,
+            "SELECT o.*,
+                    COALESCE(d.name, '') as department_name,
+                    COALESCE(e.full_name, e.name, '') as employee_name,
                     u.display_name as created_by_name
              FROM {$prefix}withdrawal_orders o
-             LEFT JOIN {$prefix}departments d ON o.department_id = d.id
-             LEFT JOIN {$prefix}employees e ON o.employee_id = e.id
+             LEFT JOIN {$hr_dept_table} d ON o.department_id = d.id
+             LEFT JOIN {$hr_emp_table} e ON o.employee_id = e.id
              LEFT JOIN {$wpdb->users} u ON o.created_by = u.ID
              WHERE 1=1 $where
              ORDER BY o.created_at DESC"
@@ -180,12 +185,17 @@ class IW_Withdrawal_Orders {
 
         $order_id = intval($_POST['order_id']);
 
+        $hr_emp_table  = $wpdb->prefix . 'rsyi_hr_employees';
+        $hr_dept_table = $wpdb->prefix . 'rsyi_hr_departments';
+
         $order = $wpdb->get_row($wpdb->prepare(
-            "SELECT o.*, d.name as department_name, e.name as employee_name,
+            "SELECT o.*,
+                    COALESCE(d.name, '') as department_name,
+                    COALESCE(e.full_name, e.name, '') as employee_name,
                     u.display_name as created_by_name
              FROM {$prefix}withdrawal_orders o
-             LEFT JOIN {$prefix}departments d ON o.department_id = d.id
-             LEFT JOIN {$prefix}employees e ON o.employee_id = e.id
+             LEFT JOIN {$hr_dept_table} d ON o.department_id = d.id
+             LEFT JOIN {$hr_emp_table} e ON o.employee_id = e.id
              LEFT JOIN {$wpdb->users} u ON o.created_by = u.ID
              WHERE o.id = %d", $order_id
         ));

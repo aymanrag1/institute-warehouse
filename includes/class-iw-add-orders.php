@@ -206,6 +206,19 @@ class IW_Add_Orders {
             IW_Products::update_stock($old->product_id, -intval($old->quantity));
         }
 
+        // Save consumed quantities per product BEFORE deleting transactions
+        // consumed = original_quantity - remaining_qty (ما صُرف فعلاً من هذا الإذن)
+        $consumption_map = array();
+        $old_transactions = $wpdb->get_results($wpdb->prepare(
+            "SELECT product_id, quantity, remaining_qty FROM {$prefix}transactions
+             WHERE notes = %s AND transaction_type = 'add'",
+            'إذن إضافة رقم: ' . $order->order_number
+        ));
+        foreach ($old_transactions as $t) {
+            $consumed = intval($t->quantity) - intval($t->remaining_qty);
+            $consumption_map[intval($t->product_id)] = ($consumption_map[intval($t->product_id)] ?? 0) + $consumed;
+        }
+
         // Delete old transactions for this order
         $wpdb->query($wpdb->prepare(
             "DELETE FROM {$prefix}transactions WHERE notes = %s AND transaction_type = 'add'",
@@ -239,13 +252,17 @@ class IW_Add_Orders {
             // Add new stock
             IW_Products::update_stock($product_id, $quantity);
 
+            // Preserve already-consumed quantity so FIFO remaining_qty stays accurate
+            $already_consumed = $consumption_map[$product_id] ?? 0;
+            $new_remaining_qty = max(0, $quantity - $already_consumed);
+
             // Create new transaction for FIFO tracking
             $wpdb->insert($prefix . 'transactions', array(
                 'transaction_type' => 'add',
                 'product_id' => $product_id,
                 'quantity' => $quantity,
                 'unit_price' => $unit_price,
-                'remaining_qty' => $quantity,
+                'remaining_qty' => $new_remaining_qty,
                 'supplier_id' => $effective_supplier ?: null,
                 'notes' => 'إذن إضافة رقم: ' . $order->order_number,
                 'created_by' => get_current_user_id(),
