@@ -203,9 +203,11 @@ class IW_Transactions {
         }
 
         $results = $wpdb->get_results(
-            "SELECT t.*, p.name as product_name, p.unit as product_unit
+            "SELECT t.*, p.name as product_name, p.unit as product_unit,
+                    s.name as supplier_name
              FROM {$prefix}transactions t
              LEFT JOIN {$prefix}products p ON t.product_id = p.id
+             LEFT JOIN {$prefix}suppliers s ON t.supplier_id = s.id
              WHERE 1=1 $where
              ORDER BY t.created_at DESC LIMIT 200"
         );

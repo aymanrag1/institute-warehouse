@@ -142,7 +142,7 @@ jQuery(document).ready(function($) {
         h += '<td><input type="number" class="ao-qty" min="1" value="1" onchange="iwCalcRowTotal(this)" style="width:80px;"></td>';
         h += '<td><input type="number" class="ao-price" min="0" step="0.01" value="0" onchange="iwCalcRowTotal(this)" style="width:100px;"></td>';
         h += '<td class="ao-row-total">0.00</td>';
-        h += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove();iwCalcTotals();">حذف</button></td>';
+        h += '<td><button type="button" class="button iw-btn-danger" onclick="jQuery(this).closest(\'tr\').remove();iwCalcTotals();">حذف</button></td>';
         h += '</tr>';
         $('#ao-items-body').append(h);
 
@@ -299,7 +299,7 @@ jQuery(document).ready(function($) {
                 html += '<td>'+i.product_name+'</td>';
                 html += '<td><input type="number" class="edit-qty" value="'+i.quantity+'" min="1"></td>';
                 html += '<td><input type="number" class="edit-price" value="'+i.unit_price+'" min="0" step="0.01"></td>';
-                html += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
+                html += '<td><button type="button" class="button iw-btn-danger" onclick="jQuery(this).closest(\'tr\').remove()">حذف</button></td></tr>';
             });
             html += '</tbody></table>';
             html += '<p style="margin-top:10px;"><button type="button" class="button" onclick="iwAddEditItem()">+ إضافة صنف</button></p>';
@@ -327,7 +327,7 @@ jQuery(document).ready(function($) {
         row += '<td><select class="edit-new-product regular-text" onchange="var p=$(this).find(\':selected\');$(this).closest(\'tr\').data(\'product\',$(this).val());$(this).closest(\'tr\').find(\'.edit-price\').val(p.data(\'price\')||0);">'+opts+'</select></td>';
         row += '<td><input type="number" class="edit-qty" value="1" min="1"></td>';
         row += '<td><input type="number" class="edit-price" value="0" min="0" step="0.01"></td>';
-        row += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
+        row += '<td><button type="button" class="button iw-btn-danger" onclick="jQuery(this).closest(\'tr\').remove()">حذف</button></td></tr>';
         $('#edit-items-body').append(row);
     };
 
