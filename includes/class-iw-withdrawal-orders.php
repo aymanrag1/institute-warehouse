@@ -89,21 +89,32 @@ class IW_Withdrawal_Orders {
         $dept_obj = IW_Departments::get_by_id($department_id);
         $emp_obj  = IW_Departments::get_employee_by_id($employee_id);
 
+        // Insert without name columns first (safe if upgrade_tables hasn't run yet)
         $wpdb->insert($prefix . 'withdrawal_orders', array(
-            'order_number'    => $order_number,
-            'department_id'   => $department_id,
-            'department_name' => $dept_obj ? $dept_obj->name : '',
-            'employee_id'     => $employee_id,
-            'employee_name'   => $emp_obj  ? $emp_obj->name  : '',
-            'status'          => 'pending',
-            'notes'           => $notes,
-            'created_by'      => get_current_user_id(),
+            'order_number' => $order_number,
+            'department_id'=> $department_id,
+            'employee_id'  => $employee_id,
+            'status'       => 'pending',
+            'notes'        => $notes,
+            'created_by'   => get_current_user_id(),
         ));
 
         $order_id = $wpdb->insert_id;
 
         if (!$order_id) {
             wp_send_json_error(array('message' => 'فشل حفظ الإذن في قاعدة البيانات: ' . $wpdb->last_error));
+        }
+
+        // Store names separately — silently ignored if columns don't exist yet
+        $dept_name = $dept_obj ? $dept_obj->name : '';
+        $emp_name  = $emp_obj  ? $emp_obj->name  : '';
+        if ($dept_name || $emp_name) {
+            $wpdb->query($wpdb->prepare(
+                "UPDATE {$prefix}withdrawal_orders
+                 SET department_name = %s, employee_name = %s
+                 WHERE id = %d",
+                $dept_name, $emp_name, $order_id
+            ));
         }
 
         foreach ($items as $item) {
@@ -615,21 +626,30 @@ class IW_Withdrawal_Orders {
         $emp_obj  = IW_Departments::get_employee_by_id($employee_id);
 
         $wpdb->insert($prefix . 'withdrawal_orders', array(
-            'order_number'    => $order_number,
-            'order_type'      => 'custody',
-            'department_id'   => $department_id,
-            'department_name' => $dept_obj ? $dept_obj->name : '',
-            'employee_id'     => $employee_id,
-            'employee_name'   => $emp_obj  ? $emp_obj->name  : '',
-            'status'          => 'pending',
-            'notes'           => $notes,
-            'created_by'      => get_current_user_id(),
+            'order_number' => $order_number,
+            'order_type'   => 'custody',
+            'department_id'=> $department_id,
+            'employee_id'  => $employee_id,
+            'status'       => 'pending',
+            'notes'        => $notes,
+            'created_by'   => get_current_user_id(),
         ));
 
         $order_id = $wpdb->insert_id;
 
         if (!$order_id) {
             wp_send_json_error(array('message' => 'فشل حفظ إذن العهدة في قاعدة البيانات: ' . $wpdb->last_error));
+        }
+
+        $dept_name = $dept_obj ? $dept_obj->name : '';
+        $emp_name  = $emp_obj  ? $emp_obj->name  : '';
+        if ($dept_name || $emp_name) {
+            $wpdb->query($wpdb->prepare(
+                "UPDATE {$prefix}withdrawal_orders
+                 SET department_name = %s, employee_name = %s
+                 WHERE id = %d",
+                $dept_name, $emp_name, $order_id
+            ));
         }
 
         foreach ($items as $item) {
