@@ -2,13 +2,6 @@
 <div class="wrap iw-wrap" dir="rtl">
     <h1>إدارة الأصناف <button class="button button-primary" onclick="iwShowProductForm()">إضافة صنف جديد</button></h1>
 
-    <!-- Auto stock diagnostic notice -->
-    <div id="iw-auto-diag" style="background:#fff;border:2px solid #2271b1;padding:15px;margin:10px 0;border-radius:4px;display:none;">
-        <strong>🔍 تشخيص تلقائي للرصيد:</strong>
-        <div id="iw-auto-diag-body" style="margin-top:8px;font-family:monospace;font-size:13px;"></div>
-        <button onclick="document.getElementById('iw-auto-diag').style.display='none'" class="button" style="margin-top:8px;">إخفاء</button>
-    </div>
-
     <!-- Product Form Modal -->
     <div id="iw-product-modal" class="iw-modal" style="display:none;">
         <div class="iw-modal-content">
@@ -90,23 +83,6 @@
 jQuery(document).ready(function($) {
     var allProducts = [];
     loadProducts();
-    runAutoStockDiag();
-
-    function runAutoStockDiag() {
-        $.post(iwAdmin.ajaxurl, {action: 'iw_stock_debug', nonce: iwAdmin.nonce}, function(res) {
-            if (!res.success || !res.data) return;
-            var lines = [];
-            res.data.forEach(function(p) {
-                lines.push('<b>' + p.name + '</b>: DB=' + p.current_stock_db
-                    + ' | حقيقي(approved+completed)=' + p.real_stock
-                    + (p.current_stock_db != p.real_stock ? ' <span style="color:red">⚠ فرق: ' + (p.current_stock_db - p.real_stock) + '</span>' : ' ✓'));
-            });
-            if (lines.length) {
-                document.getElementById('iw-auto-diag-body').innerHTML = lines.join('<br>');
-                document.getElementById('iw-auto-diag').style.display = 'block';
-            }
-        });
-    }
 
     function loadProducts() {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(res) {
@@ -154,7 +130,11 @@ jQuery(document).ready(function($) {
                 status = '<span class="iw-badge iw-badge-success">طبيعي</span>';
             }
             html += '<tr><td><input type="checkbox" class="iw-row-check" value="'+p.id+'"></td><td>'+(i+1)+'</td><td>'+p.name+'</td><td>'+(p.sku||'-')+'</td><td>'+(p.category||'-')+'</td>';
-            html += '<td>'+(p.unit||'-')+'</td><td>'+p.current_stock+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td>';
+            var stockCell = '<span id="stock-val-'+p.id+'">'+p.current_stock+'</span>';
+            if (iwAdmin.isAdmin) {
+                stockCell += ' <button class="button button-small" onclick="iwEditStock('+p.id+','+p.current_stock+')" title="تعديل الرصيد" style="padding:0 6px;min-height:22px;line-height:20px;">✎</button>';
+            }
+            html += '<td>'+(p.unit||'-')+'</td><td>'+stockCell+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td>';
             html += '<td>'+parseFloat(p.price).toFixed(2)+'</td><td>'+status+'</td>';
             html += '<td><button class="button" onclick="iwEditProduct('+p.id+')">تعديل</button> ';
             html += '<button class="button iw-btn-danger" onclick="iwDeleteProduct('+p.id+')">حذف</button></td></tr>';
@@ -294,6 +274,28 @@ jQuery(document).ready(function($) {
         });
     });
 });
+
+function iwEditStock(productId, currentStock) {
+    var newVal = prompt('أدخل الرصيد الجديد للصنف (الرصيد الحالي: ' + currentStock + '):', currentStock);
+    if (newVal === null) return; // cancelled
+    var newStock = parseInt(newVal, 10);
+    if (isNaN(newStock) || newStock < 0) { alert('الرصيد يجب أن يكون رقماً صحيحاً موجباً'); return; }
+    if (newStock === parseInt(currentStock, 10)) return; // no change
+    jQuery.post(iwAdmin.ajaxurl, {
+        action: 'iw_adjust_product_stock',
+        nonce: iwAdmin.nonce,
+        product_id: productId,
+        new_stock: newStock
+    }, function(res) {
+        if (res.success) {
+            var el = document.getElementById('stock-val-' + productId);
+            if (el) el.textContent = res.data.new_stock;
+            alert(res.data.message);
+        } else {
+            alert('خطأ: ' + (res.data ? res.data.message : 'فشل التعديل'));
+        }
+    });
+}
 
 function iwStockDebugAll() {
     document.getElementById('iw-stock-debug-modal').style.display = 'block';
