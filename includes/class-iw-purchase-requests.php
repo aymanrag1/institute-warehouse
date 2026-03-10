@@ -414,14 +414,21 @@ class IW_Purchase_Requests {
             "SELECT * FROM {$prefix}purchase_requests WHERE id = %d", $request_id
         ));
 
-        if (!$request || $request->status !== 'pending') {
+        if (!$request) {
+            wp_send_json_error(array('message' => 'الطلب غير موجود'));
+        }
+
+        $is_admin = current_user_can('manage_options');
+
+        // Admin can edit any request (including approved/completed) to recover lost items
+        if ($request->status !== 'pending' && !$is_admin) {
             wp_send_json_error(array('message' => 'لا يمكن تعديل هذا الطلب'));
         }
 
         // Allow creator, dean, admin, or accountant to edit pending requests
         $is_creator = ($request->created_by == get_current_user_id());
         $is_accountant = current_user_can('iw_accountant') || IW_Permissions::current_user_can('purchase_requests', 'read_write');
-        if (!$is_creator && !$is_accountant && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+        if (!$is_admin && !$is_creator && !$is_accountant && !current_user_can('iw_approve_orders')) {
             wp_send_json_error(array('message' => 'ليس لديك صلاحية لتعديل هذا الطلب'));
         }
 

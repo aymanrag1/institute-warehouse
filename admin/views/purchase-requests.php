@@ -259,8 +259,47 @@ jQuery(document).ready(function($) {
                 html += '</div>';
             }
 
+            // Admin panel: restore missing items on approved/completed requests
+            <?php if (current_user_can('manage_options')): ?>
+            if (iwAdmin.isAdmin && !items.length && o.status !== 'pending') {
+                var adminOpts = '<option value="">اختر الصنف</option>';
+                products.forEach(function(p) { adminOpts += '<option value="'+p.id+'" data-price="'+p.price+'">'+p.name+'</option>'; });
+                html += '<div style="margin-top:20px;padding:15px;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;">';
+                html += '<p style="margin:0 0 10px;"><strong>⚠ تحذير (للمدير فقط):</strong> هذا الطلب لا يحتوي على أصناف — أضف الأصناف لاستعادة البيانات.</p>';
+                html += '<table class="wp-list-table widefat fixed" id="pr-restore-body" style="margin-bottom:8px;"><thead><tr><th>الصنف</th><th>الكمية</th><th>السعر التقديري</th><th></th></tr></thead><tbody></tbody></table>';
+                html += '<button class="button" onclick="iwAddRestoreItem()">+ إضافة صنف</button> ';
+                html += '<button class="button button-primary" style="margin-top:5px;" onclick="iwSaveRestoreItems('+o.id+')">حفظ الأصناف</button>';
+                html += '</div>';
+                html += '<script>window._prRestoreOpts = \''+adminOpts+'\';<\/script>';
+            }
+            <?php endif; ?>
+
             $('#iw-pr-modal-body').html(html);
             $('#iw-pr-modal').show();
+        });
+    };
+
+    window.iwAddRestoreItem = function() {
+        var opts = window._prRestoreOpts || '<option value="">اختر</option>';
+        var row = '<tr><td><select class="rpr-product regular-text" style="min-width:200px;">'+opts+'</select></td>';
+        row += '<td><input type="number" class="rpr-qty" min="1" value="1" style="width:70px;"></td>';
+        row += '<td><input type="number" class="rpr-price" min="0" step="0.01" value="0" style="width:90px;"></td>';
+        row += '<td><button type="button" class="button iw-btn-danger" onclick="jQuery(this).closest(\'tr\').remove()">X</button></td></tr>';
+        jQuery('#pr-restore-body tbody').append(row);
+    };
+
+    window.iwSaveRestoreItems = function(id) {
+        var items = [];
+        jQuery('#pr-restore-body tbody tr').each(function() {
+            var pid  = jQuery(this).find('.rpr-product').val();
+            var qty  = parseInt(jQuery(this).find('.rpr-qty').val(), 10);
+            var price = parseFloat(jQuery(this).find('.rpr-price').val());
+            if (pid && qty > 0) items.push({product_id: pid, quantity: qty, approved_quantity: qty, estimated_price: price});
+        });
+        if (!items.length) { alert('أضف صنفاً واحداً على الأقل'); return; }
+        jQuery.post(iwAdmin.ajaxurl, {action: 'iw_update_purchase_request', nonce: iwAdmin.nonce, request_id: id, items: JSON.stringify(items)}, function(r) {
+            alert(r.data.message);
+            if (r.success) iwViewPr(id);
         });
     };
 
