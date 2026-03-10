@@ -118,7 +118,7 @@ jQuery(document).ready(function($) {
         row += '<td><input type="number" class="pr-qty" min="1" value="1"></td>';
         row += '<td class="pr-last-price">-</td>';
         row += '<td><input type="number" class="pr-price" min="0" step="0.01" value="0"></td>';
-        row += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
+        row += '<td><button type="button" class="button iw-btn-danger" onclick="jQuery(this).closest(\'tr\').remove()">حذف</button></td></tr>';
         var $row = $(row);
         $('#pr-items-body').append($row);
         if (typeof iwInitSelect2 === 'function') iwInitSelect2($row);
@@ -214,13 +214,16 @@ jQuery(document).ready(function($) {
     window.iwViewPr = function(id) {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_purchase_request', nonce: iwAdmin.nonce, request_id: id}, function(r) {
             if (!r.success) return;
-            var o = r.data.request, items = r.data.items, sig = r.data.signature_url;
+            var o = r.data.request, items = r.data.items || [], sig = r.data.signature_url;
             var html = '<h2>طلب شراء رقم: '+o.request_number+'</h2>';
             html += '<table class="wp-list-table widefat fixed striped"><thead><tr><th>الصنف</th><th>المخزون الحالي</th><th>الحد الأدنى</th><th>الحد الأقصى</th><th>الكمية المطلوبة</th>';
             if (o.status === 'pending') html += '<th>الكمية المعتمدة</th>';
             html += '<th>آخر سعر شراء</th><th>السعر التقديري</th>';
             if (o.status === 'pending') html += '<th>حذف</th>';
             html += '</tr></thead><tbody>';
+            if (!items.length) {
+                html += '<tr><td colspan="8" style="text-align:center;padding:20px;color:#999;">لا توجد أصناف مسجلة في هذا الطلب</td></tr>';
+            }
             items.forEach(function(it) {
                 var lastPrice = parseFloat(it.last_purchase_price || it.estimated_price).toFixed(2);
                 html += '<tr data-item-id="'+it.id+'"><td>'+it.product_name+'</td><td>'+(it.current_stock||0)+'</td><td>'+(it.min_stock||0)+'</td><td>'+(it.max_stock||0)+'</td><td>'+it.quantity+'</td>';
@@ -291,6 +294,7 @@ jQuery(document).ready(function($) {
                 });
             }
         });
+        if (!items.length) { alert('لا توجد أصناف لحفظها — يجب إضافة صنف واحد على الأقل'); return; }
         $.post(iwAdmin.ajaxurl, {action: 'iw_update_purchase_request', nonce: iwAdmin.nonce, request_id: id, items: JSON.stringify(items)}, function(r) {
             alert(r.data.message);
             if (r.success) iwViewPr(id);
@@ -313,6 +317,7 @@ jQuery(document).ready(function($) {
                 });
             }
         });
+        if (!items.length) { alert('لا توجد أصناف في الطلب — لا يمكن الاعتماد'); return; }
         $.post(iwAdmin.ajaxurl, {action: 'iw_update_purchase_request', nonce: iwAdmin.nonce, request_id: id, items: JSON.stringify(items)}, function() {
             $.post(iwAdmin.ajaxurl, {action: 'iw_approve_purchase_request', nonce: iwAdmin.nonce, request_id: id}, function(r) {
                 alert(r.data.message);
@@ -341,7 +346,7 @@ jQuery(document).ready(function($) {
     window.iwPrintPr = function(id) {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_purchase_request', nonce: iwAdmin.nonce, request_id: id}, function(r) {
             if (!r.success) return;
-            var o = r.data.request, items = r.data.items, sig = r.data.signature_url;
+            var o = r.data.request, items = r.data.items || [], sig = r.data.signature_url;
             var printContent = '<?php echo addslashes(IW_Admin::get_print_header()); ?>';
             printContent += '<h2 style="text-align:center;">طلب شراء رقم: '+o.request_number+'</h2>';
             printContent += '<p><strong>التاريخ:</strong> '+o.created_at+'</p>';

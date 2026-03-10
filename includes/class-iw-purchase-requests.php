@@ -374,12 +374,16 @@ class IW_Purchase_Requests {
              WHERE i.request_id = %d", $request_id
         ));
 
+        // Defensive: get_results() returns null on DB error, normalize to empty array
+        if (!is_array($items)) $items = array();
+
         // Add last purchase price to each item if not set
         foreach ($items as &$item) {
             if (empty($item->last_purchase_price) || $item->last_purchase_price == 0) {
                 $item->last_purchase_price = self::get_last_purchase_price($item->product_id);
             }
         }
+        unset($item); // release reference after foreach &$item
 
         $signature_url = '';
         if ($request && $request->approved_by) {
@@ -421,11 +425,19 @@ class IW_Purchase_Requests {
             wp_send_json_error(array('message' => 'ليس لديك صلاحية لتعديل هذا الطلب'));
         }
 
+        if (empty($items)) {
+            wp_send_json_error(array('message' => 'يجب إضافة أصناف للطلب — لا يمكن الحفظ بدون أصناف'));
+        }
+
+        // Use MySQL transaction: delete + re-insert atomically so a failed insert doesn't leave items empty
+        $wpdb->query('START TRANSACTION');
+
         $wpdb->delete($prefix . 'purchase_request_items', array('request_id' => $request_id));
 
+        $insert_failed = false;
         foreach ($items as $item) {
             $last_price = self::get_last_purchase_price(intval($item['product_id']));
-            $wpdb->insert($prefix . 'purchase_request_items', array(
+            $result = $wpdb->insert($prefix . 'purchase_request_items', array(
                 'request_id'          => $request_id,
                 'product_id'          => intval($item['product_id']),
                 'quantity'            => intval($item['quantity']),
@@ -433,7 +445,18 @@ class IW_Purchase_Requests {
                 'estimated_price'     => floatval($item['estimated_price'] ?? 0),
                 'last_purchase_price' => $last_price,
             ));
+            if ($result === false) {
+                $insert_failed = true;
+                break;
+            }
         }
+
+        if ($insert_failed) {
+            $wpdb->query('ROLLBACK');
+            wp_send_json_error(array('message' => 'فشل في حفظ الأصناف: ' . $wpdb->last_error));
+        }
+
+        $wpdb->query('COMMIT');
 
         if (!empty($_POST['notes'])) {
             $wpdb->update($prefix . 'purchase_requests',

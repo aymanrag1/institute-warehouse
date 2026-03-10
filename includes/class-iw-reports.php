@@ -41,13 +41,31 @@ class IW_Reports {
         if ($to)   $where .= $wpdb->prepare(" AND t.created_at <= %s", $to . ' 23:59:59');
         if ($type) $where .= $wpdb->prepare(" AND t.transaction_type = %s", $type);
 
+        // Note: iw_departments / iw_employees tables may not exist (plugin uses RSYI HR System).
+        // Use LEFT JOINs against HR tables if they exist, otherwise skip them to avoid fatal query errors.
+        $hr_dept_table = $wpdb->prefix . 'rsyi_hr_departments';
+        $hr_emp_table  = $wpdb->prefix . 'rsyi_hr_employees';
+        $dept_join = '';
+        $emp_join  = '';
+        $dept_col  = "'' as department_name";
+        $emp_col   = "'' as employee_name";
+
+        if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $hr_dept_table)) === $hr_dept_table) {
+            $dept_join = "LEFT JOIN `{$hr_dept_table}` hd ON t.department_id = hd.id";
+            $dept_col  = 'hd.name as department_name';
+        }
+        if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $hr_emp_table)) === $hr_emp_table) {
+            $emp_join = "LEFT JOIN `{$hr_emp_table}` he ON t.employee_id = he.id";
+            $emp_col  = 'he.name as employee_name';
+        }
+
         $rows = $wpdb->get_results(
             "SELECT t.*, p.name as product_name, p.unit as product_unit,
-                    d.name as department_name, e.name as employee_name, s.name as supplier_name
+                    {$dept_col}, {$emp_col}, s.name as supplier_name
              FROM {$prefix}transactions t
              LEFT JOIN {$prefix}products p ON t.product_id = p.id
-             LEFT JOIN {$prefix}departments d ON t.department_id = d.id
-             LEFT JOIN {$prefix}employees e ON t.employee_id = e.id
+             {$dept_join}
+             {$emp_join}
              LEFT JOIN {$prefix}suppliers s ON t.supplier_id = s.id
              WHERE $where
              ORDER BY t.created_at DESC"
