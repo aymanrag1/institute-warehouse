@@ -196,6 +196,46 @@ class IW_Database {
         ) $charset;";
         dbDelta($sql);
 
+        // Return orders (إذن ارتجاع / رد عهدة)
+        $sql = "CREATE TABLE {$prefix}return_orders (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            order_number varchar(50) NOT NULL,
+            order_type varchar(20) NOT NULL DEFAULT 'normal',
+            original_order_id bigint(20) UNSIGNED DEFAULT NULL,
+            department_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            employee_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            department_name varchar(255) DEFAULT '',
+            employee_name varchar(255) DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            notes text,
+            approved_by bigint(20) UNSIGNED DEFAULT NULL,
+            approved_at datetime DEFAULT NULL,
+            signature_url varchar(500) DEFAULT '',
+            rejection_reason text,
+            created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_status (status),
+            KEY idx_type (order_type),
+            KEY idx_original (original_order_id)
+        ) $charset;";
+        dbDelta($sql);
+
+        // Return order items
+        $sql = "CREATE TABLE {$prefix}return_order_items (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            order_id bigint(20) UNSIGNED NOT NULL,
+            product_id bigint(20) UNSIGNED NOT NULL,
+            quantity int(11) NOT NULL,
+            approved_quantity int(11) DEFAULT NULL,
+            unit_price decimal(12,2) NOT NULL DEFAULT 0.00,
+            PRIMARY KEY (id),
+            KEY idx_order_id (order_id),
+            KEY idx_product_id (product_id)
+        ) $charset;";
+        dbDelta($sql);
+
         // Permissions matrix
         $sql = "CREATE TABLE {$prefix}permissions (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,

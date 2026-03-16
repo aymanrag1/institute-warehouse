@@ -4,7 +4,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Institute Warehouse 2.4.0\n"
+"Project-Id-Version: Institute Warehouse 2.5.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-02-24 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
@@ -761,4 +761,84 @@ msgstr ""
 
 #: general
 msgid "حدث خطأ"
+msgstr ""
+
+#: institute-warehouse.php
+msgid "أذون الارتجاع"
+msgstr ""
+
+#: institute-warehouse.php
+msgid "طباعة إذن ارتجاع"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "أذون الارتجاع ورد العهدة"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "إذن ارتجاع عادي"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "رد عهدة"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "إنشاء إذن ارتجاع"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "إنشاء إذن رد عهدة"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "رقم الإذن"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "الإذن الأصلي"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "معلق"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "معتمد"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "منفذ"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "مرفوض"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "اعتماد"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "تنفيذ الارتجاع"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "تنفيذ رد العهدة"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "طباعة"
+msgstr ""
+
+#: admin/views/return-orders.php
+msgid "حفظ الإذن"
+msgstr ""
+
+#: admin/views/withdraw-stock.php
+msgid "إنشاء إذن ارتجاع"
+msgstr ""
+
+#: admin/views/products.php
+msgid "تعديل الرصيد"
 msgstr ""

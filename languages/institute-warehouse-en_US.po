@@ -4,7 +4,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Institute Warehouse 2.4.0\n"
+"Project-Id-Version: Institute Warehouse 2.5.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-02-24 00:00+0000\n"
 "PO-Revision-Date: 2026-02-24 00:00+0000\n"
@@ -763,3 +763,47 @@ msgstr "Operation completed successfully"
 #: general
 msgid "حدث خطأ"
 msgstr "An error occurred"
+
+#: institute-warehouse.php
+msgid "أذون الارتجاع"
+msgstr "Return Permits"
+
+#: institute-warehouse.php
+msgid "طباعة إذن ارتجاع"
+msgstr "Print Return Permit"
+
+#: admin/views/return-orders.php
+msgid "أذون الارتجاع ورد العهدة"
+msgstr "Return Permits & Custody Returns"
+
+#: admin/views/return-orders.php
+msgid "إذن ارتجاع عادي"
+msgstr "Normal Return Permit"
+
+#: admin/views/return-orders.php
+msgid "رد عهدة"
+msgstr "Custody Return"
+
+#: admin/views/return-orders.php
+msgid "إنشاء إذن ارتجاع"
+msgstr "Create Return Permit"
+
+#: admin/views/return-orders.php
+msgid "إنشاء إذن رد عهدة"
+msgstr "Create Custody Return"
+
+#: admin/views/return-orders.php
+msgid "تنفيذ الارتجاع"
+msgstr "Execute Return"
+
+#: admin/views/return-orders.php
+msgid "تنفيذ رد العهدة"
+msgstr "Execute Custody Return"
+
+#: admin/views/withdraw-stock.php
+msgid "إنشاء إذن ارتجاع"
+msgstr "Create Return Permit"
+
+#: admin/views/products.php
+msgid "تعديل الرصيد"
+msgstr "Adjust Stock"

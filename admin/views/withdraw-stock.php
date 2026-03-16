@@ -315,7 +315,10 @@ jQuery(document).ready(function($) {
                     }
                     html += ' <button class="button iw-btn-danger" onclick="iwCancelOrder('+o.id+')">إلغاء</button>';
                 }
-                if (o.status === 'completed') html += ' <button class="button button-primary" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
+                if (o.status === 'completed') {
+                    html += ' <button class="button button-primary" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
+                    html += ' <button class="button" onclick="iwCreateReturnFromOrder('+o.id+',\''+o.order_type+'\')">إنشاء إذن ارتجاع</button>';
+                }
                 html += '</td></tr>';
             });
             $(target).html(html || '<tr><td colspan="7">لا توجد أوامر</td></tr>');
@@ -449,7 +452,8 @@ jQuery(document).ready(function($) {
 
             if (o.status === 'completed') {
                 html += '<div style="margin-top:15px;">';
-                html += '<button class="button button-primary button-large" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
+                html += '<button class="button button-primary button-large" onclick="iwPrintOrder('+o.id+')">طباعة</button> ';
+                html += '<button class="button button-large" onclick="iwCreateReturnFromOrder('+o.id+',\''+o.order_type+'\')">إنشاء إذن ارتجاع</button>';
                 html += '</div>';
             }
 
@@ -658,6 +662,16 @@ jQuery(document).ready(function($) {
             w.document.close();
             w.print();
         });
+    };
+
+    // Create return order from completed withdrawal
+    window.iwCreateReturnFromOrder = function(originalId, orderType) {
+        var returnType = orderType === 'custody' ? 'custody' : 'normal';
+        var label = returnType === 'custody' ? 'رد عهدة' : 'إذن ارتجاع';
+        if (!confirm('هل تريد إنشاء ' + label + ' لهذا الإذن؟')) return;
+        // Redirect to return orders page with pre-filled original_order_id
+        var url = iwAdmin.adminurl + 'admin.php?page=iw-return-orders&from_order=' + originalId + '&type=' + returnType;
+        window.location.href = url;
     };
 
     // Bulk actions

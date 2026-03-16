@@ -95,6 +95,14 @@ class IW_Admin {
         include IW_PLUGIN_DIR . 'admin/views/reports/product-movement-report.php';
     }
 
+    public static function return_orders_page() {
+        include IW_PLUGIN_DIR . 'admin/views/return-orders.php';
+    }
+
+    public static function print_return_permit_page() {
+        include IW_PLUGIN_DIR . 'admin/views/print-return-permit.php';
+    }
+
     /**
      * Get print header with logo and institute name from settings
      */

@@ -4,7 +4,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Institute Warehouse 2.4.0\n"
+"Project-Id-Version: Institute Warehouse 2.5.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-02-24 00:00+0000\n"
 "PO-Revision-Date: 2026-02-24 00:00+0000\n"
@@ -843,3 +843,51 @@ msgstr "إلغاء الإذن"
 #: general
 msgid "سبب الرفض"
 msgstr "سبب الرفض"
+
+#: institute-warehouse.php
+msgid "أذون الارتجاع"
+msgstr "أذون الارتجاع"
+
+#: institute-warehouse.php
+msgid "طباعة إذن ارتجاع"
+msgstr "طباعة إذن ارتجاع"
+
+#: admin/views/return-orders.php
+msgid "أذون الارتجاع ورد العهدة"
+msgstr "أذون الارتجاع ورد العهدة"
+
+#: admin/views/return-orders.php
+msgid "إذن ارتجاع عادي"
+msgstr "إذن ارتجاع عادي"
+
+#: admin/views/return-orders.php
+msgid "رد عهدة"
+msgstr "رد عهدة"
+
+#: admin/views/return-orders.php
+msgid "إنشاء إذن ارتجاع"
+msgstr "إنشاء إذن ارتجاع"
+
+#: admin/views/return-orders.php
+msgid "إنشاء إذن رد عهدة"
+msgstr "إنشاء إذن رد عهدة"
+
+#: admin/views/return-orders.php
+msgid "اعتماد"
+msgstr "اعتماد"
+
+#: admin/views/return-orders.php
+msgid "تنفيذ الارتجاع"
+msgstr "تنفيذ الارتجاع"
+
+#: admin/views/return-orders.php
+msgid "تنفيذ رد العهدة"
+msgstr "تنفيذ رد العهدة"
+
+#: admin/views/withdraw-stock.php
+msgid "إنشاء إذن ارتجاع"
+msgstr "إنشاء إذن ارتجاع"
+
+#: admin/views/products.php
+msgid "تعديل الرصيد"
+msgstr "تعديل الرصيد"

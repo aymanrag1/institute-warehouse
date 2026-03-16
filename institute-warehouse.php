@@ -3,7 +3,7 @@
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
  * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
- * Version: 2.3.2
+ * Version: 2.5.0
  * Author: AYMAN RAGAB
  * Author URI: tel:00201159230034
  * Text Domain: institute-warehouse
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.4.1');
+define('IW_VERSION', '2.5.0');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -252,6 +252,7 @@ class Institute_Warehouse_System {
         require_once IW_PLUGIN_DIR . 'includes/class-iw-categories.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-reports.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-excel-import.php';
+        require_once IW_PLUGIN_DIR . 'includes/class-iw-return-orders.php';
         require_once IW_PLUGIN_DIR . 'admin/class-iw-admin.php';
     }
 
@@ -290,6 +291,7 @@ class Institute_Warehouse_System {
         IW_Categories::init();
         IW_Reports::init();
         IW_Excel_Import::init();
+        IW_Return_Orders::init();
     }
 
     public function activate() {
@@ -376,6 +378,26 @@ class Institute_Warehouse_System {
             'iw_view_warehouse',
             'iw-purchase-requests',
             array('IW_Admin', 'purchase_requests_page')
+        );
+
+        // أذون الارتجاع ورد العهدة
+        add_submenu_page(
+            'institute-warehouse',
+            __('أذون الارتجاع', 'institute-warehouse'),
+            __('أذون الارتجاع', 'institute-warehouse'),
+            'iw_withdraw_stock',
+            'iw-return-orders',
+            array('IW_Admin', 'return_orders_page')
+        );
+
+        // طباعة إذن ارتجاع
+        add_submenu_page(
+            'institute-warehouse',
+            __('طباعة إذن ارتجاع', 'institute-warehouse'),
+            __('طباعة إذن ارتجاع', 'institute-warehouse'),
+            'iw_withdraw_stock',
+            'iw-print-return-permit',
+            array('IW_Admin', 'print_return_permit_page')
         );
 
         // الرصيد الافتتاحي
@@ -550,6 +572,7 @@ class Institute_Warehouse_System {
 
         wp_localize_script('iw-admin-js', 'iwAdmin', array(
             'ajaxurl'  => admin_url('admin-ajax.php'),
+            'adminurl' => admin_url(),
             'nonce'    => wp_create_nonce('iw_admin_nonce'),
             'isAdmin'  => current_user_can('manage_options') ? 1 : 0,
             'strings'  => array(

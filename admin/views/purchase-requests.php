@@ -196,7 +196,6 @@ jQuery(document).ready(function($) {
                 html += '<td><button class="button" onclick="iwViewPr('+o.id+')">عرض</button>';
                 if (o.status === 'pending') html += ' <button class="button iw-btn-danger" onclick="iwDeletePr('+o.id+')">حذف</button>';
                 if (o.status === 'approved') html += ' <button class="button button-primary" onclick="iwPrintPr('+o.id+')">طباعة</button>';
-                if (o.status === 'approved') html += ' <button class="button" style="background:#46b450;color:#fff;" onclick="iwCompletePr('+o.id+')">استلام البضاعة</button>';
                 html += '</td></tr>';
             });
             $(target).html(html || '<tr><td colspan="5">لا توجد طلبات</td></tr>');
@@ -254,8 +253,7 @@ jQuery(document).ready(function($) {
             }
             if (o.status === 'approved') {
                 html += '<div style="margin-top:15px;">';
-                html += '<button class="button button-primary button-large" onclick="iwPrintPr('+o.id+')">طباعة</button> ';
-                html += '<button class="button button-large" style="background:#46b450;color:#fff;" onclick="iwCompletePr('+o.id+')">استلام البضاعة</button>';
+                html += '<button class="button button-primary button-large" onclick="iwPrintPr('+o.id+')">طباعة</button>';
                 html += '</div>';
             }
 
@@ -371,14 +369,6 @@ jQuery(document).ready(function($) {
         $.post(iwAdmin.ajaxurl, {action: 'iw_reject_purchase_request', nonce: iwAdmin.nonce, request_id: id, rejection_reason: reason}, function(r) {
             alert(r.data.message);
             if (r.success) $('#iw-pr-modal').hide();
-        });
-    };
-
-    window.iwCompletePr = function(id) {
-        if (!confirm('هل تم استلام البضاعة؟ سيتم إضافة الكميات للمخزون.')) return;
-        $.post(iwAdmin.ajaxurl, {action: 'iw_complete_purchase_request', nonce: iwAdmin.nonce, request_id: id}, function(r) {
-            alert(r.data.message);
-            if (r.success) { $('#iw-pr-modal').hide(); loadPrOrders('approved'); }
         });
     };
 
