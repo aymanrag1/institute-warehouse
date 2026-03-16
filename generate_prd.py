@@ -107,7 +107,7 @@ sub_run.font.color.rgb = RGBColor(0x2E, 0x74, 0xB5)
 doc.add_paragraph()
 
 meta_data = [
-    ('Version',       '1.0.0'),
+    ('Version',       '2.6.0'),
     ('Date',          'March 2026'),
     ('Platform',      'Laravel 11 / PHP 8.2+'),
     ('Architecture',  'MVC – REST API + Blade Views'),
@@ -192,10 +192,11 @@ core = [
     'FIFO (First-In First-Out) stock depletion for accurate cost tracking',
     'Multi-level electronic approval with digital signature',
     'HR integration: automatic linkage of departments and employees',
-    'Bilingual interface: Arabic (RTL) and English',
+    'Bilingual interface: Arabic (RTL) and English — auto-detected from WordPress locale',
     'Role-based access control (RBAC) with granular permissions',
     'Return permit system: normal returns and custody returns',
     'Auto-generated purchase requests when stock hits minimum level',
+    'Estimated total amount displayed on purchase request approval screen with live recalculation',
 ]
 for item in core:
     p = doc.add_paragraph(item, style='List Bullet')
@@ -595,10 +596,12 @@ add_table(doc,
         ('PRD-PR-002', 'Auto-generate request for items at minimum stock', 'Must Have'),
         ('PRD-PR-003', 'Filter auto-generation by category', 'Should Have'),
         ('PRD-PR-004', 'Show last purchase price per item', 'Must Have'),
-        ('PRD-PR-005', 'Approve request with electronic signature', 'Must Have'),
-        ('PRD-PR-006', 'Print purchase request', 'Must Have'),
-        ('PRD-PR-007', 'Track request status (pending / approved / completed)', 'Must Have'),
-        ('PRD-PR-008', 'Link purchase request to add order on receipt', 'Nice to Have'),
+        ('PRD-PR-005', 'Display estimated total amount per request on approval screen', 'Must Have'),
+        ('PRD-PR-006', 'Live recalculate total when approver edits quantities/prices', 'Must Have'),
+        ('PRD-PR-007', 'Approve request with electronic signature', 'Must Have'),
+        ('PRD-PR-008', 'Print purchase request', 'Must Have'),
+        ('PRD-PR-009', 'Track request status (pending / approved / completed)', 'Must Have'),
+        ('PRD-PR-010', 'Link purchase request to add order on receipt', 'Nice to Have'),
     ]
 )
 doc.add_paragraph()
@@ -1190,7 +1193,7 @@ add_heading(doc, '14. UI/UX Requirements', level=1)
 add_table(doc,
     ['Requirement', 'Details'],
     [
-        ('Bilingual',            'Full Arabic (RTL) and English support; switchable via user preference'),
+        ('Bilingual',            'Full Arabic (RTL) and English support; language auto-detected from WordPress/app locale — no manual toggle button'),
         ('Responsive Design',    'Works on desktop, tablet; mobile-friendly tables'),
         ('Dark/Light Mode',      'Optional; stored in user preferences'),
         ('Print Permits',        'Clean print layout: institute logo, name, order data, signature, QR code'),

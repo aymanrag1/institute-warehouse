@@ -343,7 +343,13 @@ class IW_Purchase_Requests {
         }
 
         $requests = $wpdb->get_results(
-            "SELECT pr.*, u.display_name as created_by_name
+            "SELECT pr.*,
+                    u.display_name as created_by_name,
+                    COALESCE((
+                        SELECT SUM(i.quantity * i.estimated_price)
+                        FROM {$prefix}purchase_request_items i
+                        WHERE i.request_id = pr.id
+                    ), 0) AS total_amount
              FROM {$prefix}purchase_requests pr
              LEFT JOIN {$wpdb->users} u ON pr.created_by = u.ID
              WHERE 1=1 $where

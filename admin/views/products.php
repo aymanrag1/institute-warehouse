@@ -1,6 +1,6 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>إدارة الأصناف <button class="button button-primary" onclick="iwShowProductForm()">إضافة صنف جديد</button></h1>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('إدارة الأصناف', 'Products Management'); ?> <button class="button button-primary" onclick="iwShowProductForm()"><?php echo iw_t('إضافة صنف جديد', 'Add New Product'); ?></button></h1>
 
     <!-- Product Form Modal -->
     <div id="iw-product-modal" class="iw-modal" style="display:none;">
@@ -250,7 +250,7 @@ jQuery(document).ready(function($) {
         });
         printContent += '</table>';
         var w = window.open('','','width=900,height=600');
-        w.document.write('<html dir="rtl"><head><title>قائمة الأصناف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+        w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>قائمة الأصناف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
         w.document.close();
         w.print();
     };

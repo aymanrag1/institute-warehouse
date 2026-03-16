@@ -1,5 +1,5 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
     <h1>تقرير الحركات</h1>
     <table class="form-table">
         <tr>
@@ -35,7 +35,7 @@ jQuery(document).ready(function($) {
     window.iwPrintThis = function() {
         var header = '<?php echo addslashes(IW_Admin::get_print_header()); ?>';
         var w = window.open('','','width=900,height=600');
-        w.document.write('<html dir="rtl"><head><title>تقرير الحركات</title><style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #333;padding:6px;text-align:right;font-size:11px;}th{background:#f0f0f0;}</style></head><body>'+header+'<h2 style="text-align:center;">تقرير الحركات</h2>'+$('#iw-print-area').html()+'</body></html>');
+        w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>تقرير الحركات</title><style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #333;padding:6px;text-align:right;font-size:11px;}th{background:#f0f0f0;}</style></head><body>'+header+'<h2 style="text-align:center;">تقرير الحركات</h2>'+$('#iw-print-area').html()+'</body></html>');
         w.document.close(); w.print();
     };
 });

@@ -1,15 +1,15 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>إدارة الصلاحيات</h1>
-    <p>اختر المستخدم ثم حدد صلاحياته لكل بند في النظام</p>
-    <div class="notice notice-info"><p><strong>ملاحظة:</strong> يجب تعيين صلاحيات لكل مستخدم جديد. المستخدمون بدون صلاحيات لن يتمكنوا من الوصول للنظام (باستثناء مدير الموقع Admin).</p></div>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('إدارة الصلاحيات', 'Manage Permissions'); ?></h1>
+    <p><?php echo iw_t('اختر المستخدم ثم حدد صلاحياته لكل بند في النظام', 'Select a user then set their permissions for each module.'); ?></p>
+    <div class="notice notice-info"><p><strong><?php echo iw_t('ملاحظة:', 'Note:'); ?></strong> <?php echo iw_t('يجب تعيين صلاحيات لكل مستخدم جديد. المستخدمون بدون صلاحيات لن يتمكنوا من الوصول للنظام (باستثناء مدير الموقع Admin).', 'Permissions must be assigned to every new user. Users without permissions cannot access the system (except Administrators).'); ?></p></div>
 
     <table class="form-table">
         <tr>
-            <th>المستخدم</th>
+            <th><?php echo iw_t('المستخدم', 'User'); ?></th>
             <td>
                 <select id="perm_user_id" class="regular-text">
-                    <option value="">اختر المستخدم</option>
+                    <option value=""><?php echo iw_t('اختر المستخدم', 'Select user'); ?></option>
                     <?php
                     $users = get_users(array('fields' => array('ID', 'display_name', 'user_login')));
                     foreach ($users as $u) {
@@ -17,42 +17,42 @@
                     }
                     ?>
                 </select>
-                <button class="button" onclick="iwLoadPerms()">تحميل الصلاحيات</button>
+                <button class="button" onclick="iwLoadPerms()"><?php echo iw_t('تحميل الصلاحيات', 'Load Permissions'); ?></button>
             </td>
         </tr>
     </table>
 
     <div id="perm-matrix" style="display:none;">
-        <h2>مصفوفة الصلاحيات</h2>
+        <h2><?php echo iw_t('مصفوفة الصلاحيات', 'Permissions Matrix'); ?></h2>
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
-                    <th>البند</th>
-                    <th>بدون صلاحية</th>
-                    <th>عرض فقط</th>
-                    <th>قراءة</th>
-                    <th>قراءة وكتابة</th>
+                    <th><?php echo iw_t('البند', 'Module'); ?></th>
+                    <th><?php echo iw_t('بدون صلاحية', 'None'); ?></th>
+                    <th><?php echo iw_t('عرض فقط', 'View Only'); ?></th>
+                    <th><?php echo iw_t('قراءة', 'Read'); ?></th>
+                    <th><?php echo iw_t('قراءة وكتابة', 'Read & Write'); ?></th>
                 </tr>
             </thead>
             <tbody id="perm-matrix-body"></tbody>
         </table>
         <br>
-        <button class="button button-primary button-large" onclick="iwSavePerms()">حفظ الصلاحيات</button>
+        <button class="button button-primary button-large" onclick="iwSavePerms()"><?php echo iw_t('حفظ الصلاحيات', 'Save Permissions'); ?></button>
     </div>
 
     <!-- Signature Upload Section -->
     <div style="margin-top:40px;border-top:1px solid #ccc;padding-top:20px;">
-        <h2>رفع التوقيع الإلكتروني</h2>
-        <p>يستخدم التوقيع في اعتماد أوامر الصرف وطلبات الشراء</p>
+        <h2><?php echo iw_t('رفع التوقيع الإلكتروني', 'Upload Electronic Signature'); ?></h2>
+        <p><?php echo iw_t('يستخدم التوقيع في اعتماد أوامر الصرف وطلبات الشراء', 'The signature is used when approving withdrawal orders and purchase requests.'); ?></p>
         <form id="iw-signature-form" enctype="multipart/form-data">
             <input type="file" id="signature_file" accept="image/*" required>
-            <button type="submit" class="button button-primary">رفع التوقيع</button>
+            <button type="submit" class="button button-primary"><?php echo iw_t('رفع التوقيع', 'Upload Signature'); ?></button>
         </form>
         <div id="current-signature" style="margin-top:10px;">
             <?php
             $sig = get_user_meta(get_current_user_id(), 'iw_signature_url', true);
             if ($sig) {
-                echo '<p>التوقيع الحالي:</p><img src="' . esc_url($sig) . '" style="max-height:100px;border:1px solid #ccc;padding:5px;" />';
+                echo '<p>' . iw_t('التوقيع الحالي:', 'Current Signature:') . '</p><img src="' . esc_url($sig) . '" style="max-height:100px;border:1px solid #ccc;padding:5px;" />';
             }
             ?>
         </div>
@@ -65,7 +65,7 @@ jQuery(document).ready(function($) {
 
     window.iwLoadPerms = function() {
         var userId = $('#perm_user_id').val();
-        if (!userId) { alert('اختر مستخدم'); return; }
+        if (!userId) { alert(iwT('اختر مستخدم', 'Please select a user.')); return; }
 
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_user_permissions', nonce: iwAdmin.nonce, user_id: userId}, function(r) {
             if (!r.success) return;
@@ -117,7 +117,7 @@ jQuery(document).ready(function($) {
             success: function(r) {
                 alert(r.data.message);
                 if (r.success) {
-                    $('#current-signature').html('<p>التوقيع الحالي:</p><img src="'+r.data.url+'" style="max-height:100px;border:1px solid #ccc;padding:5px;" />');
+                    $('#current-signature').html('<p>' + iwT('التوقيع الحالي:', 'Current Signature:') + '</p><img src="'+r.data.url+'" style="max-height:100px;border:1px solid #ccc;padding:5px;" />');
                 }
             }
         });

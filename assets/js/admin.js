@@ -1,15 +1,37 @@
 /**
  * Institute Warehouse Admin JS
  */
+
+/**
+ * Bilingual string helper.
+ * Returns the Arabic string when lang=ar (default), or English when lang=en.
+ * Usage: iwT('النص العربي', 'English Text')
+ */
+window.iwT = function(ar, en) {
+    if (typeof iwAdmin !== 'undefined' && iwAdmin.lang === 'en') {
+        return en || ar;
+    }
+    return ar;
+};
+
+/** Shortcut to iwAdmin.strings lookup, with fallback to inline bilingual. */
+window.iwS = function(key, ar, en) {
+    if (typeof iwAdmin !== 'undefined' && iwAdmin.strings && iwAdmin.strings[key]) {
+        return iwAdmin.strings[key];
+    }
+    return window.iwT(ar, en);
+};
+
 jQuery(document).ready(function($) {
+    var isRtl = (typeof iwAdmin !== 'undefined' && iwAdmin.dir === 'rtl');
     // Initialize Select2 on all selects inside .iw-wrap
     window.iwInitSelect2 = function(container) {
         var $target = container ? $(container).find('select.regular-text, select.iw-select2') : $('.iw-wrap select.regular-text, .iw-wrap select.iw-select2');
         $target.not('.select2-hidden-accessible').each(function() {
             $(this).select2({
-                dir: 'rtl',
+                dir: isRtl ? 'rtl' : 'ltr',
                 width: '100%',
-                placeholder: $(this).find('option:first').text() || 'اختر...',
+                placeholder: $(this).find('option:first').text() || iwS('choose', 'اختر...', 'Select...'),
                 allowClear: true
             });
         });
@@ -22,9 +44,9 @@ jQuery(document).ready(function($) {
             $el.select2('destroy');
         }
         $el.select2({
-            dir: 'rtl',
+            dir: isRtl ? 'rtl' : 'ltr',
             width: '100%',
-            placeholder: $el.find('option:first').text() || 'اختر...',
+            placeholder: $el.find('option:first').text() || iwS('choose', 'اختر...', 'Select...'),
             allowClear: true
         });
     };

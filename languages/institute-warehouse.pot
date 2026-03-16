@@ -4,7 +4,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: Institute Warehouse 2.5.0\n"
+"Project-Id-Version: Institute Warehouse 2.6.0\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-02-24 00:00+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
@@ -120,7 +120,7 @@ msgid "التصنيفات"
 msgstr ""
 
 #: institute-warehouse.php
-msgid "استيراد"
+msgid "استيراد من Excel"
 msgstr ""
 
 #: institute-warehouse.php

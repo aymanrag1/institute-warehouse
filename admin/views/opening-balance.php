@@ -1,11 +1,11 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>الرصيد الافتتاحي</h1>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('الرصيد الافتتاحي', 'Opening Balance'); ?></h1>
 
     <div class="iw-tabs">
-        <button class="iw-tab active" onclick="iwObTab('manual')">إدخال يدوي</button>
-        <button class="iw-tab" onclick="iwObTab('excel')">استيراد من Excel</button>
-        <button class="iw-tab" onclick="iwObTab('history')">الأرصدة السابقة</button>
+        <button class="iw-tab active" onclick="iwObTab('manual')"><?php echo iw_t('إدخال يدوي', 'Manual Entry'); ?></button>
+        <button class="iw-tab" onclick="iwObTab('excel')"><?php echo iw_t('استيراد من Excel', 'Import from Excel'); ?></button>
+        <button class="iw-tab" onclick="iwObTab('history')"><?php echo iw_t('الأرصدة السابقة', 'History'); ?></button>
     </div>
 
     <!-- Manual Entry -->

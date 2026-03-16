@@ -3,7 +3,7 @@
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
  * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
- * Version: 2.5.0
+ * Version: 2.6.0
  * Author: AYMAN RAGAB
  * Author URI: tel:00201159230034
  * Text Domain: institute-warehouse
@@ -15,9 +15,28 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.5.0');
+define('IW_VERSION', '2.6.0');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+// ── Language helpers ────────────────────────────────────────────────────────
+/**
+ * Detect language from WordPress locale (not a custom option).
+ * Returns 'ar' for Arabic locales, 'en' for everything else.
+ */
+function iw_get_lang() {
+    $locale = get_locale();
+    return (strpos($locale, 'ar') !== false || is_rtl()) ? 'ar' : 'en';
+}
+function iw_is_ar() { return iw_get_lang() === 'ar'; }
+function iw_dir()   { return iw_is_ar() ? 'rtl' : 'ltr'; }
+/**
+ * Inline bilingual string helper.
+ * Usage: iw_t('النص العربي', 'English Text')
+ */
+function iw_t($ar, $en = '') {
+    return iw_is_ar() ? $ar : ($en ?: $ar);
+}
 
 /**
  * Check if RSYI HR System is active
@@ -570,16 +589,67 @@ class Institute_Warehouse_System {
         // إضافة مكتبة XLSX لاستيراد Excel
         wp_enqueue_script('xlsx-js', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', array(), '0.18.5', true);
 
+        $is_ar = iw_is_ar();
         wp_localize_script('iw-admin-js', 'iwAdmin', array(
             'ajaxurl'  => admin_url('admin-ajax.php'),
             'adminurl' => admin_url(),
             'nonce'    => wp_create_nonce('iw_admin_nonce'),
             'isAdmin'  => current_user_can('manage_options') ? 1 : 0,
+            'lang'     => iw_get_lang(),
+            'dir'      => iw_dir(),
             'strings'  => array(
-                'confirm_delete' => __('هل أنت متأكد من الحذف؟', 'institute-warehouse'),
-                'error'          => __('حدث خطأ، يرجى المحاولة مرة أخرى', 'institute-warehouse'),
-                'success'        => __('تمت العملية بنجاح', 'institute-warehouse'),
-            )
+                'confirm_delete' => $is_ar ? 'هل أنت متأكد من الحذف؟'           : 'Are you sure you want to delete?',
+                'error'          => $is_ar ? 'حدث خطأ، يرجى المحاولة مرة أخرى' : 'An error occurred, please try again.',
+                'success'        => $is_ar ? 'تمت العملية بنجاح'                : 'Operation completed successfully.',
+                'no_items'       => $is_ar ? 'لا توجد عناصر'                   : 'No items found.',
+                'choose'         => $is_ar ? 'اختر...'                          : 'Select...',
+                'save'           => $is_ar ? 'حفظ'            : 'Save',
+                'delete'         => $is_ar ? 'حذف'            : 'Delete',
+                'view'           => $is_ar ? 'عرض'            : 'View',
+                'print'          => $is_ar ? 'طباعة'          : 'Print',
+                'approve'        => $is_ar ? 'اعتماد'         : 'Approve',
+                'reject'         => $is_ar ? 'رفض'            : 'Reject',
+                'complete'       => $is_ar ? 'تنفيذ'          : 'Execute',
+                'cancel'         => $is_ar ? 'إلغاء'          : 'Cancel',
+                'edit'           => $is_ar ? 'تعديل'          : 'Edit',
+                'add'            => $is_ar ? 'إضافة'          : 'Add',
+                'pending'        => $is_ar ? 'معلق'           : 'Pending',
+                'approved'       => $is_ar ? 'معتمد'          : 'Approved',
+                'completed'      => $is_ar ? 'منفذ'           : 'Completed',
+                'rejected'       => $is_ar ? 'مرفوض'          : 'Rejected',
+                'cancelled'      => $is_ar ? 'ملغي'           : 'Cancelled',
+                'product'        => $is_ar ? 'الصنف'          : 'Product',
+                'quantity'       => $is_ar ? 'الكمية'         : 'Quantity',
+                'price'          => $is_ar ? 'السعر'          : 'Price',
+                'total'          => $is_ar ? 'الإجمالي'       : 'Total',
+                'grand_total'    => $is_ar ? 'الإجمالي الكلي' : 'Grand Total',
+                'est_total'      => $is_ar ? 'الإجمالي التقديري' : 'Estimated Total',
+                'notes'          => $is_ar ? 'ملاحظات'        : 'Notes',
+                'date'           => $is_ar ? 'التاريخ'        : 'Date',
+                'status'         => $is_ar ? 'الحالة'         : 'Status',
+                'actions'        => $is_ar ? 'إجراءات'        : 'Actions',
+                'department'     => $is_ar ? 'القسم'          : 'Department',
+                'employee'       => $is_ar ? 'الموظف'         : 'Employee',
+                'supplier'       => $is_ar ? 'المورد'         : 'Supplier',
+                'unit'           => $is_ar ? 'الوحدة'         : 'Unit',
+                'current_stock'  => $is_ar ? 'المخزون الحالي' : 'Current Stock',
+                'min_stock'      => $is_ar ? 'الحد الأدنى'    : 'Min Stock',
+                'max_stock'      => $is_ar ? 'الحد الأقصى'    : 'Max Stock',
+                'order_number'   => $is_ar ? 'رقم الإذن'      : 'Order No.',
+                'order_type'     => $is_ar ? 'النوع'          : 'Type',
+                'normal'         => $is_ar ? 'عادي'           : 'Normal',
+                'custody'        => $is_ar ? 'عهدة'           : 'Custody',
+                'approved_by'    => $is_ar ? 'المعتمد'        : 'Approved By',
+                'signature'      => $is_ar ? 'توقيع المعتمد'  : 'Approver Signature',
+                'last_price'     => $is_ar ? 'آخر سعر شراء'   : 'Last Purchase Price',
+                'est_price'      => $is_ar ? 'السعر التقديري' : 'Estimated Price',
+                'approved_qty'   => $is_ar ? 'الكمية المعتمدة': 'Approved Qty',
+                'req_number'     => $is_ar ? 'رقم الطلب'      : 'Request No.',
+                'confirm_approve'=> $is_ar ? 'هل أنت متأكد من اعتماد هذا الطلب؟' : 'Are you sure you want to approve this request?',
+                'reject_reason'  => $is_ar ? 'سبب الرفض:'     : 'Rejection reason:',
+                'return_type_normal'  => $is_ar ? 'ارتجاع عادي' : 'Normal Return',
+                'return_type_custody' => $is_ar ? 'رد عهدة'     : 'Custody Return',
+            ),
         ));
     }
 }

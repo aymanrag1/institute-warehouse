@@ -1,20 +1,20 @@
 <?php if (!defined('ABSPATH')) exit; wp_enqueue_media(); ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>الموردين
-        <button class="button button-primary" onclick="iwShowSupplierModal()">+ إضافة مورد</button>
-        <button class="button" onclick="iwPrintSuppliers()">طباعة السجل</button>
-        <button class="button" onclick="iwExportToExcel()">تصدير Excel</button>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('الموردين', 'Suppliers'); ?>
+        <button class="button button-primary" onclick="iwShowSupplierModal()">+ <?php echo iw_t('إضافة مورد', 'Add Supplier'); ?></button>
+        <button class="button" onclick="iwPrintSuppliers()"><?php echo iw_t('طباعة السجل', 'Print List'); ?></button>
+        <button class="button" onclick="iwExportToExcel()"><?php echo iw_t('تصدير Excel', 'Export Excel'); ?></button>
     </h1>
 
     <table class="wp-list-table widefat fixed striped">
         <thead>
             <tr>
-                <th>رقم المورد</th>
-                <th>اسم المورد</th>
-                <th>المسؤول</th>
-                <th>تليفون محمول</th>
-                <th>التخصص</th>
-                <th>إجراءات</th>
+                <th><?php echo iw_t('رقم المورد', '#'); ?></th>
+                <th><?php echo iw_t('اسم المورد', 'Supplier Name'); ?></th>
+                <th><?php echo iw_t('المسؤول', 'Contact Person'); ?></th>
+                <th><?php echo iw_t('تليفون محمول', 'Mobile'); ?></th>
+                <th><?php echo iw_t('التخصص', 'Speciality'); ?></th>
+                <th><?php echo iw_t('إجراءات', 'Actions'); ?></th>
             </tr>
         </thead>
         <tbody id="suppliers-list"></tbody>
@@ -216,12 +216,12 @@ jQuery(document).ready(function($) {
         var isPdf = /\.pdf$/i.test(fileUrl);
 
         if (isImage) {
-            w.document.write('<html dir="rtl"><head><title>'+title+'</title></head><body style="text-align:center;padding:20px;">');
+            w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>'+title+'</title></head><body style="text-align:center;padding:20px;">');
             w.document.write('<h2>'+title+'</h2>');
             w.document.write('<img src="'+fileUrl+'" style="max-width:100%;max-height:90vh;" onload="window.print();" />');
             w.document.write('</body></html>');
         } else if (isPdf) {
-            w.document.write('<html dir="rtl"><head><title>'+title+'</title></head><body style="margin:0;padding:0;">');
+            w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>'+title+'</title></head><body style="margin:0;padding:0;">');
             w.document.write('<iframe src="'+fileUrl+'" style="width:100%;height:100vh;border:none;" onload="setTimeout(function(){window.print();},500);"></iframe>');
             w.document.write('</body></html>');
         } else {
@@ -236,7 +236,7 @@ jQuery(document).ready(function($) {
         if (!supplier) return;
 
         var w = window.open('','','width=800,height=600');
-        var content = '<html dir="rtl"><head><title>ملفات المورد - '+supplier.name+'</title>';
+        var content = '<html dir="<?php echo iw_dir(); ?>"><head><title>ملفات المورد - '+supplier.name+'</title>';
         content += '<style>body{font-family:Arial,sans-serif;padding:20px;} .file-section{margin-bottom:30px;page-break-inside:avoid;} img{max-width:100%;}</style>';
         content += '</head><body>';
         content += '<h1 style="text-align:center;">ملفات المورد: '+supplier.name+'</h1>';
@@ -328,7 +328,7 @@ jQuery(document).ready(function($) {
         content += '<p style="margin-top:20px;text-align:center;font-size:11px;">تاريخ الطباعة: '+new Date().toLocaleDateString('ar-EG')+'</p>';
 
         var w = window.open('','','width=1000,height=700');
-        w.document.write('<html dir="rtl"><head><title>سجل الموردين</title><style>body{font-family:Arial,sans-serif;padding:15px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
+        w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>سجل الموردين</title><style>body{font-family:Arial,sans-serif;padding:15px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
         w.document.close(); w.print();
     };
 

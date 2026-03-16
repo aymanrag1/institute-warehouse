@@ -1,33 +1,33 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>استيراد من Excel</h1>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('استيراد من Excel', 'Import from Excel'); ?></h1>
 
     <div style="background:#fff;padding:20px;border:1px solid #ddd;border-radius:5px;margin-bottom:20px;">
-        <h2>1. تحميل النموذج</h2>
-        <p>قم بتحميل نموذج Excel الجاهز وقم بتعبئته بالبيانات ثم ارفعه:</p>
-        <button class="button button-primary" onclick="iwDownloadTemplate()">تحميل نموذج Excel</button>
+        <h2>1. <?php echo iw_t('تحميل النموذج', 'Download Template'); ?></h2>
+        <p><?php echo iw_t('قم بتحميل نموذج Excel الجاهز وقم بتعبئته بالبيانات ثم ارفعه:', 'Download the ready Excel template, fill in the data, then upload it:'); ?></p>
+        <button class="button button-primary" onclick="iwDownloadTemplate()"><?php echo iw_t('تحميل نموذج Excel', 'Download Excel Template'); ?></button>
     </div>
 
     <div style="background:#fff;padding:20px;border:1px solid #ddd;border-radius:5px;">
-        <h2>2. رفع الملف</h2>
-        <p>يجب أن يحتوي ملف Excel على الأعمدة التالية بالترتيب:</p>
+        <h2>2. <?php echo iw_t('رفع الملف', 'Upload File'); ?></h2>
+        <p><?php echo iw_t('يجب أن يحتوي ملف Excel على الأعمدة التالية بالترتيب:', 'The Excel file must contain the following columns in order:'); ?></p>
         <table class="wp-list-table widefat fixed" style="max-width:600px;">
             <thead>
-                <tr><th>العمود</th><th>الوصف</th><th>مطلوب</th></tr>
+                <tr><th><?php echo iw_t('العمود', 'Column'); ?></th><th><?php echo iw_t('الوصف', 'Description'); ?></th><th><?php echo iw_t('مطلوب', 'Required'); ?></th></tr>
             </thead>
             <tbody>
-                <tr><td>A</td><td>اسم الصنف</td><td><strong>نعم</strong></td></tr>
-                <tr><td>B</td><td>الكود (SKU)</td><td>لا</td></tr>
-                <tr><td>C</td><td>التصنيف</td><td>لا</td></tr>
-                <tr><td>D</td><td>وحدة القياس</td><td>لا</td></tr>
-                <tr><td>E</td><td>الحد الأدنى للمخزون</td><td>لا</td></tr>
-                <tr><td>F</td><td>الحد الأقصى للمخزون</td><td>لا</td></tr>
-                <tr><td>G</td><td>السعر</td><td>لا</td></tr>
+                <tr><td>A</td><td><?php echo iw_t('اسم الصنف', 'Product Name'); ?></td><td><strong><?php echo iw_t('نعم', 'Yes'); ?></strong></td></tr>
+                <tr><td>B</td><td><?php echo iw_t('الكود (SKU)', 'SKU Code'); ?></td><td><?php echo iw_t('لا', 'No'); ?></td></tr>
+                <tr><td>C</td><td><?php echo iw_t('التصنيف', 'Category'); ?></td><td><?php echo iw_t('لا', 'No'); ?></td></tr>
+                <tr><td>D</td><td><?php echo iw_t('وحدة القياس', 'Unit'); ?></td><td><?php echo iw_t('لا', 'No'); ?></td></tr>
+                <tr><td>E</td><td><?php echo iw_t('الحد الأدنى للمخزون', 'Min Stock'); ?></td><td><?php echo iw_t('لا', 'No'); ?></td></tr>
+                <tr><td>F</td><td><?php echo iw_t('الحد الأقصى للمخزون', 'Max Stock'); ?></td><td><?php echo iw_t('لا', 'No'); ?></td></tr>
+                <tr><td>G</td><td><?php echo iw_t('السعر', 'Price'); ?></td><td><?php echo iw_t('لا', 'No'); ?></td></tr>
             </tbody>
         </table>
         <br>
         <input type="file" id="excel_file" accept=".xlsx,.xls,.csv">
-        <button class="button button-primary" onclick="iwImportExcel()">استيراد</button>
+        <button class="button button-primary" onclick="iwImportExcel()"><?php echo iw_t('استيراد', 'Import'); ?></button>
         <div id="import-preview" style="margin-top:20px;"></div>
     </div>
 </div>

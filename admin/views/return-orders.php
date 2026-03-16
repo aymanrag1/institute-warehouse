@@ -1,23 +1,23 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>أذون الارتجاع ورد العهدة</h1>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('أذون الارتجاع ورد العهدة', 'Return Orders & Custody Returns'); ?></h1>
 
     <!-- Tabs -->
     <div style="margin-bottom:15px;">
-        <button class="iw-tab active" onclick="iwRtSwitchTab('normal')">إذن ارتجاع عادي</button>
-        <button class="iw-tab" onclick="iwRtSwitchTab('custody')">رد عهدة</button>
+        <button class="iw-tab active" onclick="iwRtSwitchTab('normal')"><?php echo iw_t('إذن ارتجاع عادي', 'Normal Return'); ?></button>
+        <button class="iw-tab" onclick="iwRtSwitchTab('custody')"><?php echo iw_t('رد عهدة', 'Custody Return'); ?></button>
     </div>
 
     <!-- Tab: ارتجاع عادي -->
     <div id="tab-rt-normal" class="iw-tab-content">
         <div style="margin-bottom:10px;">
-            <button class="button button-primary" onclick="iwShowReturnForm('normal')">+ إنشاء إذن ارتجاع</button>
+            <button class="button button-primary" onclick="iwShowReturnForm('normal')">+ <?php echo iw_t('إنشاء إذن ارتجاع', 'Create Return Order'); ?></button>
         </div>
-        <h3>أذون الارتجاع</h3>
+        <h3><?php echo iw_t('أذون الارتجاع', 'Return Orders'); ?></h3>
         <table class="wp-list-table widefat fixed striped">
             <thead>
                 <tr>
-                    <th>رقم الإذن</th><th>القسم</th><th>الموظف</th><th>الحالة</th>
+                    <th><?php echo iw_t('رقم الإذن', 'Order No.'); ?></th><th><?php echo iw_t('القسم', 'Department'); ?></th><th><?php echo iw_t('الموظف', 'Employee'); ?></th><th><?php echo iw_t('الحالة', 'Status'); ?></th>
                     <th>الإذن الأصلي</th><th>التاريخ</th><th>إجراءات</th>
                 </tr>
             </thead>
@@ -370,7 +370,7 @@ jQuery(document).ready(function($) {
             content += '<div><strong>مُسلِّم البضاعة</strong><br>التوقيع: ____________</div>';
             content += '</div>';
             var w = window.open('','','width=800,height=600');
-            w.document.write('<html dir="rtl"><head><title>'+title+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
+            w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>'+title+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
             w.document.close(); w.print();
         });
     };

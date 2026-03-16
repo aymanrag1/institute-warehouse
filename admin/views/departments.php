@@ -1,5 +1,5 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
     <h1>الأقسام والموظفين</h1>
 
     <div class="notice notice-info">

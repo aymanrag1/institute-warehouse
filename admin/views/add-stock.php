@@ -1,29 +1,35 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>إذن إضافة</h1>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('إذن إضافة', 'Stock-In Order'); ?></h1>
 
     <form id="iw-add-order-form">
         <table class="form-table">
             <tr>
-                <th>المورد</th>
+                <th><?php echo iw_t('المورد', 'Supplier'); ?></th>
                 <td>
                     <div style="display:flex;gap:10px;align-items:center;">
-                        <select id="ao_supplier_id" class="regular-text" style="flex:1;"><option value="">اختر المورد</option></select>
-                        <button type="button" class="button" onclick="iwShowNewSupplierModal()">+ إضافة مورد جديد</button>
+                        <select id="ao_supplier_id" class="regular-text" style="flex:1;"><option value=""><?php echo iw_t('اختر المورد', 'Select Supplier'); ?></option></select>
+                        <button type="button" class="button" onclick="iwShowNewSupplierModal()">+ <?php echo iw_t('إضافة مورد جديد', 'Add New Supplier'); ?></button>
                     </div>
                 </td>
             </tr>
-            <tr><th>ملاحظات</th><td><textarea id="ao_notes" class="large-text" rows="2"></textarea></td></tr>
+            <tr><th><?php echo iw_t('ملاحظات', 'Notes'); ?></th><td><textarea id="ao_notes" class="large-text" rows="2"></textarea></td></tr>
         </table>
 
-        <h3>الأصناف</h3>
+        <h3><?php echo iw_t('الأصناف', 'Items'); ?></h3>
         <table class="wp-list-table widefat fixed striped" id="ao-items-table">
-            <thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>حذف</th></tr></thead>
+            <thead><tr>
+                <th><?php echo iw_t('الصنف', 'Product'); ?></th>
+                <th><?php echo iw_t('الكمية', 'Qty'); ?></th>
+                <th><?php echo iw_t('سعر الوحدة', 'Unit Price'); ?></th>
+                <th><?php echo iw_t('الإجمالي', 'Total'); ?></th>
+                <th><?php echo iw_t('حذف', 'Del'); ?></th>
+            </tr></thead>
             <tbody id="ao-items-body"></tbody>
             <tfoot>
-                <tr><td colspan="5"><button type="button" class="button" onclick="iwAddOrderItem()">+ إضافة صنف</button></td></tr>
+                <tr><td colspan="5"><button type="button" class="button" onclick="iwAddOrderItem()">+ <?php echo iw_t('إضافة صنف', 'Add Item'); ?></button></td></tr>
                 <tr style="background:#f9f9f9;font-weight:bold;">
-                    <td colspan="2">الإجمالي</td>
+                    <td colspan="2"><?php echo iw_t('الإجمالي', 'Total'); ?></td>
                     <td id="ao-total-qty">0</td>
                     <td id="ao-total-value">0.00</td>
                     <td></td>
@@ -32,15 +38,22 @@
         </table>
 
         <p style="margin-top:15px;">
-            <button type="submit" class="button button-primary button-large">حفظ إذن الإضافة</button>
+            <button type="submit" class="button button-primary button-large"><?php echo iw_t('حفظ إذن الإضافة', 'Save Stock-In Order'); ?></button>
         </p>
     </form>
 
     <hr style="margin:30px 0;">
 
-    <h2>أذونات الإضافة السابقة</h2>
+    <h2><?php echo iw_t('أذونات الإضافة السابقة', 'Previous Stock-In Orders'); ?></h2>
     <table class="wp-list-table widefat fixed striped">
-        <thead><tr><th>رقم الإذن</th><th>المورد</th><th>عدد الأصناف</th><th>إجمالي القيمة</th><th>التاريخ</th><th>إجراءات</th></tr></thead>
+        <thead><tr>
+            <th><?php echo iw_t('رقم الإذن', 'Order No.'); ?></th>
+            <th><?php echo iw_t('المورد', 'Supplier'); ?></th>
+            <th><?php echo iw_t('عدد الأصناف', 'Items'); ?></th>
+            <th><?php echo iw_t('إجمالي القيمة', 'Total Value'); ?></th>
+            <th><?php echo iw_t('التاريخ', 'Date'); ?></th>
+            <th><?php echo iw_t('إجراءات', 'Actions'); ?></th>
+        </tr></thead>
         <tbody id="add-orders-list"></tbody>
     </table>
 </div>
@@ -278,7 +291,7 @@ jQuery(document).ready(function($) {
             content += '</tr></table>';
 
             var w = window.open('','','width=800,height=600');
-            w.document.write('<html dir="rtl"><head><title>إذن إضافة</title><style>body{font-family:Arial,sans-serif;padding:20px;direction:rtl;text-align:right;}table{direction:rtl;text-align:right;}th{background:#f0f0f0;text-align:right;}td{text-align:right;}</style></head><body>'+content+'</body></html>');
+            w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>إذن إضافة</title><style>body{font-family:Arial,sans-serif;padding:20px;direction:rtl;text-align:right;}table{direction:rtl;text-align:right;}th{background:#f0f0f0;text-align:right;}td{text-align:right;}</style></head><body>'+content+'</body></html>');
             w.document.close(); w.print();
         });
     };

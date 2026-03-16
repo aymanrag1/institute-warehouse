@@ -1,32 +1,32 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>إذن صرف</h1>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('إذن صرف', 'Withdrawal Order'); ?></h1>
 
     <div class="iw-tabs">
-        <button class="iw-tab active" onclick="iwSwitchTab('create')">إنشاء إذن صرف</button>
-        <button class="iw-tab" onclick="iwSwitchTab('custody')">إذن صرف عهدة</button>
-        <button class="iw-tab" onclick="iwSwitchTab('pending')">أوامر معلقة</button>
-        <button class="iw-tab" onclick="iwSwitchTab('approved')">أوامر معتمدة</button>
-        <button class="iw-tab" onclick="iwSwitchTab('all')">جميع الأوامر</button>
+        <button class="iw-tab active" onclick="iwSwitchTab('create')"><?php echo iw_t('إنشاء إذن صرف', 'Create Withdrawal'); ?></button>
+        <button class="iw-tab" onclick="iwSwitchTab('custody')"><?php echo iw_t('إذن صرف عهدة', 'Custody Order'); ?></button>
+        <button class="iw-tab" onclick="iwSwitchTab('pending')"><?php echo iw_t('أوامر معلقة', 'Pending'); ?></button>
+        <button class="iw-tab" onclick="iwSwitchTab('approved')"><?php echo iw_t('أوامر معتمدة', 'Approved'); ?></button>
+        <button class="iw-tab" onclick="iwSwitchTab('all')"><?php echo iw_t('جميع الأوامر', 'All Orders'); ?></button>
     </div>
 
     <!-- Create Withdrawal Order -->
     <div id="tab-create" class="iw-tab-content">
-        <h2>إنشاء إذن صرف جديد</h2>
+        <h2><?php echo iw_t('إنشاء إذن صرف جديد', 'Create New Withdrawal Order'); ?></h2>
         <form id="iw-withdrawal-form">
             <table class="form-table">
                 <tr>
-                    <th>القسم</th>
-                    <td><select id="wd_department_id" class="regular-text"><option value="">— اختياري —</option></select></td>
+                    <th><?php echo iw_t('القسم', 'Department'); ?></th>
+                    <td><select id="wd_department_id" class="regular-text"><option value=""><?php echo iw_t('— اختياري —', '— Optional —'); ?></option></select></td>
                 </tr>
                 <tr>
-                    <th>الموظف</th>
-                    <td><select id="wd_employee_id" class="regular-text"><option value="">— اختياري —</option></select></td>
+                    <th><?php echo iw_t('الموظف', 'Employee'); ?></th>
+                    <td><select id="wd_employee_id" class="regular-text"><option value=""><?php echo iw_t('— اختياري —', '— Optional —'); ?></option></select></td>
                 </tr>
-                <tr><th>ملاحظات</th><td><textarea id="wd_notes" class="large-text" rows="2"></textarea></td></tr>
+                <tr><th><?php echo iw_t('ملاحظات', 'Notes'); ?></th><td><textarea id="wd_notes" class="large-text" rows="2"></textarea></td></tr>
             </table>
 
-            <h3>الأصناف المراد صرفها</h3>
+            <h3><?php echo iw_t('الأصناف المراد صرفها', 'Items to Withdraw'); ?></h3>
             <table class="wp-list-table widefat fixed" id="wd-items-table">
                 <thead>
                     <tr><th>الصنف</th><th>المخزون المتاح</th><th>الكمية المطلوبة</th><th>إجراء</th></tr>
@@ -616,7 +616,7 @@ jQuery(document).ready(function($) {
             }
             printContent += '</tr></table>';
             var w = window.open('','','width=800,height=600');
-            w.document.write('<html dir="rtl"><head><title>'+orderTypeLabel+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+            w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>'+orderTypeLabel+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
             w.document.close();
             w.print();
         }
@@ -658,7 +658,7 @@ jQuery(document).ready(function($) {
             }
             printContent += '</tr></table>';
             var w = window.open('','','width=800,height=600');
-            w.document.write('<html dir="rtl"><head><title>'+orderTypeLabel+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+            w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>'+orderTypeLabel+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
             w.document.close();
             w.print();
         });
@@ -725,7 +725,7 @@ jQuery(document).ready(function($) {
                 loaded++;
                 if (loaded === ids.length) {
                     var w = window.open('','','width=800,height=600');
-                    w.document.write('<html dir="rtl"><head><title>أوامر صرف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+                    w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>أوامر صرف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
                     w.document.close();
                     w.print();
                 }

@@ -1,5 +1,5 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
     <h1>طباعة أذون الارتجاع</h1>
     <div>
         <table class="form-table">
@@ -88,7 +88,7 @@ jQuery(document).ready(function($) {
             content += '<div><strong>مُسلِّم البضاعة</strong><br>التوقيع: ____________</div>';
             content += '</div>';
             var w = window.open('','','width=800,height=600');
-            w.document.write('<html dir="rtl"><head><title>'+title+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
+            w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>'+title+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
             w.document.close(); w.print();
         });
     };
