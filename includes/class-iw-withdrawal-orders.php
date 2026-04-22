@@ -782,7 +782,7 @@ class IW_Withdrawal_Orders {
             if ($emp) $employee_name = $emp->name;
         }
 
-        $wpdb->update(
+        $result = $wpdb->update(
             $prefix . 'withdrawal_orders',
             array(
                 'department_id'   => $department_id,
@@ -790,9 +790,24 @@ class IW_Withdrawal_Orders {
                 'department_name' => $department_name,
                 'employee_name'   => $employee_name,
             ),
-            array('id' => $order_id)
+            array('id' => $order_id),
+            array('%d', '%d', '%s', '%s'),
+            array('%d')
         );
 
-        wp_send_json_success(array('message' => 'تم تحديث بيانات الموظف'));
+        if ($result === false) {
+            wp_send_json_error(array(
+                'message' => 'فشل حفظ التعديل: ' . ($wpdb->last_error ?: 'خطأ غير معروف'),
+            ));
+        }
+
+        wp_send_json_success(array(
+            'message'         => 'تم تحديث بيانات الموظف',
+            'department_id'   => $department_id,
+            'employee_id'     => $employee_id,
+            'department_name' => $department_name,
+            'employee_name'   => $employee_name,
+            'rows_affected'   => intval($result),
+        ));
     }
 }

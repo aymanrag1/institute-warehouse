@@ -486,14 +486,30 @@ jQuery(document).ready(function($) {
 
     // Admin: save employee/department name only (any order status)
     window.iwSaveEmployeeInfo = function(id) {
-        var deptId = $('#emp-edit-dept').val();
-        var empId  = $('#emp-edit-emp').val();
+        var deptId = $('#emp-edit-dept').val() || '';
+        var empId  = $('#emp-edit-emp').val() || '';
         $.post(iwAdmin.ajaxurl, {
             action: 'iw_update_order_employee', nonce: iwAdmin.nonce,
             order_id: id, department_id: deptId, employee_id: empId
-        }, function(r) {
-            alert(r.data.message);
-            if (r.success) iwViewOrder(id);
+        })
+        .done(function(r) {
+            if (r && r.success) {
+                alert((r.data && r.data.message) || 'تم الحفظ');
+                // Refresh whichever orders list is currently active so the new values show up
+                ['pending', 'approved', 'all'].forEach(function(t) {
+                    if ($('#tab-' + t).is(':visible') && typeof loadOrders === 'function') loadOrders(t);
+                });
+                // Refresh the open modal's header/details
+                iwViewOrder(id);
+            } else {
+                var msg = (r && r.data && r.data.message) ? r.data.message : 'فشل الحفظ';
+                alert(msg);
+                console.warn('iwSaveEmployeeInfo: server response', r);
+            }
+        })
+        .fail(function(xhr) {
+            alert('خطأ في الاتصال أثناء الحفظ');
+            console.error('iwSaveEmployeeInfo failed', xhr && xhr.status, xhr && xhr.responseText);
         });
     };
 
