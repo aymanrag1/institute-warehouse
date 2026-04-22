@@ -741,8 +741,8 @@ class IW_Withdrawal_Orders {
     }
 
     /**
-     * Admin-only: update department_name / employee_name on any order regardless of status.
-     * Does NOT touch items, quantities, or status — only the human-readable name fields.
+     * Admin-only: update the department/employee linked to an order by picking from HR System.
+     * Saves IDs and resolved names; does NOT touch items, quantities, or status.
      */
     public static function update_order_employee() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
@@ -754,9 +754,9 @@ class IW_Withdrawal_Orders {
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
-        $order_id        = intval($_POST['order_id']);
-        $department_name = sanitize_text_field($_POST['department_name'] ?? '');
-        $employee_name   = sanitize_text_field($_POST['employee_name']   ?? '');
+        $order_id      = intval($_POST['order_id']);
+        $department_id = intval($_POST['department_id'] ?? 0);
+        $employee_id   = intval($_POST['employee_id']   ?? 0);
 
         if (!$order_id) {
             wp_send_json_error(array('message' => 'رقم إذن غير صحيح'));
@@ -770,9 +770,23 @@ class IW_Withdrawal_Orders {
             wp_send_json_error(array('message' => 'الإذن غير موجود'));
         }
 
+        // Resolve names from HR System so display stays consistent across lookups
+        $department_name = '';
+        $employee_name   = '';
+        if ($department_id) {
+            $dept = IW_Departments::get_by_id($department_id);
+            if ($dept) $department_name = $dept->name;
+        }
+        if ($employee_id) {
+            $emp = IW_Departments::get_employee_by_id($employee_id);
+            if ($emp) $employee_name = $emp->name;
+        }
+
         $wpdb->update(
             $prefix . 'withdrawal_orders',
             array(
+                'department_id'   => $department_id,
+                'employee_id'     => $employee_id,
                 'department_name' => $department_name,
                 'employee_name'   => $employee_name,
             ),
