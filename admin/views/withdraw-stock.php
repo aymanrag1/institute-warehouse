@@ -421,8 +421,6 @@ jQuery(document).ready(function($) {
                 html += '</tr></table>';
                 html += '<button class="button" style="margin-top:8px;" onclick="iwSaveEmployeeInfo('+o.id+')">حفظ البيانات</button>';
                 html += '</div>';
-                // populate dropdowns from HR System, preselecting current order values
-                iwPopulateEmpEdit(o.department_id, o.employee_id);
             }
 
             if (o.status === 'pending') {
@@ -461,6 +459,11 @@ jQuery(document).ready(function($) {
 
             $('#iw-wd-modal-body').html(html);
             $('#iw-wd-modal').show();
+
+            // Populate admin edit dropdowns from HR System after the DOM is rendered
+            if (iwAdmin.isAdmin) {
+                iwPopulateEmpEdit(o.department_id, o.employee_id);
+            }
         });
     };
 
