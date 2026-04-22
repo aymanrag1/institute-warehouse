@@ -416,8 +416,8 @@ jQuery(document).ready(function($) {
                 html += '<div style="margin-top:15px;padding:12px;background:#f0f6fc;border:1px solid #c3d4e4;border-radius:4px;">';
                 html += '<strong>تعديل بيانات الموظف (أدمن)</strong>';
                 html += '<table style="margin-top:8px;width:100%"><tr>';
-                html += '<td style="width:50%;padding:4px;">القسم: <select id="emp-edit-dept" class="regular-text"><option value="">اختر القسم</option></select></td>';
-                html += '<td style="padding:4px;">الموظف: <select id="emp-edit-emp" class="regular-text"><option value="">اختر الموظف</option></select></td>';
+                html += '<td style="width:50%;padding:4px;">القسم: <select id="emp-edit-dept" class="iw-emp-edit-select" style="width:100%;padding:6px;"><option value="">اختر القسم</option></select></td>';
+                html += '<td style="padding:4px;">الموظف: <select id="emp-edit-emp" class="iw-emp-edit-select" style="width:100%;padding:6px;"><option value="">اختر الموظف</option></select></td>';
                 html += '</tr></table>';
                 html += '<button class="button" style="margin-top:8px;" onclick="iwSaveEmployeeInfo('+o.id+')">حفظ البيانات</button>';
                 html += '</div>';
@@ -497,21 +497,29 @@ jQuery(document).ready(function($) {
         });
     };
 
-    // Populate admin edit dropdowns with HR departments/employees, preselecting the current order's values
+    // Populate admin edit dropdowns (plain <select>, no Select2) with HR departments/employees,
+    // preselecting the current order's values.
     window.iwPopulateEmpEdit = function(currentDeptId, currentEmpId) {
-        $.post(iwAdmin.ajaxurl, {action: 'iw_get_departments', nonce: iwAdmin.nonce}, function(r) {
-            if (!r.success) return;
+        $.post(iwAdmin.ajaxurl, {action: 'iw_get_departments', nonce: iwAdmin.nonce})
+        .done(function(r) {
             var $dept = $('#emp-edit-dept');
-            var html = '<option value="">اختر القسم</option>';
+            if (!$dept.length) { console.warn('iwPopulateEmpEdit: #emp-edit-dept not found'); return; }
+            if (!r || !r.success || !Array.isArray(r.data)) {
+                console.warn('iwPopulateEmpEdit: get_departments returned', r);
+                return;
+            }
+            var opts = '<option value="">اختر القسم</option>';
             r.data.forEach(function(d) {
                 var sel = (currentDeptId && parseInt(d.id) === parseInt(currentDeptId)) ? ' selected' : '';
-                html += '<option value="'+d.id+'"'+sel+'>'+d.name+'</option>';
+                opts += '<option value="'+d.id+'"'+sel+'>'+d.name+'</option>';
             });
-            $dept.html(html);
-            if (typeof iwRefreshSelect2 === 'function') iwRefreshSelect2('#emp-edit-dept');
+            $dept.html(opts);
 
-            // Load employees for the preselected department (or all)
-            iwLoadEmpEditEmployees(currentDeptId, currentEmpId);
+            // Load employees for the preselected department (if any) else all employees
+            iwLoadEmpEditEmployees(currentDeptId || null, currentEmpId || null);
+        })
+        .fail(function(xhr) {
+            console.error('iwPopulateEmpEdit: get_departments failed', xhr && xhr.status, xhr && xhr.responseText);
         });
 
         // When admin changes department, reload the employees dropdown
@@ -521,19 +529,26 @@ jQuery(document).ready(function($) {
     };
 
     window.iwLoadEmpEditEmployees = function(deptId, preselectEmpId) {
-        var $emp = $('#emp-edit-emp');
         var action = deptId ? 'iw_get_employees_by_dept' : 'iw_get_employees';
         var data = { action: action, nonce: iwAdmin.nonce };
         if (deptId) data.department_id = deptId;
-        $.post(iwAdmin.ajaxurl, data, function(r) {
-            if (!r.success) return;
-            var html = '<option value="">اختر الموظف</option>';
+        $.post(iwAdmin.ajaxurl, data)
+        .done(function(r) {
+            var $emp = $('#emp-edit-emp');
+            if (!$emp.length) { console.warn('iwLoadEmpEditEmployees: #emp-edit-emp not found'); return; }
+            if (!r || !r.success || !Array.isArray(r.data)) {
+                console.warn('iwLoadEmpEditEmployees: '+action+' returned', r);
+                return;
+            }
+            var opts = '<option value="">اختر الموظف</option>';
             r.data.forEach(function(e) {
                 var sel = (preselectEmpId && parseInt(e.id) === parseInt(preselectEmpId)) ? ' selected' : '';
-                html += '<option value="'+e.id+'"'+sel+'>'+e.name+'</option>';
+                opts += '<option value="'+e.id+'"'+sel+'>'+e.name+'</option>';
             });
-            $emp.html(html);
-            if (typeof iwRefreshSelect2 === 'function') iwRefreshSelect2('#emp-edit-emp');
+            $emp.html(opts);
+        })
+        .fail(function(xhr) {
+            console.error('iwLoadEmpEditEmployees: '+action+' failed', xhr && xhr.status, xhr && xhr.responseText);
         });
     };
 
