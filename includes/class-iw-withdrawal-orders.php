@@ -770,28 +770,39 @@ class IW_Withdrawal_Orders {
             wp_send_json_error(array('message' => 'الإذن غير موجود'));
         }
 
-        // Resolve names from HR System so display stays consistent across lookups
-        $department_name = '';
-        $employee_name   = '';
-        if ($department_id) {
-            $dept = IW_Departments::get_by_id($department_id);
-            if ($dept) $department_name = $dept->name;
-        }
-        if ($employee_id) {
-            $emp = IW_Departments::get_employee_by_id($employee_id);
-            if ($emp) $employee_name = $emp->name;
+        // Build update data: always include IDs; include cached name columns only if they exist
+        // (older DBs may not have department_name / employee_name columns — they get added via migration).
+        $data    = array('department_id' => $department_id, 'employee_id' => $employee_id);
+        $formats = array('%d', '%d');
+
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}withdrawal_orders");
+        if (in_array('department_name', $columns, true) || in_array('employee_name', $columns, true)) {
+            // Resolve names from HR System so the cached display is consistent
+            $department_name = '';
+            $employee_name   = '';
+            if ($department_id) {
+                $dept = IW_Departments::get_by_id($department_id);
+                if ($dept) $department_name = $dept->name;
+            }
+            if ($employee_id) {
+                $emp = IW_Departments::get_employee_by_id($employee_id);
+                if ($emp) $employee_name = $emp->name;
+            }
+            if (in_array('department_name', $columns, true)) {
+                $data['department_name'] = $department_name;
+                $formats[] = '%s';
+            }
+            if (in_array('employee_name', $columns, true)) {
+                $data['employee_name'] = $employee_name;
+                $formats[] = '%s';
+            }
         }
 
         $result = $wpdb->update(
             $prefix . 'withdrawal_orders',
-            array(
-                'department_id'   => $department_id,
-                'employee_id'     => $employee_id,
-                'department_name' => $department_name,
-                'employee_name'   => $employee_name,
-            ),
+            $data,
             array('id' => $order_id),
-            array('%d', '%d', '%s', '%s'),
+            $formats,
             array('%d')
         );
 
@@ -802,12 +813,10 @@ class IW_Withdrawal_Orders {
         }
 
         wp_send_json_success(array(
-            'message'         => 'تم تحديث بيانات الموظف',
-            'department_id'   => $department_id,
-            'employee_id'     => $employee_id,
-            'department_name' => $department_name,
-            'employee_name'   => $employee_name,
-            'rows_affected'   => intval($result),
+            'message'       => 'تم تحديث بيانات الموظف',
+            'department_id' => $department_id,
+            'employee_id'   => $employee_id,
+            'rows_affected' => intval($result),
         ));
     }
 }
