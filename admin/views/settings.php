@@ -7,7 +7,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iw_settings_nonce']))
         update_option('iw_address', sanitize_textarea_field($_POST['iw_address']));
         update_option('iw_phone', sanitize_text_field($_POST['iw_phone']));
         update_option('iw_signature_width', max(50, intval($_POST['iw_signature_width'] ?? 150)));
-        update_option('iw_tax_enabled', isset($_POST['iw_tax_enabled']) ? '1' : '0');
         update_option('iw_tax_rate', max(0, min(100, floatval($_POST['iw_tax_rate'] ?? 14))));
 
         // Handle logo upload
@@ -68,15 +67,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iw_settings_nonce']))
                 <td>
                     <input type="number" name="iw_signature_width" min="50" max="400" value="<?php echo esc_attr(get_option('iw_signature_width', 150)); ?>" style="width:100px;"> px
                     <p class="description"><?php echo iw_t('العرض الأقصى للتوقيع الإلكتروني في المطبوعات (بالبكسل). الارتفاع يتناسب تلقائياً.', 'Max width of the electronic signature on printouts (px). Height scales automatically.'); ?></p>
-                </td>
-            </tr>
-            <tr>
-                <th><?php echo iw_t('تفعيل حساب الضريبة', 'Enable Tax Calculation'); ?></th>
-                <td>
-                    <label>
-                        <input type="checkbox" name="iw_tax_enabled" value="1" <?php checked(get_option('iw_tax_enabled', '0'), '1'); ?>>
-                        <?php echo iw_t('تفعيل حساب الضريبة في أذون الإضافة', 'Enable tax calculation in stock-in orders'); ?>
-                    </label>
                 </td>
             </tr>
             <tr>

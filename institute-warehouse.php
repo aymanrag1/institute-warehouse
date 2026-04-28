@@ -596,7 +596,6 @@ class Institute_Warehouse_System {
             'nonce'         => wp_create_nonce('iw_admin_nonce'),
             'isAdmin'       => current_user_can('manage_options') ? 1 : 0,
             'sigWidth'      => intval(get_option('iw_signature_width', 150)),
-            'taxEnabled'    => get_option('iw_tax_enabled', '0') === '1' ? 1 : 0,
             'taxRate'       => floatval(get_option('iw_tax_rate', 14)),
             'lang'     => iw_get_lang(),
             'dir'      => iw_dir(),
