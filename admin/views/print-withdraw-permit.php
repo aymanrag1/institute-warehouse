@@ -58,7 +58,7 @@ jQuery(document).ready(function($) {
             content += '</table>';
             if (sig) {
                 content += '<div style="margin-top:30px;text-align:left;"><p><strong>توقيع المعتمد (عميد المعهد / المدير):</strong></p>';
-                content += '<img src="'+sig+'" style="max-height:80px;" /></div>';
+                content += '<img src="'+sig+'" style="max-width:'+(iwAdmin.sigWidth||150)+'px;height:auto;" /></div>';
             }
             content += '<div style="margin-top:40px;display:flex;justify-content:space-between;"><div><strong>مشرف المخزن</strong><br>التوقيع: ____________</div><div><strong>المستلم</strong><br>التوقيع: ____________</div></div>';
             var w = window.open('','','width=800,height=600');

@@ -408,7 +408,7 @@ jQuery(document).ready(function($) {
 
             if (sig && o.status !== 'pending') {
                 html += '<div style="margin-top:15px;text-align:center;"><p><strong>توقيع المعتمد:</strong></p>';
-                html += '<img src="'+sig+'" style="max-height:100px;" /></div>';
+                html += '<img src="'+sig+'" style="max-width:'+(iwAdmin.sigWidth||150)+'px;height:auto;" /></div>';
             }
 
             // Admin: edit employee/department name on any order regardless of status
@@ -686,7 +686,7 @@ jQuery(document).ready(function($) {
             printContent += '<p>الاسم: '+(o.employee_name||'.................')+'</p></td>';
             if (sig) {
                 printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p>';
-                printContent += '<img src="'+sig+'" style="max-height:80px;" /></td>';
+                printContent += '<img src="'+sig+'" style="max-width:'+(iwAdmin.sigWidth||150)+'px;height:auto;" /></td>';
             } else {
                 printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p><div style="height:60px;"></div></td>';
             }
@@ -728,7 +728,7 @@ jQuery(document).ready(function($) {
             printContent += '<p>الاسم: '+(o.employee_name||'.................')+'</p></td>';
             if (sig) {
                 printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p>';
-                printContent += '<img src="'+sig+'" style="max-height:80px;" /></td>';
+                printContent += '<img src="'+sig+'" style="max-width:'+(iwAdmin.sigWidth||150)+'px;height:auto;" /></td>';
             } else {
                 printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p><div style="height:60px;"></div></td>';
             }

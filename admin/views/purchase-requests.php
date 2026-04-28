@@ -19,6 +19,16 @@ $dir   = iw_dir();
         <form id="iw-pr-form">
             <table class="form-table">
                 <tr>
+                    <th><?php echo iw_t('طريقة الشراء', 'Purchase Method'); ?></th>
+                    <td>
+                        <select id="pr_purchase_method" class="regular-text">
+                            <option value="direct"><?php echo iw_t('أمر مباشر', 'Direct Order'); ?></option>
+                            <option value="limited_tender"><?php echo iw_t('مناقصة محدودة (عروض أسعار)', 'Limited Tender (Price Quotes)'); ?></option>
+                            <option value="public_tender"><?php echo iw_t('مناقصة عامة', 'Public Tender'); ?></option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
                     <th><?php echo iw_t('ملاحظات', 'Notes'); ?></th>
                     <td><textarea id="pr_notes" class="large-text" rows="2"></textarea></td>
                 </tr>
@@ -221,7 +231,13 @@ jQuery(document).ready(function($) {
             if (pid && qty > 0) items.push({product_id: pid, quantity: qty, estimated_price: price});
         });
         if (!items.length) { alert(iwT('يجب إضافة أصناف', 'Please add at least one item.')); return; }
-        $.post(iwAdmin.ajaxurl, {action: 'iw_create_purchase_request', nonce: iwAdmin.nonce, items: JSON.stringify(items), notes: $('#pr_notes').val()}, function(r) {
+        $.post(iwAdmin.ajaxurl, {
+            action: 'iw_create_purchase_request',
+            nonce: iwAdmin.nonce,
+            items: JSON.stringify(items),
+            notes: $('#pr_notes').val(),
+            purchase_method: $('#pr_purchase_method').val()
+        }, function(r) {
             alert(r.data.message);
             if (r.success) { $('#iw-pr-form')[0].reset(); $('#pr-items-body').html(''); iwAddPrItem(); $('#pr-create-grand-total').text('0.00'); }
         });
@@ -315,11 +331,21 @@ jQuery(document).ready(function($) {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_purchase_request', nonce: iwAdmin.nonce, request_id: id}, function(r) {
             if (!r.success) return;
             var o = r.data.request, items = r.data.items || [], sig = r.data.signature_url;
+            var methodLabels = {
+                direct:         iwT('أمر مباشر', 'Direct Order'),
+                limited_tender: iwT('مناقصة محدودة (عروض أسعار)', 'Limited Tender (Price Quotes)'),
+                public_tender:  iwT('مناقصة عامة', 'Public Tender')
+            };
+            var methodLabel = methodLabels[o.purchase_method] || methodLabels.direct;
             var html = '<h2>' + iwT('طلب شراء رقم: ', 'Purchase Request No.: ') + o.request_number + '</h2>';
+            html += '<p><strong>' + iwT('طريقة الشراء:', 'Purchase Method:') + '</strong> ' + methodLabel + '</p>';
 
             // Items table
-            html += '<table class="wp-list-table widefat fixed striped"><thead><tr>'
-                  + '<th>' + iwT('الصنف', 'Product') + '</th>'
+            html += '<table class="wp-list-table widefat fixed striped"><thead><tr>';
+            if (o.status === 'approved') {
+                html += '<th style="width:40px;"><input type="checkbox" id="pr-select-all" onclick="iwPrToggleAll(this)"></th>';
+            }
+            html += '<th>' + iwT('الصنف', 'Product') + '</th>'
                   + '<th>' + iwT('المخزون الحالي', 'Stock') + '</th>'
                   + '<th>' + iwT('الحد الأدنى', 'Min') + '</th>'
                   + '<th>' + iwT('الحد الأقصى', 'Max') + '</th>'
@@ -331,8 +357,9 @@ jQuery(document).ready(function($) {
             if (o.status === 'pending') html += '<th>' + iwT('حذف', 'Del') + '</th>';
             html += '</tr></thead><tbody>';
 
+            var emptyColspan = (o.status === 'approved') ? 10 : 9;
             if (!items.length) {
-                html += '<tr><td colspan="9" style="text-align:center;padding:20px;color:#999;">'
+                html += '<tr><td colspan="'+emptyColspan+'" style="text-align:center;padding:20px;color:#999;">'
                       + iwT('لا توجد أصناف مسجلة في هذا الطلب', 'No items recorded in this request.')
                       + '</td></tr>';
             }
@@ -345,8 +372,11 @@ jQuery(document).ready(function($) {
                 var rowTotal   = (o.status === 'pending' ? parseInt(it.quantity) : approvedQty) * estPrice;
                 grandTotal    += rowTotal;
 
-                html += '<tr data-item-id="'+it.id+'">'
-                      + '<td>'+it.product_name+'</td>'
+                html += '<tr data-item-id="'+it.id+'" data-product-id="'+it.product_id+'" data-product-name="'+(it.product_name||'').replace(/"/g,'&quot;')+'" data-approved-qty="'+approvedQty+'">';
+                if (o.status === 'approved') {
+                    html += '<td><input type="checkbox" class="pr-item-check" value="'+it.id+'"></td>';
+                }
+                html += '<td>'+it.product_name+'</td>'
                       + '<td>'+(it.current_stock||0)+'</td>'
                       + '<td>'+(it.min_stock||0)+'</td>'
                       + '<td>'+(it.max_stock||0)+'</td>'
@@ -371,8 +401,9 @@ jQuery(document).ready(function($) {
             });
 
             // Grand total row
+            var totalColspan = (o.status === 'approved') ? 9 : 8;
             html += '<tr style="font-weight:bold;background:#f9f9f9;">'
-                  + '<td colspan="' + (o.status === 'pending' ? '8' : '8') + '">'
+                  + '<td colspan="' + totalColspan + '">'
                   + iwT('الإجمالي التقديري', 'Estimated Grand Total') + '</td>'
                   + '<td id="pr-modal-grand-total">' + grandTotal.toFixed(2) + '</td>';
             if (o.status === 'pending') html += '<td></td>';
@@ -389,7 +420,7 @@ jQuery(document).ready(function($) {
             if (sig && o.status !== 'pending') {
                 html += '<div style="margin-top:15px;text-align:center;">'
                       + '<p><strong>' + iwT('توقيع المعتمد:', 'Approver Signature:') + '</strong></p>'
-                      + '<img src="'+sig+'" style="max-height:100px;" /></div>';
+                      + '<img src="'+sig+'" style="max-width:'+(iwAdmin.sigWidth||150)+'px;height:auto;" /></div>';
             }
 
             if (o.status === 'pending') {
@@ -400,9 +431,15 @@ jQuery(document).ready(function($) {
                       + '</div>';
             }
             if (o.status === 'approved') {
-                html += '<div style="margin-top:15px;">'
+                html += '<div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">'
                       + '<button class="button button-primary button-large" onclick="iwPrintPr('+o.id+')">' + iwT('طباعة', 'Print') + '</button>'
-                      + '</div>';
+                      + '<button class="button button-secondary button-large" onclick="iwPrCreateAddOrder('+o.id+')" style="background:#2271b1;color:#fff;border-color:#2271b1;">'
+                      + iwT('تنفيذ إذن إضافة للمحدد', 'Create Stock-In for Selected') + '</button>'
+                      + '</div>'
+                      + '<p class="description" style="margin-top:8px;">'
+                      + iwT('حدد الأصناف التي تم استلامها فعلياً ثم اضغط "تنفيذ إذن إضافة للمحدد" لإنشاء إذن إضافة بهذه الأصناف فقط.',
+                            'Select the items that were actually received, then click "Create Stock-In for Selected" to create a stock-in order with only those items.')
+                      + '</p>';
             }
 
             // Admin: restore missing items
@@ -543,13 +580,48 @@ jQuery(document).ready(function($) {
         });
     };
 
+    window.iwPrToggleAll = function(cb) {
+        $('.pr-item-check').prop('checked', cb.checked);
+    };
+
+    window.iwPrCreateAddOrder = function(prId) {
+        var selected = [];
+        $('.pr-item-check:checked').each(function() {
+            var $tr = $(this).closest('tr');
+            selected.push({
+                product_id:   $tr.data('product-id'),
+                product_name: $tr.data('product-name'),
+                quantity:     $tr.data('approved-qty')
+            });
+        });
+        if (!selected.length) {
+            alert(iwT('يجب اختيار صنف واحد على الأقل', 'Please select at least one item.'));
+            return;
+        }
+        try {
+            sessionStorage.setItem('iw_pr_to_addorder', JSON.stringify({
+                pr_id: prId,
+                items: selected
+            }));
+        } catch(e) {}
+        window.location.href = iwAdmin.adminurl + 'admin.php?page=iw-add-stock&from_pr=' + prId;
+    };
+
     window.iwPrintPr = function(id) {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_purchase_request', nonce: iwAdmin.nonce, request_id: id}, function(r) {
             if (!r.success) return;
             var o = r.data.request, items = r.data.items || [], sig = r.data.signature_url;
+            var methodLabelsP = {
+                direct:         iwT('أمر مباشر', 'Direct Order'),
+                limited_tender: iwT('مناقصة محدودة (عروض أسعار)', 'Limited Tender (Price Quotes)'),
+                public_tender:  iwT('مناقصة عامة', 'Public Tender')
+            };
+            var pmLabel = methodLabelsP[o.purchase_method] || methodLabelsP.direct;
+            var sigW = (iwAdmin.sigWidth || 150);
             var printContent = '<?php echo addslashes(IW_Admin::get_print_header()); ?>';
             printContent += '<h2 style="text-align:center;">' + iwT('طلب شراء رقم: ', 'Purchase Request No.: ') + o.request_number + '</h2>';
-            printContent += '<p><strong>' + iwT('التاريخ:', 'Date:') + '</strong> ' + o.created_at + '</p>';
+            printContent += '<p><strong>' + iwT('التاريخ:', 'Date:') + '</strong> ' + o.created_at
+                          + ' &nbsp;|&nbsp; <strong>' + iwT('طريقة الشراء:', 'Purchase Method:') + '</strong> ' + pmLabel + '</p>';
             printContent += '<table border="1" cellpadding="8" cellspacing="0" width="100%" style="border-collapse:collapse;text-align:right;">';
             printContent += '<tr style="background:#f0f0f0;">'
                           + '<th>' + iwT('الصنف', 'Product') + '</th>'
@@ -573,7 +645,7 @@ jQuery(document).ready(function($) {
             if (sig) {
                 printContent += '<div style="margin-top:40px;text-align:left;">'
                               + '<p><strong>' + iwT('توقيع عميد المعهد / المدير:', 'Dean / Director Signature:') + '</strong></p>'
-                              + '<img src="'+sig+'" style="max-height:80px;" />'
+                              + '<img src="'+sig+'" style="max-width:'+sigW+'px;height:auto;" />'
                               + '</div>';
             }
             var w = window.open('','','width=800,height=600');

@@ -3,7 +3,7 @@
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
  * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
- * Version: 2.6.0
+ * Version: 2.7.0
  * Author: AYMAN RAGAB
  * Author URI: tel:00201159230034
  * Text Domain: institute-warehouse
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.6.0');
+define('IW_VERSION', '2.7.0');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -591,10 +591,13 @@ class Institute_Warehouse_System {
 
         $is_ar = iw_is_ar();
         wp_localize_script('iw-admin-js', 'iwAdmin', array(
-            'ajaxurl'  => admin_url('admin-ajax.php'),
-            'adminurl' => admin_url(),
-            'nonce'    => wp_create_nonce('iw_admin_nonce'),
-            'isAdmin'  => current_user_can('manage_options') ? 1 : 0,
+            'ajaxurl'       => admin_url('admin-ajax.php'),
+            'adminurl'      => admin_url(),
+            'nonce'         => wp_create_nonce('iw_admin_nonce'),
+            'isAdmin'       => current_user_can('manage_options') ? 1 : 0,
+            'sigWidth'      => intval(get_option('iw_signature_width', 150)),
+            'taxEnabled'    => get_option('iw_tax_enabled', '0') === '1' ? 1 : 0,
+            'taxRate'       => floatval(get_option('iw_tax_rate', 14)),
             'lang'     => iw_get_lang(),
             'dir'      => iw_dir(),
             'strings'  => array(

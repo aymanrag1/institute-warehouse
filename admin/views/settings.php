@@ -6,6 +6,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iw_settings_nonce']))
         update_option('iw_institute_name', sanitize_text_field($_POST['iw_institute_name']));
         update_option('iw_address', sanitize_textarea_field($_POST['iw_address']));
         update_option('iw_phone', sanitize_text_field($_POST['iw_phone']));
+        update_option('iw_signature_width', max(50, intval($_POST['iw_signature_width'] ?? 150)));
+        update_option('iw_tax_enabled', isset($_POST['iw_tax_enabled']) ? '1' : '0');
+        update_option('iw_tax_rate', max(0, min(100, floatval($_POST['iw_tax_rate'] ?? 14))));
 
         // Handle logo upload
         if (!empty($_FILES['iw_logo']['name'])) {
@@ -59,6 +62,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iw_settings_nonce']))
             <tr>
                 <th><?php echo iw_t('الهاتف', 'Phone'); ?></th>
                 <td><input type="text" name="iw_phone" class="regular-text" value="<?php echo esc_attr(get_option('iw_phone', '')); ?>"></td>
+            </tr>
+            <tr>
+                <th><?php echo iw_t('حجم التوقيع في المطبوعات', 'Signature Size on Printouts'); ?></th>
+                <td>
+                    <input type="number" name="iw_signature_width" min="50" max="400" value="<?php echo esc_attr(get_option('iw_signature_width', 150)); ?>" style="width:100px;"> px
+                    <p class="description"><?php echo iw_t('العرض الأقصى للتوقيع الإلكتروني في المطبوعات (بالبكسل). الارتفاع يتناسب تلقائياً.', 'Max width of the electronic signature on printouts (px). Height scales automatically.'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th><?php echo iw_t('تفعيل حساب الضريبة', 'Enable Tax Calculation'); ?></th>
+                <td>
+                    <label>
+                        <input type="checkbox" name="iw_tax_enabled" value="1" <?php checked(get_option('iw_tax_enabled', '0'), '1'); ?>>
+                        <?php echo iw_t('تفعيل حساب الضريبة في أذون الإضافة', 'Enable tax calculation in stock-in orders'); ?>
+                    </label>
+                </td>
+            </tr>
+            <tr>
+                <th><?php echo iw_t('نسبة الضريبة %', 'Tax Rate %'); ?></th>
+                <td>
+                    <input type="number" name="iw_tax_rate" min="0" max="100" step="0.01" value="<?php echo esc_attr(get_option('iw_tax_rate', 14)); ?>" style="width:100px;"> %
+                    <p class="description"><?php echo iw_t('النسبة الافتراضية: 14%', 'Default rate: 14%'); ?></p>
+                </td>
             </tr>
         </table>
         <button type="submit" class="button button-primary button-large">

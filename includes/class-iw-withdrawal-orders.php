@@ -267,16 +267,23 @@ class IW_Withdrawal_Orders {
             $item->current_stock = IW_Products::get_real_stock($item->product_id);
         }
 
-        // Get approver signature if approved
+        // Resolve signature: prefer value stored on the order, fall back to
+        // approver's user meta. Returned for ALL users so any account can
+        // print an approved/completed order with the signature.
         $signature_url = '';
-        if ($order && $order->approved_by) {
-            $signature_url = get_user_meta($order->approved_by, 'iw_signature_url', true);
+        if ($order) {
+            if (!empty($order->signature_url)) {
+                $signature_url = $order->signature_url;
+            } elseif ($order->approved_by) {
+                $signature_url = get_user_meta($order->approved_by, 'iw_signature_url', true);
+            }
         }
 
         wp_send_json_success(array(
-            'order'         => $order,
-            'items'         => $items,
-            'signature_url' => $signature_url,
+            'order'          => $order,
+            'items'          => $items,
+            'signature_url'  => $signature_url,
+            'signature_width'=> intval(get_option('iw_signature_width', 150)),
         ));
     }
 

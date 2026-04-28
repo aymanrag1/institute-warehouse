@@ -382,5 +382,23 @@ class IW_Database {
                 $wpdb->query("ALTER TABLE {$prefix}purchase_request_items ADD COLUMN last_purchase_price decimal(12,2) NOT NULL DEFAULT 0.00 AFTER estimated_price");
             }
         }
+
+        // Add purchase_method to purchase_requests
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}purchase_requests'");
+        if ($table_exists) {
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}purchase_requests");
+            if (!in_array('purchase_method', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}purchase_requests ADD COLUMN purchase_method varchar(50) NOT NULL DEFAULT 'direct' AFTER notes");
+            }
+        }
+
+        // Add from_pr_id to add_orders (link add order to its source purchase request)
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}add_orders'");
+        if ($table_exists) {
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}add_orders");
+            if (!in_array('from_pr_id', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}add_orders ADD COLUMN from_pr_id bigint(20) UNSIGNED DEFAULT NULL AFTER supplier_id");
+            }
+        }
     }
 }

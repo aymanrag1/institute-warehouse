@@ -271,6 +271,11 @@ class IW_Purchase_Requests {
 
         $items = json_decode(stripslashes($_POST['items']), true);
         $notes = sanitize_textarea_field($_POST['notes'] ?? '');
+        $purchase_method = sanitize_text_field($_POST['purchase_method'] ?? 'direct');
+        $allowed_methods = array('direct', 'limited_tender', 'public_tender');
+        if (!in_array($purchase_method, $allowed_methods, true)) {
+            $purchase_method = 'direct';
+        }
 
         if (empty($items)) {
             wp_send_json_error(array('message' => 'يجب إضافة أصناف'));
@@ -279,10 +284,11 @@ class IW_Purchase_Requests {
         $request_number = self::generate_request_number();
 
         $wpdb->insert($prefix . 'purchase_requests', array(
-            'request_number' => $request_number,
-            'status'         => 'pending',
-            'notes'          => $notes,
-            'created_by'     => get_current_user_id(),
+            'request_number'  => $request_number,
+            'status'          => 'pending',
+            'notes'           => $notes,
+            'purchase_method' => $purchase_method,
+            'created_by'      => get_current_user_id(),
         ));
 
         $request_id = $wpdb->insert_id;
@@ -391,15 +397,23 @@ class IW_Purchase_Requests {
         }
         unset($item); // release reference after foreach &$item
 
+        // Resolve signature: prefer the value stored on the request itself,
+        // fall back to the approver's user meta. Returned for ALL users so
+        // any account can print an approved request with the signature.
         $signature_url = '';
-        if ($request && $request->approved_by) {
-            $signature_url = get_user_meta($request->approved_by, 'iw_signature_url', true);
+        if ($request) {
+            if (!empty($request->signature_url)) {
+                $signature_url = $request->signature_url;
+            } elseif ($request->approved_by) {
+                $signature_url = get_user_meta($request->approved_by, 'iw_signature_url', true);
+            }
         }
 
         wp_send_json_success(array(
-            'request'       => $request,
-            'items'         => $items,
-            'signature_url' => $signature_url,
+            'request'        => $request,
+            'items'          => $items,
+            'signature_url'  => $signature_url,
+            'signature_width'=> intval(get_option('iw_signature_width', 150)),
         ));
     }
 

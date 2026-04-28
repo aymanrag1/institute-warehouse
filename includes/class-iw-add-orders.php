@@ -47,6 +47,9 @@ class IW_Add_Orders {
         $supplier_id = intval($_POST['supplier_id'] ?? 0);
         $notes = sanitize_textarea_field($_POST['notes'] ?? '');
         $items = json_decode(stripslashes($_POST['items'] ?? '[]'), true);
+        $from_pr_id  = intval($_POST['from_pr_id']  ?? 0);
+        $tax_enabled = intval($_POST['tax_enabled'] ?? 0) ? 1 : 0;
+        $tax_rate    = floatval($_POST['tax_rate']  ?? 0);
 
         if (empty($items)) {
             wp_send_json_error(array('message' => 'يجب إضافة صنف واحد على الأقل'));
@@ -56,22 +59,34 @@ class IW_Add_Orders {
         $total_qty = 0;
         $total_value = 0;
 
-        // Calculate totals
+        // Calculate totals (subtotal before tax)
         foreach ($items as $item) {
-            $total_qty += intval($item['quantity']);
+            $total_qty   += intval($item['quantity']);
             $total_value += intval($item['quantity']) * floatval($item['unit_price']);
         }
 
+        // Build notes with tax info if enabled
+        $notes_full = $notes;
+        if ($tax_enabled && $tax_rate > 0) {
+            $tax_amount = $total_value * ($tax_rate / 100);
+            $tax_note   = sprintf('[ضريبة %.2f%% = %.2f | الإجمالي شامل الضريبة = %.2f]', $tax_rate, $tax_amount, $total_value + $tax_amount);
+            $notes_full = trim($notes_full . ' ' . $tax_note);
+        }
+
         // Insert order
-        $wpdb->insert($prefix . 'add_orders', array(
-            'order_number' => $order_number,
-            'supplier_id' => $supplier_id ?: null,
-            'notes' => $notes,
+        $insert_data = array(
+            'order_number'   => $order_number,
+            'supplier_id'    => $supplier_id ?: null,
+            'notes'          => $notes_full,
             'total_quantity' => $total_qty,
-            'total_value' => $total_value,
-            'created_by' => get_current_user_id(),
-            'created_at' => current_time('mysql')
-        ));
+            'total_value'    => $total_value,
+            'created_by'     => get_current_user_id(),
+            'created_at'     => current_time('mysql'),
+        );
+        if ($from_pr_id > 0) {
+            $insert_data['from_pr_id'] = $from_pr_id;
+        }
+        $wpdb->insert($prefix . 'add_orders', $insert_data);
 
         $order_id = $wpdb->insert_id;
 

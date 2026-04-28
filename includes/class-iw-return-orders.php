@@ -156,10 +156,16 @@ class IW_Return_Orders {
             $order_id
         ));
 
+        // Resolve signature: prefer stored value, fall back to approver meta.
+        $signature_url = !empty($order->signature_url)
+            ? $order->signature_url
+            : ($order->approved_by ? (get_user_meta($order->approved_by, 'iw_signature_url', true) ?: '') : '');
+
         wp_send_json_success(array(
-            'order'         => $order,
-            'items'         => $items ?: [],
-            'signature_url' => $order->signature_url,
+            'order'          => $order,
+            'items'          => $items ?: [],
+            'signature_url'  => $signature_url,
+            'signature_width'=> intval(get_option('iw_signature_width', 150)),
         ));
     }
 

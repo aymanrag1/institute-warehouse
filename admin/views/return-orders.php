@@ -280,7 +280,7 @@ jQuery(document).ready(function($) {
             html += '</tbody></table>';
 
             if (sig) {
-                html += '<div style="margin-top:15px;text-align:center;"><p><strong>توقيع المعتمد:</strong></p><img src="'+sig+'" style="max-height:100px;"/></div>';
+                html += '<div style="margin-top:15px;text-align:center;"><p><strong>توقيع المعتمد:</strong></p><img src="'+sig+'" style="max-width:'+(iwAdmin.sigWidth||150)+'px;height:auto;"/></div>';
             }
 
             // Action buttons
@@ -363,7 +363,7 @@ jQuery(document).ready(function($) {
             });
             content += '</table>';
             if (sig) {
-                content += '<div style="margin-top:30px;text-align:left;"><p><strong>توقيع المعتمد:</strong></p><img src="'+sig+'" style="max-height:80px;"/></div>';
+                content += '<div style="margin-top:30px;text-align:left;"><p><strong>توقيع المعتمد:</strong></p><img src="'+sig+'" style="max-width:'+(iwAdmin.sigWidth||150)+'px;height:auto;"/></div>';
             }
             content += '<div style="margin-top:40px;display:flex;justify-content:space-between;">';
             content += '<div><strong>مشرف المخزن</strong><br>التوقيع: ____________</div>';

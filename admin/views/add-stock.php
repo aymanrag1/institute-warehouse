@@ -1,6 +1,21 @@
-<?php if (!defined('ABSPATH')) exit; ?>
+<?php
+if (!defined('ABSPATH')) exit;
+$tax_enabled = get_option('iw_tax_enabled', '0') === '1';
+$tax_rate    = floatval(get_option('iw_tax_rate', 14));
+$from_pr_id  = isset($_GET['from_pr']) ? intval($_GET['from_pr']) : 0;
+?>
 <div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
     <h1><?php echo iw_t('إذن إضافة', 'Stock-In Order'); ?></h1>
+
+    <?php if ($from_pr_id): ?>
+    <div class="notice notice-info" style="margin:10px 0;padding:10px 15px;">
+        <p style="margin:0;">
+            <strong><?php echo iw_t('إنشاء إذن إضافة من طلب شراء', 'Creating Stock-In from Purchase Request'); ?></strong>
+            — <?php echo iw_t('الأصناف ستُحمَّل تلقائياً. أدخل سعر الوحدة لكل صنف.', 'Items will be loaded automatically. Enter unit price for each item.'); ?>
+        </p>
+    </div>
+    <input type="hidden" id="ao_from_pr_id" value="<?php echo esc_attr($from_pr_id); ?>">
+    <?php endif; ?>
 
     <form id="iw-add-order-form">
         <table class="form-table">
@@ -22,16 +37,24 @@
                 <th><?php echo iw_t('الصنف', 'Product'); ?></th>
                 <th><?php echo iw_t('الكمية', 'Qty'); ?></th>
                 <th><?php echo iw_t('سعر الوحدة', 'Unit Price'); ?></th>
-                <th><?php echo iw_t('الإجمالي', 'Total'); ?></th>
+                <th><?php echo iw_t('قبل الضريبة', 'Subtotal'); ?></th>
+                <?php if ($tax_enabled): ?>
+                <th><?php echo iw_t('الضريبة', 'Tax'); ?> (<?php echo $tax_rate; ?>%)</th>
+                <th><?php echo iw_t('الإجمالي شامل الضريبة', 'Total incl. Tax'); ?></th>
+                <?php endif; ?>
                 <th><?php echo iw_t('حذف', 'Del'); ?></th>
             </tr></thead>
             <tbody id="ao-items-body"></tbody>
             <tfoot>
-                <tr><td colspan="5"><button type="button" class="button" onclick="iwAddOrderItem()">+ <?php echo iw_t('إضافة صنف', 'Add Item'); ?></button></td></tr>
+                <tr><td colspan="<?php echo $tax_enabled ? 7 : 5; ?>"><button type="button" class="button" onclick="iwAddOrderItem()">+ <?php echo iw_t('إضافة صنف', 'Add Item'); ?></button></td></tr>
                 <tr style="background:#f9f9f9;font-weight:bold;">
                     <td colspan="2"><?php echo iw_t('الإجمالي', 'Total'); ?></td>
                     <td id="ao-total-qty">0</td>
                     <td id="ao-total-value">0.00</td>
+                    <?php if ($tax_enabled): ?>
+                    <td id="ao-total-tax">0.00</td>
+                    <td id="ao-total-grand">0.00</td>
+                    <?php endif; ?>
                     <td></td>
                 </tr>
             </tfoot>
@@ -85,16 +108,36 @@
 <script>
 jQuery(document).ready(function($) {
     var products = [];
+    var TAX_ENABLED = <?php echo $tax_enabled ? 'true' : 'false'; ?>;
+    var TAX_RATE    = <?php echo $tax_rate; ?>;
+    var FROM_PR_ID  = <?php echo intval($from_pr_id); ?>;
 
     function loadProducts() {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) {
             if (r.success) {
                 products = r.data;
-                iwAddOrderItem(); // Add first row after products loaded
+                if (FROM_PR_ID) {
+                    iwLoadFromPr();
+                } else {
+                    iwAddOrderItem();
+                }
             }
         });
     }
     loadProducts();
+
+    window.iwLoadFromPr = function() {
+        var raw = null;
+        try { raw = sessionStorage.getItem('iw_pr_to_addorder'); } catch(e) {}
+        if (!raw) { iwAddOrderItem(); return; }
+        var data = null;
+        try { data = JSON.parse(raw); } catch(e) {}
+        if (!data || !data.items || !data.items.length) { iwAddOrderItem(); return; }
+        data.items.forEach(function(it) {
+            iwAddOrderItem({ product_id: it.product_id, quantity: it.quantity, unit_price: 0 });
+        });
+        try { sessionStorage.removeItem('iw_pr_to_addorder'); } catch(e) {}
+    };
 
     // Modal functions
     window.iwShowNewSupplierModal = function() {
@@ -147,48 +190,75 @@ jQuery(document).ready(function($) {
     loadOrders();
 
     // Add item row
-    window.iwAddOrderItem = function() {
+    window.iwAddOrderItem = function(prefill) {
+        prefill = prefill || {};
+        var pid  = prefill.product_id || '';
+        var qty  = prefill.quantity   || 1;
+        var pr   = prefill.unit_price || 0;
         var h = '<tr class="ao-item-row">';
         h += '<td><select class="ao-product regular-text" onchange="iwCalcRowTotal(this)"><option value="">اختر الصنف</option>';
-        products.forEach(function(p) { h += '<option value="'+p.id+'" data-price="'+p.price+'">'+p.name+' (المخزون: '+(p.current_stock||0)+')</option>'; });
+        products.forEach(function(p) {
+            var sel = (String(p.id) === String(pid)) ? ' selected' : '';
+            h += '<option value="'+p.id+'" data-price="'+p.price+'"'+sel+'>'+p.name+' (المخزون: '+(p.current_stock||0)+')</option>';
+        });
         h += '</select></td>';
-        h += '<td><input type="number" class="ao-qty" min="1" value="1" onchange="iwCalcRowTotal(this)" style="width:80px;"></td>';
-        h += '<td><input type="number" class="ao-price" min="0" step="0.01" value="0" onchange="iwCalcRowTotal(this)" style="width:100px;"></td>';
-        h += '<td class="ao-row-total">0.00</td>';
+        h += '<td><input type="number" class="ao-qty" min="1" value="'+qty+'" oninput="iwCalcRowTotal(this)" style="width:80px;"></td>';
+        h += '<td><input type="number" class="ao-price" min="0" step="0.01" value="'+pr+'" oninput="iwCalcRowTotal(this)" style="width:100px;"></td>';
+        h += '<td class="ao-row-subtotal">0.00</td>';
+        if (TAX_ENABLED) {
+            h += '<td class="ao-row-tax">0.00</td>';
+            h += '<td class="ao-row-total">0.00</td>';
+        } else {
+            h += '<td class="ao-row-total">0.00</td>';
+        }
         h += '<td><button type="button" class="button iw-btn-danger" onclick="jQuery(this).closest(\'tr\').remove();iwCalcTotals();">حذف</button></td>';
         h += '</tr>';
         $('#ao-items-body').append(h);
 
         var $row = $('#ao-items-body tr:last');
         if (typeof iwInitSelect2 === 'function') iwInitSelect2($row);
+        iwCalcRowTotal($row.find('.ao-qty')[0]);
     };
 
     // Calculate row total
     window.iwCalcRowTotal = function(el) {
         var $row = $(el).closest('tr');
-        // Only auto-fill price when product changes, not when price is manually edited
-        if ($(el).hasClass('ao-product')) {
+        // Only auto-fill price when product changes AND not coming from purchase request
+        // (PR flow leaves price blank for the user to enter)
+        if ($(el).hasClass('ao-product') && !FROM_PR_ID) {
             var price = $(el).find(':selected').data('price') || 0;
             $row.find('.ao-price').val(parseFloat(price).toFixed(2));
         }
 
-        var qty = parseInt($row.find('.ao-qty').val()) || 0;
+        var qty = parseFloat($row.find('.ao-qty').val()) || 0;
         var unitPrice = parseFloat($row.find('.ao-price').val()) || 0;
-        $row.find('.ao-row-total').text((qty * unitPrice).toFixed(2));
+        var subtotal  = qty * unitPrice;
+        var tax       = TAX_ENABLED ? subtotal * (TAX_RATE / 100) : 0;
+        var total     = subtotal + tax;
+
+        $row.find('.ao-row-subtotal').text(subtotal.toFixed(2));
+        if (TAX_ENABLED) $row.find('.ao-row-tax').text(tax.toFixed(2));
+        $row.find('.ao-row-total').text(total.toFixed(2));
         iwCalcTotals();
     };
 
     // Calculate totals
     window.iwCalcTotals = function() {
-        var totalQty = 0, totalValue = 0;
+        var totalQty = 0, subTotal = 0, taxTotal = 0;
         $('.ao-item-row').each(function() {
-            totalQty += parseInt($(this).find('.ao-qty').val()) || 0;
-            var qty = parseInt($(this).find('.ao-qty').val()) || 0;
+            var qty   = parseFloat($(this).find('.ao-qty').val()) || 0;
             var price = parseFloat($(this).find('.ao-price').val()) || 0;
-            totalValue += qty * price;
+            totalQty += qty;
+            var sub   = qty * price;
+            subTotal += sub;
+            taxTotal += TAX_ENABLED ? sub * (TAX_RATE / 100) : 0;
         });
         $('#ao-total-qty').text(totalQty);
-        $('#ao-total-value').text(totalValue.toFixed(2));
+        $('#ao-total-value').text(subTotal.toFixed(2));
+        if (TAX_ENABLED) {
+            $('#ao-total-tax').text(taxTotal.toFixed(2));
+            $('#ao-total-grand').text((subTotal + taxTotal).toFixed(2));
+        }
     };
 
     // Submit order
@@ -210,7 +280,10 @@ jQuery(document).ready(function($) {
             action: 'iw_create_add_order', nonce: iwAdmin.nonce,
             supplier_id: $('#ao_supplier_id').val(),
             notes: $('#ao_notes').val(),
-            items: JSON.stringify(items)
+            items: JSON.stringify(items),
+            from_pr_id: ($('#ao_from_pr_id').val() || 0),
+            tax_enabled: TAX_ENABLED ? 1 : 0,
+            tax_rate: TAX_RATE
         }, function(r) {
             alert(r.data.message);
             if (r.success) {
@@ -219,6 +292,9 @@ jQuery(document).ready(function($) {
                 iwAddOrderItem();
                 loadOrders();
                 loadProducts();
+                if (FROM_PR_ID) {
+                    window.location.href = iwAdmin.adminurl + 'admin.php?page=iw-add-stock';
+                }
             }
         });
     });
