@@ -4,6 +4,8 @@ if (!defined('ABSPATH')) exit;
 class IW_Withdrawal_Orders {
 
     public static function init() {
+        add_action('wp_ajax_iw_save_draft_withdrawal_order',   array(__CLASS__, 'save_draft'));
+        add_action('wp_ajax_iw_submit_draft_withdrawal_order', array(__CLASS__, 'submit_draft_order'));
         add_action('wp_ajax_iw_create_withdrawal_order',      array(__CLASS__, 'create_order'));
         add_action('wp_ajax_iw_get_withdrawal_orders',        array(__CLASS__, 'get_orders'));
         add_action('wp_ajax_iw_get_withdrawal_order',         array(__CLASS__, 'get_order'));
@@ -138,6 +140,148 @@ class IW_Withdrawal_Orders {
     }
 
     /**
+     * Save withdrawal order as draft (no stock validation, no email)
+     */
+    public static function save_draft() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        if (!IW_Permissions::current_user_can('withdraw_stock', 'read_write')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
+
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        $draft_id      = intval($_POST['draft_id'] ?? 0);
+        $department_id = intval($_POST['department_id']);
+        $employee_id   = intval($_POST['employee_id']);
+        $notes         = sanitize_textarea_field($_POST['notes'] ?? '');
+        $items         = json_decode(stripslashes($_POST['items']), true);
+
+        if (empty($items)) {
+            wp_send_json_error(array('message' => 'يجب إضافة أصناف'));
+        }
+
+        $dept_obj = IW_Departments::get_by_id($department_id);
+        $emp_obj  = IW_Departments::get_employee_by_id($employee_id);
+        $dept_name = $dept_obj ? $dept_obj->name : '';
+        $emp_name  = $emp_obj  ? $emp_obj->name  : '';
+
+        if ($draft_id > 0) {
+            // Update existing draft
+            $existing = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$prefix}withdrawal_orders WHERE id = %d AND status = 'draft'", $draft_id
+            ));
+            if (!$existing) {
+                wp_send_json_error(array('message' => 'المسودة غير موجودة'));
+            }
+            $wpdb->update($prefix . 'withdrawal_orders', array(
+                'department_id'   => $department_id,
+                'employee_id'     => $employee_id,
+                'notes'           => $notes,
+                'department_name' => $dept_name,
+                'employee_name'   => $emp_name,
+            ), array('id' => $draft_id));
+            $wpdb->delete($prefix . 'withdrawal_order_items', array('order_id' => $draft_id));
+            foreach ($items as $item) {
+                $product = IW_Products::get_by_id(intval($item['product_id']));
+                $wpdb->insert($prefix . 'withdrawal_order_items', array(
+                    'order_id'   => $draft_id,
+                    'product_id' => intval($item['product_id']),
+                    'quantity'   => intval($item['quantity']),
+                    'unit_price' => $product ? $product->price : 0,
+                ));
+            }
+            wp_send_json_success(array(
+                'order_id'     => $draft_id,
+                'order_number' => $existing->order_number,
+                'message'      => 'تم تحديث المسودة بنجاح',
+            ));
+        } else {
+            // Create new draft
+            $order_number = self::generate_order_number();
+            $wpdb->insert($prefix . 'withdrawal_orders', array(
+                'order_number'    => $order_number,
+                'department_id'   => $department_id,
+                'employee_id'     => $employee_id,
+                'status'          => 'draft',
+                'notes'           => $notes,
+                'department_name' => $dept_name,
+                'employee_name'   => $emp_name,
+                'created_by'      => get_current_user_id(),
+            ));
+            $order_id = $wpdb->insert_id;
+            if (!$order_id) {
+                wp_send_json_error(array('message' => 'فشل حفظ المسودة: ' . $wpdb->last_error));
+            }
+            foreach ($items as $item) {
+                $product = IW_Products::get_by_id(intval($item['product_id']));
+                $wpdb->insert($prefix . 'withdrawal_order_items', array(
+                    'order_id'   => $order_id,
+                    'product_id' => intval($item['product_id']),
+                    'quantity'   => intval($item['quantity']),
+                    'unit_price' => $product ? $product->price : 0,
+                ));
+            }
+            wp_send_json_success(array(
+                'order_id'     => $order_id,
+                'order_number' => $order_number,
+                'message'      => 'تم حفظ المسودة: ' . $order_number,
+            ));
+        }
+    }
+
+    /**
+     * Submit draft → pending (validates stock, sends email)
+     */
+    public static function submit_draft_order() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        if (!IW_Permissions::current_user_can('withdraw_stock', 'read_write')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
+
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+
+        $order_id = intval($_POST['order_id']);
+        $order = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$prefix}withdrawal_orders WHERE id = %d AND status = 'draft'", $order_id
+        ));
+        if (!$order) {
+            wp_send_json_error(array('message' => 'المسودة غير موجودة أو تم إرسالها مسبقاً'));
+        }
+
+        $items = $wpdb->get_results($wpdb->prepare(
+            "SELECT i.*, p.name as product_name FROM {$prefix}withdrawal_order_items i
+             LEFT JOIN {$prefix}products p ON i.product_id = p.id
+             WHERE i.order_id = %d", $order_id
+        ));
+
+        $errors = array();
+        foreach ($items as $item) {
+            $available = IW_Products::get_real_stock($item->product_id);
+            $qty = intval($item->quantity);
+            if ($available <= 0) {
+                $errors[] = 'الصنف "' . $item->product_name . '" لا يوجد به رصيد متاح';
+            } elseif ($qty > $available) {
+                $errors[] = 'الكمية المطلوبة من "' . $item->product_name . '" (' . $qty . ') أكبر من الرصيد المتاح (' . $available . ')';
+            }
+        }
+
+        if (!empty($errors)) {
+            wp_send_json_error(array('message' => implode("\n", $errors)));
+        }
+
+        $wpdb->update($prefix . 'withdrawal_orders', array('status' => 'pending'), array('id' => $order_id));
+        self::notify_approvers($order->order_number);
+
+        wp_send_json_success(array(
+            'message' => 'تم إرسال إذن الصرف رقم ' . $order->order_number . ' للاعتماد',
+        ));
+    }
+
+    /**
      * Send email notification to users with approval capability
      */
     private static function notify_approvers($order_number) {
@@ -262,9 +406,10 @@ class IW_Withdrawal_Orders {
              WHERE i.order_id = %d", $order_id
         ));
 
-        // Update items with REAL stock from transactions (source of truth)
+        // Show available stock excluding THIS order's own reservation so the
+        // dean sees how much stock is physically available for this order
         foreach ($items as &$item) {
-            $item->current_stock = IW_Products::get_real_stock($item->product_id);
+            $item->current_stock = IW_Products::get_real_stock($item->product_id, $order_id);
         }
 
         // Resolve signature: prefer value stored on the order, fall back to
@@ -305,7 +450,7 @@ class IW_Withdrawal_Orders {
 
         $is_admin = current_user_can('manage_options');
 
-        if (!$order || !in_array($order->status, array('pending', 'approved'))) {
+        if (!$order || !in_array($order->status, array('pending', 'approved', 'draft'))) {
             wp_send_json_error(array('message' => 'لا يمكن تعديل هذا الإذن'));
         }
 
@@ -381,8 +526,8 @@ class IW_Withdrawal_Orders {
 
             $errors = array();
             foreach ($items as $item) {
-                // Order is still 'pending', so get_real_stock() doesn't include it yet — correct check
-                $available_stock = IW_Products::get_real_stock($item->product_id);
+                // Exclude THIS order's own reservation so we check physical stock vs other reservations
+                $available_stock = IW_Products::get_real_stock($item->product_id, $order_id);
                 $requested_qty = $item->approved_quantity !== null ? intval($item->approved_quantity) : intval($item->quantity);
 
                 if ($requested_qty > 0) {
@@ -550,7 +695,7 @@ class IW_Withdrawal_Orders {
             wp_send_json_error(array('message' => 'الإذن غير موجود'));
         }
 
-        if ($order->status !== 'pending') {
+        if (!in_array($order->status, array('pending', 'draft'))) {
             wp_send_json_error(array('message' => 'لا يمكن حذف إذن معتمد أو منفذ'));
         }
 
