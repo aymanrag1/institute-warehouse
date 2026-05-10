@@ -13,7 +13,7 @@
     <div id="iw-print-area">
         <div id="pm-summary" style="margin:15px 0;"></div>
         <table class="wp-list-table widefat fixed striped">
-            <thead><tr><th>#</th><th>النوع</th><th>الكمية</th><th>السعر</th><th>القسم/المورد</th><th>التاريخ</th><th>ملاحظات</th></tr></thead>
+            <thead><tr><th>#</th><th>النوع</th><th>الكمية</th><th>الرصيد بعد</th><th>السعر</th><th>القسم/المورد</th><th>التاريخ</th><th>ملاحظات</th></tr></thead>
             <tbody id="pm-body"></tbody>
         </table>
     </div>
@@ -34,14 +34,32 @@ jQuery(document).ready(function($) {
             if (!r.success) return;
             var filtered = r.data.filter(function(t) { return t.product_id == productId; });
             var h = '', totalIn = 0, totalOut = 0;
+
+            // Calculate running balance chronologically (oldest → newest)
+            var chrono = filtered.slice().sort(function(a, b) {
+                return new Date(a.created_at) - new Date(b.created_at);
+            });
+            var balanceMap = {}, runBal = 0;
+            chrono.forEach(function(t) {
+                var qty = parseInt(t.quantity) || 0;
+                runBal += (t.transaction_type === 'add') ? qty : -qty;
+                balanceMap[t.id] = runBal;
+            });
+
             filtered.forEach(function(t, i) {
-                var type = t.transaction_type === 'add' ? '<span style="color:green;">إضافة</span>' : '<span style="color:red;">صرف</span>';
-                var source = t.transaction_type === 'add' ? (t.supplier_name||'-') : (t.department_name||'-');
-                if (t.transaction_type === 'add') totalIn += parseInt(t.quantity); else totalOut += parseInt(t.quantity);
-                h += '<tr><td>'+(i+1)+'</td><td>'+type+'</td><td>'+t.quantity+'</td><td>'+parseFloat(t.unit_price).toFixed(2)+'</td>';
+                var qty = parseInt(t.quantity) || 0;
+                var isAdd = t.transaction_type === 'add';
+                var type   = isAdd ? '<span style="color:green;">إضافة</span>' : '<span style="color:red;">صرف</span>';
+                var source = isAdd ? (t.supplier_name||'-') : (t.department_name||'-');
+                if (isAdd) totalIn += qty; else totalOut += qty;
+                var bal = balanceMap[t.id];
+                var balColor = bal > 0 ? 'color:green;' : (bal < 0 ? 'color:red;' : 'color:gray;');
+                h += '<tr><td>'+(i+1)+'</td><td>'+type+'</td><td>'+t.quantity+'</td>';
+                h += '<td style="font-weight:bold;'+balColor+'">'+bal+'</td>';
+                h += '<td>'+parseFloat(t.unit_price).toFixed(2)+'</td>';
                 h += '<td>'+source+'</td><td>'+t.created_at+'</td><td>'+(t.notes||'-')+'</td></tr>';
             });
-            $('#pm-body').html(h || '<tr><td colspan="7">لا توجد حركات</td></tr>');
+            $('#pm-body').html(h || '<tr><td colspan="8">لا توجد حركات</td></tr>');
             $('#pm-summary').html('<strong>إجمالي الوارد:</strong> '+totalIn+' | <strong>إجمالي المنصرف:</strong> '+totalOut+' | <strong>الصافي:</strong> '+(totalIn-totalOut));
         });
     };
