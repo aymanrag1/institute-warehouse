@@ -85,6 +85,7 @@ class IW_Database {
         $sql = "CREATE TABLE {$prefix}transactions (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             transaction_type varchar(20) NOT NULL DEFAULT 'add',
+            add_order_id bigint(20) UNSIGNED DEFAULT NULL,
             product_id bigint(20) UNSIGNED NOT NULL,
             quantity int(11) NOT NULL,
             unit_price decimal(12,2) NOT NULL DEFAULT 0.00,
@@ -99,7 +100,8 @@ class IW_Database {
             PRIMARY KEY (id),
             KEY idx_product_type (product_id, transaction_type),
             KEY idx_remaining (product_id, remaining_qty),
-            KEY idx_created_at (created_at)
+            KEY idx_created_at (created_at),
+            KEY idx_add_order (add_order_id)
         ) $charset;";
         dbDelta($sql);
 
@@ -302,6 +304,10 @@ class IW_Database {
             }
             if (!in_array('batch_number', $columns)) {
                 $wpdb->query("ALTER TABLE {$prefix}transactions ADD COLUMN batch_number varchar(100) DEFAULT '' AFTER notes");
+            }
+            if (!in_array('add_order_id', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}transactions ADD COLUMN add_order_id bigint(20) UNSIGNED DEFAULT NULL AFTER transaction_type");
+                $wpdb->query("ALTER TABLE {$prefix}transactions ADD INDEX idx_add_order (add_order_id)");
             }
         }
 

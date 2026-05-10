@@ -110,14 +110,15 @@ class IW_Add_Orders {
             // Record transaction
             $wpdb->insert($prefix . 'transactions', array(
                 'transaction_type' => 'add',
-                'product_id' => $product_id,
-                'quantity' => $quantity,
-                'unit_price' => $unit_price,
-                'remaining_qty' => $quantity,
-                'supplier_id' => $supplier_id ?: null,
-                'notes' => 'إذن إضافة رقم: ' . $order_number,
-                'created_by' => get_current_user_id(),
-                'created_at' => current_time('mysql')
+                'add_order_id'     => $order_id,
+                'product_id'       => $product_id,
+                'quantity'         => $quantity,
+                'unit_price'       => $unit_price,
+                'remaining_qty'    => $quantity,
+                'supplier_id'      => $supplier_id ?: null,
+                'notes'            => 'إذن إضافة رقم: ' . $order_number,
+                'created_by'       => get_current_user_id(),
+                'created_at'       => current_time('mysql')
             ));
         }
 
@@ -226,7 +227,8 @@ class IW_Add_Orders {
         $consumption_map = array();
         $old_transactions = $wpdb->get_results($wpdb->prepare(
             "SELECT product_id, quantity, remaining_qty FROM {$prefix}transactions
-             WHERE notes = %s AND transaction_type = 'add'",
+             WHERE (add_order_id = %d OR notes = %s) AND transaction_type = 'add'",
+            $order_id,
             'إذن إضافة رقم: ' . $order->order_number
         ));
         foreach ($old_transactions as $t) {
@@ -234,9 +236,10 @@ class IW_Add_Orders {
             $consumption_map[intval($t->product_id)] = ($consumption_map[intval($t->product_id)] ?? 0) + $consumed;
         }
 
-        // Delete old transactions for this order
+        // Delete old transactions for this order (match by ID for reliability, notes as fallback for legacy rows)
         $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$prefix}transactions WHERE notes = %s AND transaction_type = 'add'",
+            "DELETE FROM {$prefix}transactions WHERE (add_order_id = %d OR notes = %s) AND transaction_type = 'add'",
+            $order_id,
             'إذن إضافة رقم: ' . $order->order_number
         ));
 
@@ -274,14 +277,15 @@ class IW_Add_Orders {
             // Create new transaction for FIFO tracking
             $wpdb->insert($prefix . 'transactions', array(
                 'transaction_type' => 'add',
-                'product_id' => $product_id,
-                'quantity' => $quantity,
-                'unit_price' => $unit_price,
-                'remaining_qty' => $new_remaining_qty,
-                'supplier_id' => $effective_supplier ?: null,
-                'notes' => 'إذن إضافة رقم: ' . $order->order_number,
-                'created_by' => get_current_user_id(),
-                'created_at' => current_time('mysql')
+                'add_order_id'     => $order_id,
+                'product_id'       => $product_id,
+                'quantity'         => $quantity,
+                'unit_price'       => $unit_price,
+                'remaining_qty'    => $new_remaining_qty,
+                'supplier_id'      => $effective_supplier ?: null,
+                'notes'            => 'إذن إضافة رقم: ' . $order->order_number,
+                'created_by'       => get_current_user_id(),
+                'created_at'       => current_time('mysql')
             ));
         }
 
@@ -330,9 +334,10 @@ class IW_Add_Orders {
             IW_Products::update_stock($item->product_id, -intval($item->quantity));
         }
 
-        // Delete related transactions
+        // Delete related transactions (match by ID for reliability, notes as fallback for legacy rows)
         $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$prefix}transactions WHERE notes = %s AND transaction_type = 'add'",
+            "DELETE FROM {$prefix}transactions WHERE (add_order_id = %d OR notes = %s) AND transaction_type = 'add'",
+            $order_id,
             'إذن إضافة رقم: ' . $order->order_number
         ));
 
