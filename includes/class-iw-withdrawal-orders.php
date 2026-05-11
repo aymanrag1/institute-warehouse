@@ -285,24 +285,37 @@ class IW_Withdrawal_Orders {
      * Send email notification to users with approval capability
      */
     private static function notify_approvers($order_number) {
-        $subject = 'يوجد إذن صرف جديد يحتاج اعتمادك - رقم: ' . $order_number;
+        $subject = 'برجاء المراجعة - إذن صرف جديد رقم: ' . $order_number;
         $admin_url = admin_url('admin.php?page=iw-withdraw-stock');
 
         $message = "مرحباً،\n\n";
+        $message .= "برجاء المراجعة\n\n";
         $message .= "تم إنشاء إذن صرف جديد برقم: " . $order_number . "\n";
         $message .= "يرجى الدخول للنظام لمراجعته واعتماده.\n\n";
         $message .= "رابط الصفحة: " . $admin_url . "\n\n";
         $message .= "نظام إدارة المخازن";
 
+        $sent_emails = array();
+
+        // Send to fixed notification email configured in settings
+        $notification_email = get_option('iw_notification_email', '');
+        if (!empty($notification_email) && is_email($notification_email)) {
+            wp_mail($notification_email, $subject, $message);
+            $sent_emails[] = $notification_email;
+        }
+
+        // Send to users with approval capability
         $approvers = get_users(array('role__in' => array('administrator', 'iw_dean')));
         $cap_users = get_users(array('capability' => 'iw_approve_orders'));
         $all = array_merge($approvers, $cap_users);
-        $sent = array();
+        $sent_ids = array();
 
         foreach ($all as $user) {
-            if (in_array($user->ID, $sent) || $user->ID === get_current_user_id()) continue;
+            if (in_array($user->ID, $sent_ids) || $user->ID === get_current_user_id()) continue;
+            if (in_array($user->user_email, $sent_emails)) { $sent_ids[] = $user->ID; continue; }
             wp_mail($user->user_email, $subject, $message);
-            $sent[] = $user->ID;
+            $sent_ids[]    = $user->ID;
+            $sent_emails[] = $user->user_email;
         }
     }
 

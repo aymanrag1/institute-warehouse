@@ -8,6 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iw_settings_nonce']))
         update_option('iw_phone', sanitize_text_field($_POST['iw_phone']));
         update_option('iw_signature_width', max(50, intval($_POST['iw_signature_width'] ?? 150)));
         update_option('iw_tax_rate', max(0, min(100, floatval($_POST['iw_tax_rate'] ?? 14))));
+        update_option('iw_notification_email', sanitize_email($_POST['iw_notification_email'] ?? ''));
 
         // Handle logo upload
         if (!empty($_FILES['iw_logo']['name'])) {
@@ -67,6 +68,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['iw_settings_nonce']))
                 <td>
                     <input type="number" name="iw_signature_width" min="50" max="400" value="<?php echo esc_attr(get_option('iw_signature_width', 150)); ?>" style="width:100px;"> px
                     <p class="description"><?php echo iw_t('العرض الأقصى للتوقيع الإلكتروني في المطبوعات (بالبكسل). الارتفاع يتناسب تلقائياً.', 'Max width of the electronic signature on printouts (px). Height scales automatically.'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th><?php echo iw_t('إيميل الإشعارات', 'Notification Email'); ?></th>
+                <td>
+                    <input type="email" name="iw_notification_email" class="regular-text" value="<?php echo esc_attr(get_option('iw_notification_email', '')); ?>">
+                    <p class="description"><?php echo iw_t('سيُرسل إشعار لهذا الإيميل عند إنشاء أي إذن صرف جديد برجاء المراجعة', 'This email will receive a notification whenever a new withdrawal order is created for review.'); ?></p>
                 </td>
             </tr>
             <tr>
