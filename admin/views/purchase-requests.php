@@ -312,6 +312,7 @@ jQuery(document).ready(function($) {
                 html += '<td>';
                 html += '<button class="button" onclick="iwViewPr('+o.id+')">' + iwT('عرض', 'View') + '</button>';
                 if (o.status === 'pending')  html += ' <button class="button iw-btn-danger" onclick="iwDeletePr('+o.id+')">' + iwT('حذف', 'Delete') + '</button>';
+                else if (iwAdmin.isAdmin)    html += ' <button class="button iw-btn-danger" onclick="iwDeletePr('+o.id+')" title="' + iwT('حذف نهائي (مدير)', 'Admin force delete') + '">' + iwT('حذف', 'Delete') + '</button>';
                 if (o.status === 'approved') html += ' <button class="button button-primary" onclick="iwPrintPr('+o.id+')">' + iwT('طباعة', 'Print') + '</button>';
                 html += '</td></tr>';
             });
@@ -323,7 +324,11 @@ jQuery(document).ready(function($) {
         if (!confirm(iwT('هل أنت متأكد من حذف هذا الطلب؟', 'Are you sure you want to delete this request?'))) return;
         $.post(iwAdmin.ajaxurl, {action: 'iw_delete_purchase_request', nonce: iwAdmin.nonce, request_id: id}, function(r) {
             alert(r.data.message);
-            if (r.success) loadPrOrders('pending');
+            if (r.success) {
+                // Refresh the currently active tab instead of only pending
+                var active = $('.iw-tabs .iw-tab-btn.active').data('tab') || 'pending';
+                loadPrOrders(active === 'all' ? '' : active);
+            }
         });
     };
 

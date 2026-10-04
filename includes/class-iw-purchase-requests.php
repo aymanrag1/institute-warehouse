@@ -649,7 +649,7 @@ class IW_Purchase_Requests {
     }
 
     /**
-     * Delete pending purchase request
+     * Delete purchase request (pending by anyone with permission; any status by admin)
      */
     public static function delete_request() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
@@ -666,14 +666,17 @@ class IW_Purchase_Requests {
             wp_send_json_error(array('message' => 'الطلب غير موجود'));
         }
 
-        if ($request->status !== 'pending') {
-            wp_send_json_error(array('message' => 'لا يمكن حذف طلب معتمد أو مكتمل'));
-        }
-
-        // Allow creator, dean, or admin to delete pending requests
+        $is_admin   = current_user_can('manage_options');
         $is_creator = ($request->created_by == get_current_user_id());
-        if (!$is_creator && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => 'ليس لديك صلاحية لحذف هذا الطلب'));
+
+        // Admin can delete anything; others can only delete pending they created or can approve
+        if (!$is_admin) {
+            if ($request->status !== 'pending') {
+                wp_send_json_error(array('message' => 'لا يمكن حذف طلب معتمد أو مكتمل، تواصل مع المدير'));
+            }
+            if (!$is_creator && !current_user_can('iw_approve_orders')) {
+                wp_send_json_error(array('message' => 'ليس لديك صلاحية لحذف هذا الطلب'));
+            }
         }
 
         // Delete items first
