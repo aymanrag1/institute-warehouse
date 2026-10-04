@@ -3,7 +3,7 @@
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
  * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
- * Version: 2.7.1
+ * Version: 2.7.2
  * Author: AYMAN RAGAB
  * Author URI: tel:00201159230034
  * Text Domain: institute-warehouse
@@ -15,9 +15,27 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.7.1');
+define('IW_VERSION', '2.7.2');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+// ── GitHub auto-updater ─────────────────────────────────────────────────────
+// Checks the GitHub repo for new Releases and lets WordPress install them
+// directly (no manual download/upload). To publish an update: bump the version
+// above, commit & push, then on GitHub create a Release whose tag is "vX.Y.Z"
+// matching this version.
+if (file_exists(IW_PLUGIN_DIR . 'vendor/plugin-update-checker/plugin-update-checker.php')) {
+    require_once IW_PLUGIN_DIR . 'vendor/plugin-update-checker/plugin-update-checker.php';
+    $iw_update_checker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+        'https://github.com/aymanrag1/institute-warehouse/',
+        __FILE__,
+        'institute-warehouse'
+    );
+    // Pull updates from GitHub Releases (recommended: create a Release per version)
+    $iw_update_checker->getVcsApi()->enableReleaseAssets();
+    // Track the main branch (optional - uncomment to update from branch tip instead of releases)
+    // $iw_update_checker->setBranch('main');
+}
 
 // ── Language helpers ────────────────────────────────────────────────────────
 /**
