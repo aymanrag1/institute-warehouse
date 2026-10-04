@@ -47,6 +47,9 @@ class IW_Add_Orders {
         $supplier_id = intval($_POST['supplier_id'] ?? 0);
         $notes = sanitize_textarea_field($_POST['notes'] ?? '');
         $items = json_decode(stripslashes($_POST['items'] ?? '[]'), true);
+        $from_pr_id  = intval($_POST['from_pr_id']  ?? 0);
+        $tax_enabled = intval($_POST['tax_enabled'] ?? 0) ? 1 : 0;
+        $tax_rate    = floatval($_POST['tax_rate']  ?? 0);
 
         if (empty($items)) {
             wp_send_json_error(array('message' => 'يجب إضافة صنف واحد على الأقل'));
@@ -56,22 +59,34 @@ class IW_Add_Orders {
         $total_qty = 0;
         $total_value = 0;
 
-        // Calculate totals
+        // Calculate totals (subtotal before tax)
         foreach ($items as $item) {
-            $total_qty += intval($item['quantity']);
+            $total_qty   += intval($item['quantity']);
             $total_value += intval($item['quantity']) * floatval($item['unit_price']);
         }
 
+        // Build notes with tax info if enabled
+        $notes_full = $notes;
+        if ($tax_enabled && $tax_rate > 0) {
+            $tax_amount = $total_value * ($tax_rate / 100);
+            $tax_note   = sprintf('[ضريبة %.2f%% = %.2f | الإجمالي شامل الضريبة = %.2f]', $tax_rate, $tax_amount, $total_value + $tax_amount);
+            $notes_full = trim($notes_full . ' ' . $tax_note);
+        }
+
         // Insert order
-        $wpdb->insert($prefix . 'add_orders', array(
-            'order_number' => $order_number,
-            'supplier_id' => $supplier_id ?: null,
-            'notes' => $notes,
+        $insert_data = array(
+            'order_number'   => $order_number,
+            'supplier_id'    => $supplier_id ?: null,
+            'notes'          => $notes_full,
             'total_quantity' => $total_qty,
-            'total_value' => $total_value,
-            'created_by' => get_current_user_id(),
-            'created_at' => current_time('mysql')
-        ));
+            'total_value'    => $total_value,
+            'created_by'     => get_current_user_id(),
+            'created_at'     => current_time('mysql'),
+        );
+        if ($from_pr_id > 0) {
+            $insert_data['from_pr_id'] = $from_pr_id;
+        }
+        $wpdb->insert($prefix . 'add_orders', $insert_data);
 
         $order_id = $wpdb->insert_id;
 
@@ -95,14 +110,15 @@ class IW_Add_Orders {
             // Record transaction
             $wpdb->insert($prefix . 'transactions', array(
                 'transaction_type' => 'add',
-                'product_id' => $product_id,
-                'quantity' => $quantity,
-                'unit_price' => $unit_price,
-                'remaining_qty' => $quantity,
-                'supplier_id' => $supplier_id ?: null,
-                'notes' => 'إذن إضافة رقم: ' . $order_number,
-                'created_by' => get_current_user_id(),
-                'created_at' => current_time('mysql')
+                'add_order_id'     => $order_id,
+                'product_id'       => $product_id,
+                'quantity'         => $quantity,
+                'unit_price'       => $unit_price,
+                'remaining_qty'    => $quantity,
+                'supplier_id'      => $supplier_id ?: null,
+                'notes'            => 'إذن إضافة رقم: ' . $order_number,
+                'created_by'       => get_current_user_id(),
+                'created_at'       => current_time('mysql')
             ));
         }
 
@@ -206,9 +222,24 @@ class IW_Add_Orders {
             IW_Products::update_stock($old->product_id, -intval($old->quantity));
         }
 
-        // Delete old transactions for this order
+        // Save consumed quantities per product BEFORE deleting transactions
+        // consumed = original_quantity - remaining_qty (ما صُرف فعلاً من هذا الإذن)
+        $consumption_map = array();
+        $old_transactions = $wpdb->get_results($wpdb->prepare(
+            "SELECT product_id, quantity, remaining_qty FROM {$prefix}transactions
+             WHERE (add_order_id = %d OR notes = %s) AND transaction_type = 'add'",
+            $order_id,
+            'إذن إضافة رقم: ' . $order->order_number
+        ));
+        foreach ($old_transactions as $t) {
+            $consumed = intval($t->quantity) - intval($t->remaining_qty);
+            $consumption_map[intval($t->product_id)] = ($consumption_map[intval($t->product_id)] ?? 0) + $consumed;
+        }
+
+        // Delete old transactions for this order (match by ID for reliability, notes as fallback for legacy rows)
         $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$prefix}transactions WHERE notes = %s AND transaction_type = 'add'",
+            "DELETE FROM {$prefix}transactions WHERE (add_order_id = %d OR notes = %s) AND transaction_type = 'add'",
+            $order_id,
             'إذن إضافة رقم: ' . $order->order_number
         ));
 
@@ -239,17 +270,22 @@ class IW_Add_Orders {
             // Add new stock
             IW_Products::update_stock($product_id, $quantity);
 
+            // Preserve already-consumed quantity so FIFO remaining_qty stays accurate
+            $already_consumed = $consumption_map[$product_id] ?? 0;
+            $new_remaining_qty = max(0, $quantity - $already_consumed);
+
             // Create new transaction for FIFO tracking
             $wpdb->insert($prefix . 'transactions', array(
                 'transaction_type' => 'add',
-                'product_id' => $product_id,
-                'quantity' => $quantity,
-                'unit_price' => $unit_price,
-                'remaining_qty' => $quantity,
-                'supplier_id' => $effective_supplier ?: null,
-                'notes' => 'إذن إضافة رقم: ' . $order->order_number,
-                'created_by' => get_current_user_id(),
-                'created_at' => current_time('mysql')
+                'add_order_id'     => $order_id,
+                'product_id'       => $product_id,
+                'quantity'         => $quantity,
+                'unit_price'       => $unit_price,
+                'remaining_qty'    => $new_remaining_qty,
+                'supplier_id'      => $effective_supplier ?: null,
+                'notes'            => 'إذن إضافة رقم: ' . $order->order_number,
+                'created_by'       => get_current_user_id(),
+                'created_at'       => current_time('mysql')
             ));
         }
 
@@ -298,9 +334,10 @@ class IW_Add_Orders {
             IW_Products::update_stock($item->product_id, -intval($item->quantity));
         }
 
-        // Delete related transactions
+        // Delete related transactions (match by ID for reliability, notes as fallback for legacy rows)
         $wpdb->query($wpdb->prepare(
-            "DELETE FROM {$prefix}transactions WHERE notes = %s AND transaction_type = 'add'",
+            "DELETE FROM {$prefix}transactions WHERE (add_order_id = %d OR notes = %s) AND transaction_type = 'add'",
+            $order_id,
             'إذن إضافة رقم: ' . $order->order_number
         ));
 

@@ -9,6 +9,8 @@ class IW_Products {
         add_action('wp_ajax_iw_get_product', array(__CLASS__, 'get_product'));
         add_action('wp_ajax_iw_get_products_list', array(__CLASS__, 'get_products_list'));
         add_action('wp_ajax_iw_sync_all_stocks', array(__CLASS__, 'ajax_sync_all_stocks'));
+        add_action('wp_ajax_iw_stock_debug', array(__CLASS__, 'ajax_stock_debug'));
+        add_action('wp_ajax_iw_adjust_product_stock', array(__CLASS__, 'ajax_adjust_stock'));
     }
 
     public static function save_product() {
@@ -139,64 +141,66 @@ class IW_Products {
     }
 
     /**
-     * Get real stock by calculating from add orders and completed withdrawals
-     * This is the DEFINITIVE source of truth - no dependency on transactions table
+     * Get real available stock.
+     *
+     * Uses the FIFO transactions table as the single source of truth for completed stock:
+     *   SUM(remaining_qty) from transactions = physical stock after all completed withdrawals.
+     *
+     * Then subtracts pending/approved orders (reserved but not yet physically withdrawn).
+     *
+     * @param int $product_id
+     * @param int $exclude_order_id  Order to exclude from pending/approved deduction
+     *                               (used in complete_order() to avoid double-deducting).
      */
-    public static function get_real_stock($product_id) {
+    public static function get_real_stock($product_id, $exclude_order_id = 0) {
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
-        // 1. Calculate total added from add_order_items
-        $total_added = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COALESCE(SUM(i.quantity), 0)
-             FROM {$prefix}add_order_items i
-             WHERE i.product_id = %d",
+        // 1. Ensure FIFO transaction records exist for this product
+        //    (creates them from add_order_items + opening_balances if not yet present)
+        IW_Transactions::ensure_product_transactions($product_id);
+
+        // 2. Physical stock = sum of remaining_qty across all 'add' transactions
+        //    remaining_qty is reduced by withdraw_fifo() on each completed order
+        $remaining = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(SUM(remaining_qty), 0)
+             FROM {$prefix}transactions
+             WHERE product_id = %d AND transaction_type = 'add'",
             $product_id
         ));
 
-        // 2. Calculate total added from opening_balances (if table exists)
-        $opening_balance = 0;
-        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}opening_balances'");
-        if ($table_exists) {
-            $opening_balance = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT COALESCE(SUM(quantity), 0)
-                 FROM {$prefix}opening_balances
-                 WHERE product_id = %d",
-                $product_id
-            ));
-        }
+        // 3. Reserved stock = pending + approved orders not yet physically executed
+        $exclude_clause = ($exclude_order_id > 0)
+            ? $wpdb->prepare(" AND o.id != %d", $exclude_order_id)
+            : '';
 
-        // 3. Calculate total withdrawn from completed withdrawal orders (NOT custody)
-        $total_withdrawn = (int) $wpdb->get_var($wpdb->prepare(
+        $reserved = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COALESCE(SUM(COALESCE(i.approved_quantity, i.quantity)), 0)
              FROM {$prefix}withdrawal_order_items i
              INNER JOIN {$prefix}withdrawal_orders o ON i.order_id = o.id
              WHERE i.product_id = %d
-               AND o.status = 'completed'
-               AND o.order_type != 'custody'",
+               AND o.status IN ('pending', 'approved')
+               AND COALESCE(o.order_type, 'normal') != 'custody'" . $exclude_clause,
             $product_id
         ));
 
-        // Real stock = additions + opening balance - withdrawals
-        $real_stock = $total_added + $opening_balance - $total_withdrawn;
-
-        return max(0, $real_stock);
+        return max(0, $remaining - $reserved);
     }
 
     /**
-     * Sync a single product's current_stock with real calculated stock
+     * Sync a single product's current_stock with real stock
      */
     public static function sync_product_stock($product_id) {
         global $wpdb;
-        $real_stock = self::get_real_stock($product_id);
+        $stock = self::get_real_stock($product_id);
         $wpdb->update(
             $wpdb->prefix . 'iw_products',
-            array('current_stock' => $real_stock),
+            array('current_stock' => $stock),
             array('id' => $product_id),
             array('%d'),
             array('%d')
         );
-        return $real_stock;
+        return $stock;
     }
 
     /**
@@ -225,5 +229,155 @@ class IW_Products {
 
         self::sync_all_stocks();
         wp_send_json_success(array('message' => 'تم مزامنة جميع الأرصدة بنجاح'));
+    }
+
+    /**
+     * AJAX: Manually adjust current_stock for a product (admin only)
+     * Creates an adjustment transaction to keep FIFO data consistent.
+     */
+    public static function ajax_adjust_stock() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
+
+        global $wpdb;
+        $prefix     = $wpdb->prefix . 'iw_';
+        $product_id = intval($_POST['product_id'] ?? 0);
+        $new_stock  = max(0, intval($_POST['new_stock'] ?? 0));
+
+        if (!$product_id) {
+            wp_send_json_error(array('message' => 'معرّف الصنف مطلوب'));
+        }
+
+        IW_Transactions::ensure_product_transactions($product_id);
+        $current = self::get_real_stock($product_id);
+        $diff     = $new_stock - $current;
+
+        if ($diff === 0) {
+            wp_send_json_success(array('message' => 'الرصيد لم يتغير', 'new_stock' => $new_stock));
+            return;
+        }
+
+        if ($diff > 0) {
+            // Add a positive adjustment transaction
+            $wpdb->insert($prefix . 'transactions', array(
+                'transaction_type' => 'add',
+                'product_id'       => $product_id,
+                'quantity'         => $diff,
+                'unit_price'       => 0,
+                'remaining_qty'    => $diff,
+                'notes'            => 'تعديل يدوي للرصيد بواسطة المدير',
+                'created_by'       => get_current_user_id(),
+            ));
+        } else {
+            // Reduce remaining_qty across existing add transactions (FIFO)
+            $to_reduce = abs($diff);
+            $batches   = $wpdb->get_results($wpdb->prepare(
+                "SELECT id, remaining_qty FROM {$prefix}transactions
+                 WHERE product_id = %d AND transaction_type = 'add' AND remaining_qty > 0
+                 ORDER BY created_at ASC",
+                $product_id
+            ));
+            foreach ($batches as $batch) {
+                if ($to_reduce <= 0) break;
+                $deduct = min($to_reduce, intval($batch->remaining_qty));
+                $wpdb->update(
+                    $prefix . 'transactions',
+                    array('remaining_qty' => intval($batch->remaining_qty) - $deduct),
+                    array('id' => $batch->id),
+                    array('%d'),
+                    array('%d')
+                );
+                $to_reduce -= $deduct;
+            }
+        }
+
+        // Sync the products table cache
+        $wpdb->update(
+            $prefix . 'products',
+            array('current_stock' => $new_stock),
+            array('id' => $product_id),
+            array('%d'),
+            array('%d')
+        );
+
+        wp_send_json_success(array('message' => 'تم تعديل الرصيد إلى ' . $new_stock, 'new_stock' => $new_stock));
+    }
+
+    /**
+     * AJAX: Diagnostic breakdown of stock for a specific product (admin only)
+     * Returns detailed data to diagnose stock discrepancies
+     */
+    public static function ajax_stock_debug() {
+        check_ajax_referer('iw_admin_nonce', 'nonce');
+
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
+
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+        $product_id = intval($_POST['product_id'] ?? 0);
+
+        if (!$product_id) {
+            // Return diagnostics for ALL products if no product_id given
+            $products = $wpdb->get_results("SELECT id, name, current_stock FROM {$prefix}products ORDER BY name ASC");
+            $result = array();
+            foreach ($products as $p) {
+                $result[] = array(
+                    'id'              => $p->id,
+                    'name'            => $p->name,
+                    'current_stock_db'=> $p->current_stock,
+                    'real_stock'      => self::get_real_stock($p->id),
+                    'available_stock' => self::get_real_stock($p->id),
+                );
+            }
+            wp_send_json_success($result);
+            return;
+        }
+
+        $product = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$prefix}products WHERE id = %d", $product_id));
+
+        // Add order items
+        $add_items = $wpdb->get_results($wpdb->prepare(
+            "SELECT ao.order_number, aoi.quantity, ao.created_at
+             FROM {$prefix}add_order_items aoi
+             JOIN {$prefix}add_orders ao ON aoi.order_id = ao.id
+             WHERE aoi.product_id = %d ORDER BY ao.created_at ASC", $product_id
+        ));
+
+        // Opening balances
+        $balances = $wpdb->get_results($wpdb->prepare(
+            "SELECT quantity, balance_date FROM {$prefix}opening_balances WHERE product_id = %d", $product_id
+        ));
+
+        // Withdrawal orders by status (from items joined to orders)
+        $withdrawals = $wpdb->get_results($wpdb->prepare(
+            "SELECT wo.order_number, wo.status, wo.order_type,
+                    COALESCE(woi.approved_quantity, woi.quantity) as qty
+             FROM {$prefix}withdrawal_order_items woi
+             JOIN {$prefix}withdrawal_orders wo ON woi.order_id = wo.id
+             WHERE woi.product_id = %d ORDER BY wo.created_at ASC", $product_id
+        ));
+
+        // Orders in withdrawal_orders (no prepare needed — no user input in query)
+        $orders_without_items = $wpdb->get_results(
+            "SELECT wo.id, wo.order_number, wo.status, wo.order_type, wo.created_at,
+                    (SELECT COUNT(*) FROM {$prefix}withdrawal_order_items woi2 WHERE woi2.order_id = wo.id) as items_count
+             FROM {$prefix}withdrawal_orders wo
+             ORDER BY wo.created_at DESC LIMIT 20"
+        );
+
+        wp_send_json_success(array(
+            'product'              => $product,
+            'add_items'            => $add_items,
+            'opening_balances'     => $balances,
+            'withdrawals'          => $withdrawals,
+            'orders_without_items' => $orders_without_items,
+            'real_stock'           => self::get_real_stock($product_id),
+            'available_stock'      => self::get_real_stock($product_id),
+        ));
     }
 }

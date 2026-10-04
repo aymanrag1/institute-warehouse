@@ -1,5 +1,5 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
     <h1>تقرير استهلاك الأقسام</h1>
     <table class="form-table">
         <tr>
@@ -101,7 +101,7 @@ jQuery(document).ready(function($) {
         var fromDate = $('#dc_from').val() || '-';
         var toDate = $('#dc_to').val() || '-';
         var w = window.open('','','width=900,height=700');
-        w.document.write('<html dir="rtl"><head><title>استهلاك الأقسام</title><style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #333;padding:6px;text-align:right;}th{background:#f0f0f0;}.no-border{border:none;}</style></head><body>'+header+'<h2 style="text-align:center;">تقرير استهلاك الأقسام</h2><p style="text-align:center;"><strong>القسم:</strong> '+deptName+' | <strong>من:</strong> '+fromDate+' | <strong>إلى:</strong> '+toDate+'</p>'+$('#iw-print-area').html()+'</body></html>');
+        w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>استهلاك الأقسام</title><style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #333;padding:6px;text-align:right;}th{background:#f0f0f0;}.no-border{border:none;}</style></head><body>'+header+'<h2 style="text-align:center;">تقرير استهلاك الأقسام</h2><p style="text-align:center;"><strong>القسم:</strong> '+deptName+' | <strong>من:</strong> '+fromDate+' | <strong>إلى:</strong> '+toDate+'</p>'+$('#iw-print-area').html()+'</body></html>');
         w.document.close(); w.print();
     };
 });

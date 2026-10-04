@@ -1,21 +1,21 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>التقارير</h1>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('التقارير', 'Reports'); ?></h1>
     <div class="iw-tabs">
-        <button class="iw-tab active" onclick="iwRepTab('stock')">تقرير المخزون</button>
-        <button class="iw-tab" onclick="iwRepTab('transactions')">تقرير الحركات</button>
-        <button class="iw-tab" onclick="iwRepTab('lowstock')">أصناف تحت الحد الأدنى</button>
+        <button class="iw-tab active" onclick="iwRepTab('stock')"><?php echo iw_t('تقرير المخزون', 'Stock Report'); ?></button>
+        <button class="iw-tab" onclick="iwRepTab('transactions')"><?php echo iw_t('تقرير الحركات', 'Transactions Report'); ?></button>
+        <button class="iw-tab" onclick="iwRepTab('lowstock')"><?php echo iw_t('أصناف تحت الحد الأدنى', 'Low Stock Items'); ?></button>
     </div>
 
     <div id="rep-tab-stock" class="iw-tab-content">
-        <h2>تقرير المخزون الحالي</h2>
+        <h2><?php echo iw_t('تقرير المخزون الحالي', 'Current Stock Report'); ?></h2>
         <div style="margin-bottom:15px;">
-            <label style="margin-left:10px;"><strong>التصنيف:</strong></label>
+            <label style="margin-left:10px;"><strong><?php echo iw_t('التصنيف:', 'Category:'); ?></strong></label>
             <select id="stock_category" style="min-width:200px;" onchange="loadStockReport()">
-                <option value="">جميع التصنيفات</option>
+                <option value=""><?php echo iw_t('جميع التصنيفات', 'All Categories'); ?></option>
                 <?php echo IW_Categories::get_options_html(); ?>
             </select>
-            <button class="button" onclick="iwPrintReport('stock')" style="margin-right:15px;">طباعة</button>
+            <button class="button" onclick="iwPrintReport('stock')" style="margin-right:15px;"><?php echo iw_t('طباعة', 'Print'); ?></button>
         </div>
         <table class="wp-list-table widefat fixed striped" id="stock-report-table">
             <thead><tr><th>الصنف</th><th>الكود</th><th>التصنيف</th><th>الوحدة</th><th>المخزون الحالي</th><th>الحد الأدنى</th><th>الحد الأقصى</th><th>السعر</th></tr></thead>
@@ -107,7 +107,7 @@ jQuery(document).ready(function($) {
         var title = type === 'stock' ? 'تقرير المخزون' : type === 'transactions' ? 'تقرير الحركات' : 'أصناف تحت الحد الأدنى';
         var header = '<?php echo addslashes(IW_Admin::get_print_header()); ?>';
         var w = window.open('','','width=800,height=600');
-        w.document.write('<html dir="rtl"><head><title>'+title+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #333;padding:8px;text-align:right;}th{background:#f0f0f0;}</style></head><body>'+header+'<h2 style="text-align:center;">'+title+'</h2>'+$(tableId).prop('outerHTML')+'</body></html>');
+        w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>'+title+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #333;padding:8px;text-align:right;}th{background:#f0f0f0;}</style></head><body>'+header+'<h2 style="text-align:center;">'+title+'</h2>'+$(tableId).prop('outerHTML')+'</body></html>');
         w.document.close(); w.print();
     };
 });

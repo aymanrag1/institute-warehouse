@@ -1,32 +1,33 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>إذن صرف</h1>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('إذن صرف', 'Withdrawal Order'); ?></h1>
 
     <div class="iw-tabs">
-        <button class="iw-tab active" onclick="iwSwitchTab('create')">إنشاء إذن صرف</button>
-        <button class="iw-tab" onclick="iwSwitchTab('custody')">إذن صرف عهدة</button>
-        <button class="iw-tab" onclick="iwSwitchTab('pending')">أوامر معلقة</button>
-        <button class="iw-tab" onclick="iwSwitchTab('approved')">أوامر معتمدة</button>
-        <button class="iw-tab" onclick="iwSwitchTab('all')">جميع الأوامر</button>
+        <button class="iw-tab active" onclick="iwSwitchTab('create')"><?php echo iw_t('إنشاء إذن صرف', 'Create Withdrawal'); ?></button>
+        <button class="iw-tab" onclick="iwSwitchTab('custody')"><?php echo iw_t('إذن صرف عهدة', 'Custody Order'); ?></button>
+        <button class="iw-tab" onclick="iwSwitchTab('draft')"><?php echo iw_t('المسودات', 'Drafts'); ?></button>
+        <button class="iw-tab" onclick="iwSwitchTab('pending')"><?php echo iw_t('أوامر معلقة', 'Pending'); ?></button>
+        <button class="iw-tab" onclick="iwSwitchTab('approved')"><?php echo iw_t('أوامر معتمدة', 'Approved'); ?></button>
+        <button class="iw-tab" onclick="iwSwitchTab('all')"><?php echo iw_t('جميع الأوامر', 'All Orders'); ?></button>
     </div>
 
     <!-- Create Withdrawal Order -->
     <div id="tab-create" class="iw-tab-content">
-        <h2>إنشاء إذن صرف جديد</h2>
+        <h2><?php echo iw_t('إنشاء إذن صرف جديد', 'Create New Withdrawal Order'); ?></h2>
         <form id="iw-withdrawal-form">
             <table class="form-table">
                 <tr>
-                    <th>القسم *</th>
-                    <td><select id="wd_department_id" class="regular-text" required><option value="">اختر القسم</option></select></td>
+                    <th><?php echo iw_t('القسم', 'Department'); ?></th>
+                    <td><select id="wd_department_id" class="regular-text"><option value=""><?php echo iw_t('— اختياري —', '— Optional —'); ?></option></select></td>
                 </tr>
                 <tr>
-                    <th>الموظف *</th>
-                    <td><select id="wd_employee_id" class="regular-text" required><option value="">اختر الموظف</option></select></td>
+                    <th><?php echo iw_t('الموظف', 'Employee'); ?></th>
+                    <td><select id="wd_employee_id" class="regular-text"><option value=""><?php echo iw_t('— اختياري —', '— Optional —'); ?></option></select></td>
                 </tr>
-                <tr><th>ملاحظات</th><td><textarea id="wd_notes" class="large-text" rows="2"></textarea></td></tr>
+                <tr><th><?php echo iw_t('ملاحظات', 'Notes'); ?></th><td><textarea id="wd_notes" class="large-text" rows="2"></textarea></td></tr>
             </table>
 
-            <h3>الأصناف المراد صرفها</h3>
+            <h3><?php echo iw_t('الأصناف المراد صرفها', 'Items to Withdraw'); ?></h3>
             <table class="wp-list-table widefat fixed" id="wd-items-table">
                 <thead>
                     <tr><th>الصنف</th><th>المخزون المتاح</th><th>الكمية المطلوبة</th><th>إجراء</th></tr>
@@ -34,8 +35,11 @@
                 <tbody id="wd-items-body"></tbody>
             </table>
             <button type="button" class="button" onclick="iwAddWdItem()" style="margin-top:10px;">+ إضافة صنف</button>
+            <input type="hidden" id="wd_draft_id" value="0">
             <br><br>
-            <button type="submit" class="button button-primary button-large">إرسال للاعتماد</button>
+            <button type="button" class="button button-large" onclick="iwSaveDraftOrder()">💾 <?php echo iw_t('حفظ مسودة', 'Save Draft'); ?></button>
+            &nbsp;
+            <button type="submit" class="button button-primary button-large">✉️ <?php echo iw_t('إرسال للاعتماد', 'Send for Approval'); ?></button>
         </form>
     </div>
 
@@ -46,12 +50,12 @@
         <form id="iw-custody-form">
             <table class="form-table">
                 <tr>
-                    <th>القسم *</th>
-                    <td><select id="cust_department_id" class="regular-text" required><option value="">اختر القسم</option></select></td>
+                    <th>القسم</th>
+                    <td><select id="cust_department_id" class="regular-text"><option value="">— اختياري —</option></select></td>
                 </tr>
                 <tr>
-                    <th>الموظف *</th>
-                    <td><select id="cust_employee_id" class="regular-text" required><option value="">اختر الموظف</option></select></td>
+                    <th>الموظف</th>
+                    <td><select id="cust_employee_id" class="regular-text"><option value="">— اختياري —</option></select></td>
                 </tr>
                 <tr><th>ملاحظات</th><td><textarea id="cust_notes" class="large-text" rows="2"></textarea></td></tr>
             </table>
@@ -67,6 +71,15 @@
             <br><br>
             <button type="submit" class="button button-primary button-large">إرسال للاعتماد</button>
         </form>
+    </div>
+
+    <!-- Draft Orders -->
+    <div id="tab-draft" class="iw-tab-content" style="display:none;">
+        <h2><?php echo iw_t('المسودات (لم تُرسل للاعتماد بعد)', 'Drafts (Not Yet Submitted)'); ?></h2>
+        <table class="wp-list-table widefat fixed striped">
+            <thead><tr><th>رقم الإذن</th><th>القسم</th><th>الموظف</th><th>التاريخ</th><th>إجراءات</th></tr></thead>
+            <tbody id="wd-draft-table"></tbody>
+        </table>
     </div>
 
     <!-- Pending Orders (for Dean) -->
@@ -183,20 +196,25 @@ jQuery(document).ready(function($) {
     };
 
     window.iwUpdateStock = function(sel) {
-        var stock = parseInt($(sel).find(':selected').data('stock')) || 0;
         var $row = $(sel).closest('tr');
         var $available = $row.find('.wd-available');
         var $qty = $row.find('.wd-qty');
+        var productId = $(sel).val();
+        var productName = $(sel).find(':selected').text().split(' (')[0];
 
-        if (!$(sel).val()) {
+        if (!productId) {
             $available.text('-').css('color', '');
             $qty.prop('disabled', false).removeAttr('max');
             return;
         }
 
+        // Use cached stock for immediate feedback (refreshed on tab open)
+        var stock = parseInt($(sel).find(':selected').data('stock')) || 0;
+
         if (stock <= 0) {
-            $available.html('<span style="color:red;font-weight:bold;">0 - لا يوجد رصيد!</span>');
-            $qty.prop('disabled', true).val(0);
+            alert('لا يوجد رصيد متاح للصنف "' + productName + '". لا يمكن إضافته للإذن.');
+            $row.remove();
+            return;
         } else {
             $available.html('<span style="color:green;font-weight:bold;">' + stock + '</span>');
             $qty.prop('disabled', false).attr('max', stock).val(1);
@@ -236,16 +254,46 @@ jQuery(document).ready(function($) {
         if (errors.length) { alert('لا يمكن إنشاء إذن الصرف:\n\n' + errors.join('\n')); return; }
         if (!items.length) { alert('يجب إضافة أصناف'); return; }
 
-        $.post(iwAdmin.ajaxurl, {
-            action: 'iw_create_withdrawal_order', nonce: iwAdmin.nonce,
-            department_id: $('#wd_department_id').val(),
-            employee_id: $('#wd_employee_id').val(),
-            notes: $('#wd_notes').val(),
-            items: JSON.stringify(items)
-        }, function(res) {
-            alert(res.data.message);
-            if (res.success) { $('#iw-withdrawal-form')[0].reset(); $('#wd-items-body').html(''); iwAddWdItem(); }
-        });
+        var draftId = parseInt($('#wd_draft_id').val()) || 0;
+        if (draftId > 0) {
+            // Submit existing draft for approval
+            if (!confirm('هل أنت متأكد من إرسال الإذن للاعتماد؟')) return;
+            // Save items first, then submit
+            $.post(iwAdmin.ajaxurl, {
+                action: 'iw_save_draft_withdrawal_order', nonce: iwAdmin.nonce,
+                draft_id: draftId,
+                department_id: $('#wd_department_id').val(),
+                employee_id:   $('#wd_employee_id').val(),
+                notes:         $('#wd_notes').val(),
+                items:         JSON.stringify(items)
+            }, function(sr) {
+                $.post(iwAdmin.ajaxurl, {action: 'iw_submit_draft_withdrawal_order', nonce: iwAdmin.nonce, order_id: draftId}, function(res) {
+                    alert(res.data.message);
+                    if (res.success) {
+                        $('#wd_draft_id').val(0);
+                        $('#iw-withdrawal-form')[0].reset();
+                        $('#wd-items-body').html('');
+                        iwAddWdItem();
+                    }
+                });
+            });
+        } else {
+            $.post(iwAdmin.ajaxurl, {
+                action: 'iw_create_withdrawal_order', nonce: iwAdmin.nonce,
+                department_id: $('#wd_department_id').val(),
+                employee_id: $('#wd_employee_id').val(),
+                notes: $('#wd_notes').val(),
+                items: JSON.stringify(items)
+            }, function(res) {
+                alert(res.data.message);
+                if (res.success) {
+                    $('#wd_draft_id').val(0);
+                    $('#iw-withdrawal-form')[0].reset();
+                    $('#wd-items-body').html('');
+                    iwAddWdItem();
+                }
+            });
+        }
     });
 
     // Submit custody order
@@ -278,6 +326,22 @@ jQuery(document).ready(function($) {
         $('.iw-tab').removeClass('active');
         $('#tab-'+tab).show();
         $('[onclick="iwSwitchTab(\''+tab+'\')"]').addClass('active');
+        if (tab === 'create') {
+            // Refresh products so stock values are up to date
+            $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) {
+                if (r.success) {
+                    products = r.data;
+                    // Update data-stock on existing selects
+                    $('.wd-product option').each(function() {
+                        var pid = $(this).val();
+                        if (!pid) return;
+                        var found = products.find(function(p) { return String(p.id) === String(pid); });
+                        if (found) $(this).data('stock', found.current_stock || 0);
+                    });
+                }
+            });
+        }
+        if (tab === 'draft')   loadOrders('draft');
         if (tab === 'pending') loadOrders('pending');
         if (tab === 'approved') loadOrders('approved');
         if (tab === 'all') loadOrders('');
@@ -291,7 +355,7 @@ jQuery(document).ready(function($) {
     function loadOrders(status) {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_withdrawal_orders', nonce: iwAdmin.nonce, status: status}, function(r) {
             if (!r.success) return;
-            var target = status ? '#wd-'+status+'-table' : '#wd-all-table';
+            var target = status === 'draft' ? '#wd-draft-table' : (status ? '#wd-'+status+'-table' : '#wd-all-table');
             var html = '';
             r.data.forEach(function(o) {
                 var statusBadge = getStatusBadge(o.status);
@@ -300,19 +364,38 @@ jQuery(document).ready(function($) {
                 if (status === 'approved') {
                     html += '<td><input type="checkbox" class="wd-approved-check" value="'+o.id+'"></td>';
                 }
+                if (status === 'draft') {
+                    html += '<td>'+o.order_number+'</td><td>'+(o.department_name||'-')+'</td><td>'+(o.employee_name||'-')+'</td><td>'+o.created_at+'</td>';
+                    html += '<td>';
+                    html += '<button class="button" onclick="iwEditDraft('+o.id+')">تعديل</button> ';
+                    html += '<button class="button button-primary" onclick="iwSubmitDraft('+o.id+')">إرسال للاعتماد</button> ';
+                    html += '<button class="button iw-btn-danger" onclick="iwDeleteOrder('+o.id+')">حذف</button>';
+                    html += '</td></tr>';
+                    return;
+                }
                 html += '<td>'+o.order_number+'</td><td>'+typeBadge+'</td><td>'+(o.department_name||'-')+'</td><td>'+(o.employee_name||'-')+'</td>';
                 if (!status) html += '<td>'+statusBadge+'</td>';
                 html += '<td>'+o.created_at+'</td>';
                 html += '<td><button class="button" onclick="iwViewOrder('+o.id+')">عرض</button>';
+                if (o.status === 'draft') {
+                    html += ' <button class="button" onclick="iwEditDraft('+o.id+')">تعديل</button>';
+                    html += ' <button class="button button-primary" onclick="iwSubmitDraft('+o.id+')">إرسال للاعتماد</button>';
+                    html += ' <button class="button iw-btn-danger" onclick="iwDeleteOrder('+o.id+')">حذف</button>';
+                }
                 if (o.status === 'pending') {
-                    html += ' <button class="button" onclick="iwViewOrder('+o.id+')">تعديل</button>';
                     html += ' <button class="button iw-btn-danger" onclick="iwDeleteOrder('+o.id+')">حذف</button>';
                 }
                 if (o.status === 'approved') {
                     html += ' <button class="button button-primary" onclick="iwPrintAndExecute('+o.id+')">طباعة وتنفيذ</button>';
+                    if (iwAdmin.isAdmin) {
+                        html += ' <button class="button" onclick="iwViewOrder('+o.id+')">تعديل</button>';
+                    }
                     html += ' <button class="button iw-btn-danger" onclick="iwCancelOrder('+o.id+')">إلغاء</button>';
                 }
-                if (o.status === 'completed') html += ' <button class="button button-primary" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
+                if (o.status === 'completed') {
+                    html += ' <button class="button button-primary" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
+                    html += ' <button class="button" onclick="iwCreateReturnFromOrder('+o.id+',\''+o.order_type+'\')">إنشاء إذن ارتجاع</button>';
+                }
                 html += '</td></tr>';
             });
             $(target).html(html || '<tr><td colspan="7">لا توجد أوامر</td></tr>');
@@ -320,8 +403,8 @@ jQuery(document).ready(function($) {
     }
 
     function getStatusBadge(s) {
-        var map = {pending:'معلق',approved:'معتمد',rejected:'مرفوض',completed:'منفذ',cancelled:'ملغي'};
-        var cls = {pending:'warning',approved:'success',rejected:'danger',completed:'info',cancelled:'danger'};
+        var map = {draft:'مسودة',pending:'معلق',approved:'معتمد',rejected:'مرفوض',completed:'منفذ',cancelled:'ملغي'};
+        var cls = {draft:'',pending:'warning',approved:'success',rejected:'danger',completed:'info',cancelled:'danger'};
         return '<span class="iw-badge iw-badge-'+(cls[s]||'')+'">'+( map[s]||s)+'</span>';
     }
 
@@ -402,16 +485,24 @@ jQuery(document).ready(function($) {
 
             if (sig && o.status !== 'pending') {
                 html += '<div style="margin-top:15px;text-align:center;"><p><strong>توقيع المعتمد:</strong></p>';
-                html += '<img src="'+sig+'" style="max-height:100px;" /></div>';
+                html += '<img src="'+sig+'" style="max-width:'+(iwAdmin.sigWidth||150)+'px;height:auto;" /></div>';
+            }
+
+            // Admin: edit employee/department name on any order regardless of status
+            if (iwAdmin.isAdmin) {
+                html += '<div style="margin-top:15px;padding:12px;background:#f0f6fc;border:1px solid #c3d4e4;border-radius:4px;">';
+                html += '<strong>تعديل بيانات الموظف (أدمن)</strong>';
+                html += '<table style="margin-top:8px;width:100%"><tr>';
+                html += '<td style="width:50%;padding:4px;">القسم: <select id="emp-edit-dept" class="iw-emp-edit-select" style="width:100%;padding:6px;"><option value="">اختر القسم</option></select></td>';
+                html += '<td style="padding:4px;">الموظف: <select id="emp-edit-emp" class="iw-emp-edit-select" style="width:100%;padding:6px;"><option value="">اختر الموظف</option></select></td>';
+                html += '</tr></table>';
+                html += '<button class="button" style="margin-top:8px;" onclick="iwSaveEmployeeInfo('+o.id+')">حفظ البيانات</button>';
+                html += '</div>';
             }
 
             if (o.status === 'pending') {
                 html += '<div style="margin-top:15px;">';
-                if (hasZeroStock) {
-                    html += '<button class="button button-large" disabled title="يوجد أصناف رصيدها صفر">اعتماد (غير متاح)</button> ';
-                } else {
-                    html += '<button class="button button-primary button-large" onclick="iwApproveOrder('+o.id+')">اعتماد</button> ';
-                }
+                html += '<button class="button button-primary button-large" id="wd-approve-btn" onclick="iwApproveOrder('+o.id+')">اعتماد</button> ';
                 html += '<button class="button iw-btn-danger button-large" onclick="iwRejectOrder('+o.id+')">رفض</button> ';
                 html += '<button class="button button-large" onclick="iwSaveOrderEdit('+o.id+')">حفظ التعديلات</button> ';
                 html += '<button class="button iw-btn-danger button-large" onclick="iwDeleteOrder('+o.id+')">حذف الإذن</button>';
@@ -425,18 +516,35 @@ jQuery(document).ready(function($) {
                 } else {
                     html += '<button class="button button-primary button-large" onclick="iwPrintAndExecute('+o.id+')">طباعة وتنفيذ</button> ';
                 }
+                if (iwAdmin.isAdmin) {
+                    html += '<button class="button button-large" onclick="iwSaveOrderEdit('+o.id+')">حفظ التعديلات</button> ';
+                }
                 html += '<button class="button iw-btn-danger button-large" onclick="iwCancelOrder('+o.id+')">إلغاء الإذن</button>';
+                html += '</div>';
+            }
+
+            if (o.status === 'draft') {
+                html += '<div style="margin-top:15px;">';
+                html += '<button class="button button-primary button-large" onclick="$(\'#iw-wd-modal\').hide();iwEditDraft('+o.id+')">تعديل المسودة</button> ';
+                html += '<button class="button button-large" onclick="$(\'#iw-wd-modal\').hide();iwSubmitDraft('+o.id+')">إرسال للاعتماد</button> ';
+                html += '<button class="button iw-btn-danger button-large" onclick="iwDeleteOrder('+o.id+')">حذف المسودة</button>';
                 html += '</div>';
             }
 
             if (o.status === 'completed') {
                 html += '<div style="margin-top:15px;">';
-                html += '<button class="button button-primary button-large" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
+                html += '<button class="button button-primary button-large" onclick="iwPrintOrder('+o.id+')">طباعة</button> ';
+                html += '<button class="button button-large" onclick="iwCreateReturnFromOrder('+o.id+',\''+o.order_type+'\')">إنشاء إذن ارتجاع</button>';
                 html += '</div>';
             }
 
             $('#iw-wd-modal-body').html(html);
             $('#iw-wd-modal').show();
+
+            // Populate admin edit dropdowns from HR System after the DOM is rendered
+            if (iwAdmin.isAdmin) {
+                iwPopulateEmpEdit(o.department_id, o.employee_id);
+            }
         });
     };
 
@@ -457,12 +565,190 @@ jQuery(document).ready(function($) {
         });
     };
 
+    // Admin: save employee/department name only (any order status)
+    window.iwSaveEmployeeInfo = function(id) {
+        var deptId = $('#emp-edit-dept').val() || '';
+        var empId  = $('#emp-edit-emp').val() || '';
+        $.post(iwAdmin.ajaxurl, {
+            action: 'iw_update_order_employee', nonce: iwAdmin.nonce,
+            order_id: id, department_id: deptId, employee_id: empId
+        })
+        .done(function(r) {
+            if (r && r.success) {
+                alert((r.data && r.data.message) || 'تم الحفظ');
+                // Refresh whichever orders list is currently active so the new values show up
+                ['pending', 'approved', 'all'].forEach(function(t) {
+                    if ($('#tab-' + t).is(':visible') && typeof loadOrders === 'function') loadOrders(t);
+                });
+                // Refresh the open modal's header/details
+                iwViewOrder(id);
+            } else {
+                var msg = (r && r.data && r.data.message) ? r.data.message : 'فشل الحفظ';
+                alert(msg);
+                console.warn('iwSaveEmployeeInfo: server response', r);
+            }
+        })
+        .fail(function(xhr) {
+            alert('خطأ في الاتصال أثناء الحفظ');
+            console.error('iwSaveEmployeeInfo failed', xhr && xhr.status, xhr && xhr.responseText);
+        });
+    };
+
+    // Populate admin edit dropdowns (plain <select>, no Select2) with HR departments/employees,
+    // preselecting the current order's values.
+    window.iwPopulateEmpEdit = function(currentDeptId, currentEmpId) {
+        $.post(iwAdmin.ajaxurl, {action: 'iw_get_departments', nonce: iwAdmin.nonce})
+        .done(function(r) {
+            var $dept = $('#emp-edit-dept');
+            if (!$dept.length) { console.warn('iwPopulateEmpEdit: #emp-edit-dept not found'); return; }
+            if (!r || !r.success || !Array.isArray(r.data)) {
+                console.warn('iwPopulateEmpEdit: get_departments returned', r);
+                return;
+            }
+            var opts = '<option value="">اختر القسم</option>';
+            r.data.forEach(function(d) {
+                var sel = (currentDeptId && parseInt(d.id) === parseInt(currentDeptId)) ? ' selected' : '';
+                opts += '<option value="'+d.id+'"'+sel+'>'+d.name+'</option>';
+            });
+            $dept.html(opts);
+
+            // Load employees for the preselected department (if any) else all employees
+            iwLoadEmpEditEmployees(currentDeptId || null, currentEmpId || null);
+        })
+        .fail(function(xhr) {
+            console.error('iwPopulateEmpEdit: get_departments failed', xhr && xhr.status, xhr && xhr.responseText);
+        });
+
+        // When admin changes department, reload the employees dropdown
+        $(document).off('change.empedit', '#emp-edit-dept').on('change.empedit', '#emp-edit-dept', function() {
+            iwLoadEmpEditEmployees($(this).val(), null);
+        });
+    };
+
+    window.iwLoadEmpEditEmployees = function(deptId, preselectEmpId) {
+        var action = deptId ? 'iw_get_employees_by_dept' : 'iw_get_employees';
+        var data = { action: action, nonce: iwAdmin.nonce };
+        if (deptId) data.department_id = deptId;
+        $.post(iwAdmin.ajaxurl, data)
+        .done(function(r) {
+            var $emp = $('#emp-edit-emp');
+            if (!$emp.length) { console.warn('iwLoadEmpEditEmployees: #emp-edit-emp not found'); return; }
+            if (!r || !r.success || !Array.isArray(r.data)) {
+                console.warn('iwLoadEmpEditEmployees: '+action+' returned', r);
+                return;
+            }
+            var opts = '<option value="">اختر الموظف</option>';
+            r.data.forEach(function(e) {
+                var sel = (preselectEmpId && parseInt(e.id) === parseInt(preselectEmpId)) ? ' selected' : '';
+                opts += '<option value="'+e.id+'"'+sel+'>'+e.name+'</option>';
+            });
+            $emp.html(opts);
+        })
+        .fail(function(xhr) {
+            console.error('iwLoadEmpEditEmployees: '+action+' failed', xhr && xhr.status, xhr && xhr.responseText);
+        });
+    };
+
     // Delete order
     window.iwDeleteOrder = function(id) {
         if (!confirm('هل أنت متأكد من حذف هذا الإذن؟')) return;
         $.post(iwAdmin.ajaxurl, {action: 'iw_delete_withdrawal_order', nonce: iwAdmin.nonce, order_id: id}, function(r) {
             alert(r.data.message);
             if (r.success) { $('#iw-wd-modal').hide(); loadOrders('pending'); }
+        });
+    };
+
+    // Save withdrawal order as draft
+    window.iwSaveDraftOrder = function() {
+        var items = [];
+        $('#wd-items-body tr').each(function() {
+            var pid = $(this).find('.wd-product').val();
+            var qty = parseInt($(this).find('.wd-qty').val()) || 0;
+            if (pid && qty > 0) items.push({product_id: pid, quantity: qty});
+        });
+        if (!items.length) { alert('يجب إضافة أصناف'); return; }
+        var draftId = parseInt($('#wd_draft_id').val()) || 0;
+        $.post(iwAdmin.ajaxurl, {
+            action: 'iw_save_draft_withdrawal_order', nonce: iwAdmin.nonce,
+            draft_id: draftId,
+            department_id: $('#wd_department_id').val(),
+            employee_id:   $('#wd_employee_id').val(),
+            notes:         $('#wd_notes').val(),
+            items:         JSON.stringify(items)
+        }, function(r) {
+            alert(r.data.message);
+            if (r.success) {
+                $('#wd_draft_id').val(r.data.order_id);
+            }
+        });
+    };
+
+    // Edit draft: load into create form
+    window.iwEditDraft = function(id) {
+        $.post(iwAdmin.ajaxurl, {action: 'iw_get_withdrawal_order', nonce: iwAdmin.nonce, order_id: id}, function(r) {
+            if (!r.success) return;
+            var o = r.data.order, items = r.data.items;
+            // Switch to create tab
+            iwSwitchTab('create');
+            // Wait for products to be refreshed then fill form
+            setTimeout(function() {
+                $('#wd_draft_id').val(o.id);
+                $('#wd_department_id').val(o.department_id || '');
+                if (typeof iwRefreshSelect2 === 'function') iwRefreshSelect2('#wd_department_id');
+                // Load employees for the department, then set employee
+                if (o.department_id) {
+                    $.post(iwAdmin.ajaxurl, {action: 'iw_get_employees_by_dept', nonce: iwAdmin.nonce, department_id: o.department_id}, function(er) {
+                        if (er.success) {
+                            var eh = '<option value="">اختر الموظف</option>';
+                            er.data.forEach(function(e) { eh += '<option value="'+e.id+'"'+(e.id==o.employee_id?' selected':'')+'>'+e.name+'</option>'; });
+                            $('#wd_employee_id').html(eh);
+                            if (typeof iwRefreshSelect2 === 'function') iwRefreshSelect2('#wd_employee_id');
+                        }
+                    });
+                }
+                $('#wd_notes').val(o.notes || '');
+                $('#wd-items-body').html('');
+                items.forEach(function(it) {
+                    iwAddWdItemPrefill(it.product_id, it.quantity);
+                });
+            }, 600);
+        });
+    };
+
+    // Add item row with pre-selected product & quantity (for draft editing)
+    window.iwAddWdItemPrefill = function(productId, qty) {
+        var opts = '<option value="">اختر الصنف</option>';
+        products.forEach(function(p) {
+            var sel = (String(p.id) === String(productId)) ? ' selected' : '';
+            opts += '<option value="'+p.id+'" data-stock="'+(p.current_stock||0)+'"'+sel+'>'+p.name+' ('+(p.current_stock||0)+' '+(p.unit||'')+')</option>';
+        });
+        var row = '<tr><td><select class="wd-product regular-text" onchange="iwUpdateStock(this)">'+opts+'</select></td>';
+        row += '<td class="wd-available"><span style="color:green;font-weight:bold;">' + (function() {
+            var p = products.find(function(x) { return String(x.id) === String(productId); });
+            return p ? (p.current_stock||0) : '-';
+        })() + '</span></td>';
+        row += '<td><input type="number" class="wd-qty" min="1" value="'+qty+'" onchange="iwValidateQty(this)"></td>';
+        row += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
+        var $row = $(row);
+        $('#wd-items-body').append($row);
+        if (typeof iwInitSelect2 === 'function') iwInitSelect2($row);
+    };
+
+    // Submit draft for approval
+    window.iwSubmitDraft = function(id) {
+        if (!confirm('هل أنت متأكد من إرسال المسودة للاعتماد؟')) return;
+        $.post(iwAdmin.ajaxurl, {action: 'iw_submit_draft_withdrawal_order', nonce: iwAdmin.nonce, order_id: id}, function(r) {
+            alert(r.data.message);
+            if (r.success) {
+                loadOrders('draft');
+                // Reset create form draft ID if it was this draft
+                if (parseInt($('#wd_draft_id').val()) === id) {
+                    $('#wd_draft_id').val(0);
+                    $('#iw-withdrawal-form')[0].reset();
+                    $('#wd-items-body').html('');
+                    iwAddWdItem();
+                }
+            }
         });
     };
 
@@ -575,13 +861,13 @@ jQuery(document).ready(function($) {
             printContent += '<p>الاسم: '+(o.employee_name||'.................')+'</p></td>';
             if (sig) {
                 printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p>';
-                printContent += '<img src="'+sig+'" style="max-height:80px;" /></td>';
+                printContent += '<img src="'+sig+'" style="max-width:'+(iwAdmin.sigWidth||150)+'px;height:auto;" /></td>';
             } else {
                 printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p><div style="height:60px;"></div></td>';
             }
             printContent += '</tr></table>';
             var w = window.open('','','width=800,height=600');
-            w.document.write('<html dir="rtl"><head><title>'+orderTypeLabel+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+            w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>'+orderTypeLabel+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
             w.document.close();
             w.print();
         }
@@ -617,16 +903,26 @@ jQuery(document).ready(function($) {
             printContent += '<p>الاسم: '+(o.employee_name||'.................')+'</p></td>';
             if (sig) {
                 printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p>';
-                printContent += '<img src="'+sig+'" style="max-height:80px;" /></td>';
+                printContent += '<img src="'+sig+'" style="max-width:'+(iwAdmin.sigWidth||150)+'px;height:auto;" /></td>';
             } else {
                 printContent += '<td style="text-align:center;border:none;width:50%;"><p><strong>توقيع عميد المعهد / المدير:</strong></p><div style="height:60px;"></div></td>';
             }
             printContent += '</tr></table>';
             var w = window.open('','','width=800,height=600');
-            w.document.write('<html dir="rtl"><head><title>'+orderTypeLabel+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+            w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>'+orderTypeLabel+'</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
             w.document.close();
             w.print();
         });
+    };
+
+    // Create return order from completed withdrawal
+    window.iwCreateReturnFromOrder = function(originalId, orderType) {
+        var returnType = orderType === 'custody' ? 'custody' : 'normal';
+        var label = returnType === 'custody' ? 'رد عهدة' : 'إذن ارتجاع';
+        if (!confirm('هل تريد إنشاء ' + label + ' لهذا الإذن؟')) return;
+        // Redirect to return orders page with pre-filled original_order_id
+        var url = iwAdmin.adminurl + 'admin.php?page=iw-return-orders&from_order=' + originalId + '&type=' + returnType;
+        window.location.href = url;
     };
 
     // Bulk actions
@@ -680,7 +976,7 @@ jQuery(document).ready(function($) {
                 loaded++;
                 if (loaded === ids.length) {
                     var w = window.open('','','width=800,height=600');
-                    w.document.write('<html dir="rtl"><head><title>أوامر صرف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+                    w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>أوامر صرف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
                     w.document.close();
                     w.print();
                 }

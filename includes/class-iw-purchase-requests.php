@@ -271,6 +271,11 @@ class IW_Purchase_Requests {
 
         $items = json_decode(stripslashes($_POST['items']), true);
         $notes = sanitize_textarea_field($_POST['notes'] ?? '');
+        $purchase_method = sanitize_text_field($_POST['purchase_method'] ?? 'direct');
+        $allowed_methods = array('direct', 'limited_tender', 'public_tender');
+        if (!in_array($purchase_method, $allowed_methods, true)) {
+            $purchase_method = 'direct';
+        }
 
         if (empty($items)) {
             wp_send_json_error(array('message' => 'يجب إضافة أصناف'));
@@ -279,10 +284,11 @@ class IW_Purchase_Requests {
         $request_number = self::generate_request_number();
 
         $wpdb->insert($prefix . 'purchase_requests', array(
-            'request_number' => $request_number,
-            'status'         => 'pending',
-            'notes'          => $notes,
-            'created_by'     => get_current_user_id(),
+            'request_number'  => $request_number,
+            'status'          => 'pending',
+            'notes'           => $notes,
+            'purchase_method' => $purchase_method,
+            'created_by'      => get_current_user_id(),
         ));
 
         $request_id = $wpdb->insert_id;
@@ -343,7 +349,13 @@ class IW_Purchase_Requests {
         }
 
         $requests = $wpdb->get_results(
-            "SELECT pr.*, u.display_name as created_by_name
+            "SELECT pr.*,
+                    u.display_name as created_by_name,
+                    COALESCE((
+                        SELECT SUM(i.quantity * i.estimated_price)
+                        FROM {$prefix}purchase_request_items i
+                        WHERE i.request_id = pr.id
+                    ), 0) AS total_amount
              FROM {$prefix}purchase_requests pr
              LEFT JOIN {$wpdb->users} u ON pr.created_by = u.ID
              WHERE 1=1 $where
@@ -374,22 +386,34 @@ class IW_Purchase_Requests {
              WHERE i.request_id = %d", $request_id
         ));
 
+        // Defensive: get_results() returns null on DB error, normalize to empty array
+        if (!is_array($items)) $items = array();
+
         // Add last purchase price to each item if not set
         foreach ($items as &$item) {
             if (empty($item->last_purchase_price) || $item->last_purchase_price == 0) {
                 $item->last_purchase_price = self::get_last_purchase_price($item->product_id);
             }
         }
+        unset($item); // release reference after foreach &$item
 
+        // Resolve signature: prefer the value stored on the request itself,
+        // fall back to the approver's user meta. Returned for ALL users so
+        // any account can print an approved request with the signature.
         $signature_url = '';
-        if ($request && $request->approved_by) {
-            $signature_url = get_user_meta($request->approved_by, 'iw_signature_url', true);
+        if ($request) {
+            if (!empty($request->signature_url)) {
+                $signature_url = $request->signature_url;
+            } elseif ($request->approved_by) {
+                $signature_url = get_user_meta($request->approved_by, 'iw_signature_url', true);
+            }
         }
 
         wp_send_json_success(array(
-            'request'       => $request,
-            'items'         => $items,
-            'signature_url' => $signature_url,
+            'request'        => $request,
+            'items'          => $items,
+            'signature_url'  => $signature_url,
+            'signature_width'=> intval(get_option('iw_signature_width', 150)),
         ));
     }
 
@@ -410,22 +434,37 @@ class IW_Purchase_Requests {
             "SELECT * FROM {$prefix}purchase_requests WHERE id = %d", $request_id
         ));
 
-        if (!$request || $request->status !== 'pending') {
+        if (!$request) {
+            wp_send_json_error(array('message' => 'الطلب غير موجود'));
+        }
+
+        $is_admin = current_user_can('manage_options');
+
+        // Admin can edit any request (including approved/completed) to recover lost items
+        if ($request->status !== 'pending' && !$is_admin) {
             wp_send_json_error(array('message' => 'لا يمكن تعديل هذا الطلب'));
         }
 
         // Allow creator, dean, admin, or accountant to edit pending requests
         $is_creator = ($request->created_by == get_current_user_id());
         $is_accountant = current_user_can('iw_accountant') || IW_Permissions::current_user_can('purchase_requests', 'read_write');
-        if (!$is_creator && !$is_accountant && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
+        if (!$is_admin && !$is_creator && !$is_accountant && !current_user_can('iw_approve_orders')) {
             wp_send_json_error(array('message' => 'ليس لديك صلاحية لتعديل هذا الطلب'));
         }
 
+        if (empty($items)) {
+            wp_send_json_error(array('message' => 'يجب إضافة أصناف للطلب — لا يمكن الحفظ بدون أصناف'));
+        }
+
+        // Use MySQL transaction: delete + re-insert atomically so a failed insert doesn't leave items empty
+        $wpdb->query('START TRANSACTION');
+
         $wpdb->delete($prefix . 'purchase_request_items', array('request_id' => $request_id));
 
+        $insert_failed = false;
         foreach ($items as $item) {
             $last_price = self::get_last_purchase_price(intval($item['product_id']));
-            $wpdb->insert($prefix . 'purchase_request_items', array(
+            $result = $wpdb->insert($prefix . 'purchase_request_items', array(
                 'request_id'          => $request_id,
                 'product_id'          => intval($item['product_id']),
                 'quantity'            => intval($item['quantity']),
@@ -433,7 +472,18 @@ class IW_Purchase_Requests {
                 'estimated_price'     => floatval($item['estimated_price'] ?? 0),
                 'last_purchase_price' => $last_price,
             ));
+            if ($result === false) {
+                $insert_failed = true;
+                break;
+            }
         }
+
+        if ($insert_failed) {
+            $wpdb->query('ROLLBACK');
+            wp_send_json_error(array('message' => 'فشل في حفظ الأصناف: ' . $wpdb->last_error));
+        }
+
+        $wpdb->query('COMMIT');
 
         if (!empty($_POST['notes'])) {
             $wpdb->update($prefix . 'purchase_requests',
@@ -599,7 +649,7 @@ class IW_Purchase_Requests {
     }
 
     /**
-     * Delete pending purchase request
+     * Delete purchase request (pending by anyone with permission; any status by admin)
      */
     public static function delete_request() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
@@ -616,14 +666,17 @@ class IW_Purchase_Requests {
             wp_send_json_error(array('message' => 'الطلب غير موجود'));
         }
 
-        if ($request->status !== 'pending') {
-            wp_send_json_error(array('message' => 'لا يمكن حذف طلب معتمد أو مكتمل'));
-        }
-
-        // Allow creator, dean, or admin to delete pending requests
+        $is_admin   = current_user_can('manage_options');
         $is_creator = ($request->created_by == get_current_user_id());
-        if (!$is_creator && !current_user_can('iw_approve_orders') && !current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => 'ليس لديك صلاحية لحذف هذا الطلب'));
+
+        // Admin can delete anything; others can only delete pending they created or can approve
+        if (!$is_admin) {
+            if ($request->status !== 'pending') {
+                wp_send_json_error(array('message' => 'لا يمكن حذف طلب معتمد أو مكتمل، تواصل مع المدير'));
+            }
+            if (!$is_creator && !current_user_can('iw_approve_orders')) {
+                wp_send_json_error(array('message' => 'ليس لديك صلاحية لحذف هذا الطلب'));
+            }
         }
 
         // Delete items first

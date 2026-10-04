@@ -1,5 +1,5 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
     <h1>طباعة إذن إضافة مشتريات</h1>
     <div id="iw-print-add-permit">
         <p>اختر إذن الإضافة للطباعة:</p>
@@ -66,10 +66,14 @@ jQuery(document).ready(function($) {
         });
         content += '<tr style="background:#f0f0f0;font-weight:bold;"><td colspan="2">الإجمالي</td><td>'+totalQty+'</td><td>-</td><td>'+totalValue.toFixed(2)+'</td><td></td></tr>';
         content += '</table>';
-        content += '<div style="margin-top:40px;display:flex;justify-content:space-between;"><div style="text-align:center;"><strong>مسؤول المخزن</strong><br><br>التوقيع: ____________</div><div style="text-align:center;"><strong>المدير / عميد المعهد</strong><br><br>التوقيع: ____________</div></div>';
+        content += '<table width="100%" style="margin-top:50px;border:none;"><tr>';
+        content += '<td style="text-align:center;border:none;width:33%;"><strong>مسؤول المخازن</strong><br><br><br>التوقيع: ____________</td>';
+        content += '<td style="text-align:center;border:none;width:33%;"><strong>مدير الحسابات</strong><br><br><br>التوقيع: ____________</td>';
+        content += '<td style="text-align:center;border:none;width:33%;"><strong>يعتمد</strong><br><br><br>التوقيع: ____________</td>';
+        content += '</tr></table>';
 
         var w = window.open('','','width=800,height=600');
-        w.document.write('<html dir="rtl"><head><title>إذن إضافة مشتريات</title><style>body{font-family:Arial,sans-serif;padding:20px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
+        w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>إذن إضافة مشتريات</title><style>body{font-family:Arial,sans-serif;padding:20px;}th{background:#f0f0f0;}</style></head><body>'+content+'</body></html>');
         w.document.close(); w.print();
     };
 });

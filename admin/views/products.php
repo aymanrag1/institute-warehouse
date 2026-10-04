@@ -1,6 +1,6 @@
 <?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>إدارة الأصناف <button class="button button-primary" onclick="iwShowProductForm()">إضافة صنف جديد</button></h1>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('إدارة الأصناف', 'Products Management'); ?> <button class="button button-primary" onclick="iwShowProductForm()"><?php echo iw_t('إضافة صنف جديد', 'Add New Product'); ?></button></h1>
 
     <!-- Product Form Modal -->
     <div id="iw-product-modal" class="iw-modal" style="display:none;">
@@ -43,6 +43,18 @@
             <option value="">-- تغيير التصنيف إلى --</option>
         </select>
         <button class="button" onclick="iwBulkChangeCategory()">تطبيق التصنيف</button>
+        <button class="button" onclick="iwStockDebugAll()" style="background:#f0f0f0;border-color:#999;" title="يعرض تفاصيل حساب الرصيد لكل صنف">تشخيص الرصيد</button>
+    </div>
+
+    <!-- Stock Debug Modal -->
+    <div id="iw-stock-debug-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:99999;overflow:auto;">
+        <div style="background:#fff;margin:40px auto;max-width:900px;border-radius:6px;padding:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                <h3 style="margin:0;">تشخيص رصيد الأصناف</h3>
+                <button onclick="document.getElementById('iw-stock-debug-modal').style.display='none'" class="button">✕ إغلاق</button>
+            </div>
+            <div id="iw-stock-debug-content">جاري التحميل...</div>
+        </div>
     </div>
 
     <!-- Products Table -->
@@ -118,7 +130,11 @@ jQuery(document).ready(function($) {
                 status = '<span class="iw-badge iw-badge-success">طبيعي</span>';
             }
             html += '<tr><td><input type="checkbox" class="iw-row-check" value="'+p.id+'"></td><td>'+(i+1)+'</td><td>'+p.name+'</td><td>'+(p.sku||'-')+'</td><td>'+(p.category||'-')+'</td>';
-            html += '<td>'+(p.unit||'-')+'</td><td>'+p.current_stock+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td>';
+            var stockCell = '<span id="stock-val-'+p.id+'">'+p.current_stock+'</span>';
+            if (iwAdmin.isAdmin) {
+                stockCell += ' <button class="button button-small" onclick="iwEditStock('+p.id+','+p.current_stock+')" title="تعديل الرصيد" style="padding:0 6px;min-height:22px;line-height:20px;">✎</button>';
+            }
+            html += '<td>'+(p.unit||'-')+'</td><td>'+stockCell+'</td><td>'+p.min_stock+'</td><td>'+p.max_stock+'</td>';
             html += '<td>'+parseFloat(p.price).toFixed(2)+'</td><td>'+status+'</td>';
             html += '<td><button class="button" onclick="iwEditProduct('+p.id+')">تعديل</button> ';
             html += '<button class="button iw-btn-danger" onclick="iwDeleteProduct('+p.id+')">حذف</button></td></tr>';
@@ -234,7 +250,7 @@ jQuery(document).ready(function($) {
         });
         printContent += '</table>';
         var w = window.open('','','width=900,height=600');
-        w.document.write('<html dir="rtl"><head><title>قائمة الأصناف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
+        w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>قائمة الأصناف</title><style>body{font-family:Arial,sans-serif;padding:20px;}</style></head><body>'+printContent+'</body></html>');
         w.document.close();
         w.print();
     };
@@ -258,4 +274,87 @@ jQuery(document).ready(function($) {
         });
     });
 });
+
+function iwEditStock(productId, currentStock) {
+    var newVal = prompt('أدخل الرصيد الجديد للصنف (الرصيد الحالي: ' + currentStock + '):', currentStock);
+    if (newVal === null) return; // cancelled
+    var newStock = parseInt(newVal, 10);
+    if (isNaN(newStock) || newStock < 0) { alert('الرصيد يجب أن يكون رقماً صحيحاً موجباً'); return; }
+    if (newStock === parseInt(currentStock, 10)) return; // no change
+    jQuery.post(iwAdmin.ajaxurl, {
+        action: 'iw_adjust_product_stock',
+        nonce: iwAdmin.nonce,
+        product_id: productId,
+        new_stock: newStock
+    }, function(res) {
+        if (res.success) {
+            var el = document.getElementById('stock-val-' + productId);
+            if (el) el.textContent = res.data.new_stock;
+            alert(res.data.message);
+        } else {
+            alert('خطأ: ' + (res.data ? res.data.message : 'فشل التعديل'));
+        }
+    });
+}
+
+function iwStockDebugAll() {
+    document.getElementById('iw-stock-debug-modal').style.display = 'block';
+    document.getElementById('iw-stock-debug-content').innerHTML = '<p>جاري التحميل...</p>';
+    jQuery.post(iwAdmin.ajaxurl, {action: 'iw_stock_debug', nonce: iwAdmin.nonce}, function(res) {
+        if (!res.success) { document.getElementById('iw-stock-debug-content').innerHTML = 'خطأ: ' + (res.data ? res.data.message : ''); return; }
+        var rows = '';
+        res.data.forEach(function(p) {
+            var ok = p.real_stock == p.available_stock;
+            var diff = p.real_stock - p.available_stock;
+            rows += '<tr style="background:' + (diff > 0 ? '#fff3cd' : '#fff') + '">'
+                + '<td><b>' + p.name + '</b></td>'
+                + '<td>' + p.current_stock_db + '</td>'
+                + '<td>' + p.real_stock + ' (مضاف - مكتمل)</td>'
+                + '<td>' + p.available_stock + ' (مطروح منه المعتمد)</td>'
+                + '<td style="color:' + (diff > 0 ? '#d63638' : '#008a20') + '">'
+                    + (diff > 0 ? '⚠ ' + diff + ' كمية محجوزة بأذونات معتمدة' : '✓') + '</td>'
+                + '<td><button class="button button-small" onclick="iwStockDebugProduct(' + p.id + ')">تفاصيل</button></td>'
+                + '</tr>';
+        });
+        document.getElementById('iw-stock-debug-content').innerHTML =
+            '<p style="color:#666;font-size:12px;">الرصيد الحقيقي = إجمالي الإضافات - الأذونات المكتملة | الرصيد المتاح = الرصيد الحقيقي - الأذونات المعتمدة</p>'
+            + '<table class="wp-list-table widefat fixed striped" style="margin-top:10px"><thead><tr>'
+            + '<th>الصنف</th><th>الرصيد في DB</th><th>الرصيد الحقيقي</th><th>الرصيد المتاح</th><th>الحالة</th><th></th>'
+            + '</tr></thead><tbody>' + rows + '</tbody></table>';
+    });
+}
+
+function iwStockDebugProduct(productId) {
+    document.getElementById('iw-stock-debug-content').innerHTML = '<p>جاري التحميل...</p>';
+    jQuery.post(iwAdmin.ajaxurl, {action: 'iw_stock_debug', nonce: iwAdmin.nonce, product_id: productId}, function(res) {
+        if (!res.success) return;
+        var d = res.data;
+        var addRows = (d.add_items || []).map(function(i) {
+            return '<tr><td>' + i.order_number + '</td><td>' + i.quantity + '</td><td>' + i.created_at + '</td></tr>';
+        }).join('');
+        var wdRows = (d.withdrawals || []).map(function(w) {
+            var color = w.status === 'completed' ? '#008a20' : (w.status === 'approved' ? '#d63638' : '#666');
+            return '<tr><td>' + w.order_number + '</td><td style="color:' + color + '">' + w.status + '</td><td>' + (w.order_type || 'normal') + '</td><td>' + w.qty + '</td></tr>';
+        }).join('');
+        // Orders in withdrawal_orders table (with or without items)
+        var owRows = (d.orders_without_items || []).map(function(o) {
+            var itemsLabel = o.items_count > 0
+                ? '<span style="color:green">' + o.items_count + ' بند</span>'
+                : '<span style="color:red;font-weight:bold">0 بنود ← مشكلة!</span>';
+            return '<tr><td>' + o.order_number + '</td><td>' + o.status + '</td><td>' + (o.order_type || 'normal') + '</td><td>' + itemsLabel + '</td><td>' + o.created_at + '</td></tr>';
+        }).join('');
+
+        document.getElementById('iw-stock-debug-content').innerHTML =
+            '<button onclick="iwStockDebugAll()" class="button" style="margin-bottom:10px">← رجوع للكل</button>'
+            + '<h4>' + d.product.name + '</h4>'
+            + '<p><b>الرصيد الحقيقي:</b> ' + d.real_stock + ' | <b>الرصيد المتاح:</b> ' + d.available_stock + '</p>'
+            + '<h5>أذونات الإضافة (add_order_items):</h5>'
+            + '<table class="wp-list-table widefat" style="margin-bottom:15px"><thead><tr><th>رقم الإذن</th><th>الكمية</th><th>التاريخ</th></tr></thead><tbody>' + (addRows || '<tr><td colspan=3>لا يوجد</td></tr>') + '</tbody></table>'
+            + '<h5>الأرصدة الافتتاحية:</h5><p>' + (d.opening_balances.length ? d.opening_balances.map(function(b){return b.quantity + ' (' + b.balance_date + ')';}).join(', ') : 'لا يوجد') + '</p>'
+            + '<h5>أذونات الصرف (في withdrawal_order_items):</h5>'
+            + '<table class="wp-list-table widefat" style="margin-bottom:15px"><thead><tr><th>رقم الإذن</th><th>الحالة</th><th>النوع</th><th>الكمية</th></tr></thead><tbody>' + (wdRows || '<tr><td colspan=4 style="color:red">لا يوجد بنود في جدول withdrawal_order_items لهذا الصنف</td></tr>') + '</tbody></table>'
+            + '<h5>جميع أذونات الصرف في النظام (آخر 20) - لكشف أذونات بدون بنود:</h5>'
+            + '<table class="wp-list-table widefat"><thead><tr><th>رقم الإذن</th><th>الحالة</th><th>النوع</th><th>عدد البنود</th><th>التاريخ</th></tr></thead><tbody>' + (owRows || '<tr><td colspan=5 style="color:red">لا يوجد أذونات صرف في النظام نهائياً!</td></tr>') + '</tbody></table>';
+    });
+}
 </script>

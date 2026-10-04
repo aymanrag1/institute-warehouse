@@ -1,29 +1,63 @@
-<?php if (!defined('ABSPATH')) exit; ?>
-<div class="wrap iw-wrap" dir="rtl">
-    <h1>إذن إضافة</h1>
+<?php
+if (!defined('ABSPATH')) exit;
+$tax_rate   = floatval(get_option('iw_tax_rate', 14));
+$from_pr_id = isset($_GET['from_pr']) ? intval($_GET['from_pr']) : 0;
+?>
+<div class="wrap iw-wrap" dir="<?php echo iw_dir(); ?>">
+    <h1><?php echo iw_t('إذن إضافة', 'Stock-In Order'); ?></h1>
+
+    <?php if ($from_pr_id): ?>
+    <div class="notice notice-info" style="margin:10px 0;padding:10px 15px;">
+        <p style="margin:0;">
+            <strong><?php echo iw_t('إنشاء إذن إضافة من طلب شراء', 'Creating Stock-In from Purchase Request'); ?></strong>
+            — <?php echo iw_t('الأصناف ستُحمَّل تلقائياً. أدخل سعر الوحدة لكل صنف.', 'Items will be loaded automatically. Enter unit price for each item.'); ?>
+        </p>
+    </div>
+    <input type="hidden" id="ao_from_pr_id" value="<?php echo esc_attr($from_pr_id); ?>">
+    <?php endif; ?>
 
     <form id="iw-add-order-form">
         <table class="form-table">
             <tr>
-                <th>المورد</th>
+                <th><?php echo iw_t('المورد', 'Supplier'); ?></th>
                 <td>
                     <div style="display:flex;gap:10px;align-items:center;">
-                        <select id="ao_supplier_id" class="regular-text" style="flex:1;"><option value="">اختر المورد</option></select>
-                        <button type="button" class="button" onclick="iwShowNewSupplierModal()">+ إضافة مورد جديد</button>
+                        <select id="ao_supplier_id" class="regular-text" style="flex:1;"><option value=""><?php echo iw_t('اختر المورد', 'Select Supplier'); ?></option></select>
+                        <button type="button" class="button" onclick="iwShowNewSupplierModal()">+ <?php echo iw_t('إضافة مورد جديد', 'Add New Supplier'); ?></button>
                     </div>
                 </td>
             </tr>
-            <tr><th>ملاحظات</th><td><textarea id="ao_notes" class="large-text" rows="2"></textarea></td></tr>
+            <tr><th><?php echo iw_t('ملاحظات', 'Notes'); ?></th><td><textarea id="ao_notes" class="large-text" rows="2"></textarea></td></tr>
+            <tr>
+                <th><?php echo iw_t('الضريبة', 'Tax'); ?></th>
+                <td>
+                    <label style="margin-<?php echo iw_dir() === 'rtl' ? 'left' : 'right'; ?>:20px;">
+                        <input type="radio" name="ao_tax_mode" value="incl" checked>
+                        &nbsp;<?php echo iw_t('السعر شامل الضريبة', 'Price includes tax'); ?>
+                    </label>
+                    <label>
+                        <input type="radio" name="ao_tax_mode" value="excl">
+                        &nbsp;<?php echo iw_t('السعر بدون الضريبة', 'Price excludes tax'); ?>
+                        <span style="color:#888;">(<?php echo iw_t('سيُضاف', 'tax added:'); ?> <?php echo $tax_rate; ?>%)</span>
+                    </label>
+                </td>
+            </tr>
         </table>
 
-        <h3>الأصناف</h3>
+        <h3><?php echo iw_t('الأصناف', 'Items'); ?></h3>
         <table class="wp-list-table widefat fixed striped" id="ao-items-table">
-            <thead><tr><th>الصنف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th><th>حذف</th></tr></thead>
+            <thead><tr>
+                <th style="width:36%"><?php echo iw_t('الصنف', 'Product'); ?></th>
+                <th style="width:9%"><?php echo iw_t('الكمية', 'Qty'); ?></th>
+                <th style="width:13%"><?php echo iw_t('سعر الوحدة', 'Unit Price'); ?></th>
+                <th style="width:22%"><?php echo iw_t('الإجمالي', 'Total'); ?></th>
+                <th style="width:10%"><?php echo iw_t('حذف', 'Del'); ?></th>
+            </tr></thead>
             <tbody id="ao-items-body"></tbody>
             <tfoot>
-                <tr><td colspan="5"><button type="button" class="button" onclick="iwAddOrderItem()">+ إضافة صنف</button></td></tr>
-                <tr style="background:#f9f9f9;font-weight:bold;">
-                    <td colspan="2">الإجمالي</td>
+                <tr><td id="ao-add-btn-td" colspan="5"><button type="button" class="button" onclick="iwAddOrderItem()">+ <?php echo iw_t('إضافة صنف', 'Add Item'); ?></button></td></tr>
+                <tr id="ao-totals-row" style="background:#f9f9f9;font-weight:bold;">
+                    <td colspan="2"><?php echo iw_t('الإجمالي', 'Total'); ?></td>
                     <td id="ao-total-qty">0</td>
                     <td id="ao-total-value">0.00</td>
                     <td></td>
@@ -32,15 +66,22 @@
         </table>
 
         <p style="margin-top:15px;">
-            <button type="submit" class="button button-primary button-large">حفظ إذن الإضافة</button>
+            <button type="submit" class="button button-primary button-large"><?php echo iw_t('حفظ إذن الإضافة', 'Save Stock-In Order'); ?></button>
         </p>
     </form>
 
     <hr style="margin:30px 0;">
 
-    <h2>أذونات الإضافة السابقة</h2>
+    <h2><?php echo iw_t('أذونات الإضافة السابقة', 'Previous Stock-In Orders'); ?></h2>
     <table class="wp-list-table widefat fixed striped">
-        <thead><tr><th>رقم الإذن</th><th>المورد</th><th>عدد الأصناف</th><th>إجمالي القيمة</th><th>التاريخ</th><th>إجراءات</th></tr></thead>
+        <thead><tr>
+            <th><?php echo iw_t('رقم الإذن', 'Order No.'); ?></th>
+            <th><?php echo iw_t('المورد', 'Supplier'); ?></th>
+            <th><?php echo iw_t('عدد الأصناف', 'Items'); ?></th>
+            <th><?php echo iw_t('إجمالي القيمة', 'Total Value'); ?></th>
+            <th><?php echo iw_t('التاريخ', 'Date'); ?></th>
+            <th><?php echo iw_t('إجراءات', 'Actions'); ?></th>
+        </tr></thead>
         <tbody id="add-orders-list"></tbody>
     </table>
 </div>
@@ -72,16 +113,87 @@
 <script>
 jQuery(document).ready(function($) {
     var products = [];
+    var TAX_ENABLED = false;
+    var TAX_RATE    = <?php echo $tax_rate; ?>;
+    var FROM_PR_ID  = <?php echo intval($from_pr_id); ?>;
+
+    // Per-order tax toggle
+    $(document).on('change', 'input[name="ao_tax_mode"]', function() {
+        TAX_ENABLED = $(this).val() === 'excl';
+
+        // Rebuild table header
+        var th = '';
+        th += '<th style="width:36%"><?php echo iw_t('الصنف', 'Product'); ?></th>';
+        th += '<th style="width:9%"><?php echo iw_t('الكمية', 'Qty'); ?></th>';
+        th += '<th style="width:13%"><?php echo iw_t('سعر الوحدة', 'Unit Price'); ?></th>';
+        if (TAX_ENABLED) {
+            th += '<th style="width:11%"><?php echo iw_t('قبل الضريبة', 'Subtotal'); ?></th>';
+            th += '<th style="width:9%"><?php echo iw_t('الضريبة', 'Tax'); ?> (' + TAX_RATE + '%)</th>';
+            th += '<th style="width:12%"><?php echo iw_t('الإجمالي شامل الضريبة', 'Total incl. Tax'); ?></th>';
+        } else {
+            th += '<th style="width:22%"><?php echo iw_t('الإجمالي', 'Total'); ?></th>';
+        }
+        th += '<th style="width:10%"><?php echo iw_t('حذف', 'Del'); ?></th>';
+        $('#ao-items-table thead tr').html(th);
+
+        // Update add-button colspan
+        $('#ao-add-btn-td').attr('colspan', TAX_ENABLED ? 7 : 5);
+
+        // Rebuild totals row
+        var tf = '';
+        tf += '<td colspan="2"><?php echo iw_t('الإجمالي', 'Total'); ?></td>';
+        tf += '<td id="ao-total-qty">0</td>';
+        tf += '<td id="ao-total-value">0.00</td>';
+        if (TAX_ENABLED) {
+            tf += '<td id="ao-total-tax">0.00</td>';
+            tf += '<td id="ao-total-grand">0.00</td>';
+        }
+        tf += '<td></td>';
+        $('#ao-totals-row').html(tf);
+
+        // Preserve item values and rebuild rows with correct structure
+        var saved = [];
+        $('.ao-item-row').each(function() {
+            saved.push({
+                product_id: $(this).find('.ao-product').val(),
+                quantity:   $(this).find('.ao-qty').val(),
+                unit_price: $(this).find('.ao-price').val()
+            });
+        });
+        $('#ao-items-body').html('');
+        if (saved.length) {
+            saved.forEach(function(it) { iwAddOrderItem(it); });
+        } else {
+            iwAddOrderItem();
+        }
+    });
 
     function loadProducts() {
         $.post(iwAdmin.ajaxurl, {action: 'iw_get_products_list', nonce: iwAdmin.nonce}, function(r) {
             if (r.success) {
                 products = r.data;
-                iwAddOrderItem(); // Add first row after products loaded
+                if (FROM_PR_ID) {
+                    iwLoadFromPr();
+                } else {
+                    iwAddOrderItem();
+                }
             }
         });
     }
     loadProducts();
+
+    window.iwLoadFromPr = function() {
+        var raw = null;
+        try { raw = sessionStorage.getItem('iw_pr_to_addorder'); } catch(e) {}
+        if (!raw) { iwAddOrderItem(); return; }
+        var data = null;
+        try { data = JSON.parse(raw); } catch(e) {}
+        if (!data || !data.items || !data.items.length) { iwAddOrderItem(); return; }
+        data.items.forEach(function(it) {
+            iwAddOrderItem({ product_id: it.product_id, quantity: it.quantity, unit_price: 0 });
+        });
+        try { sessionStorage.removeItem('iw_pr_to_addorder'); } catch(e) {}
+    };
 
     // Modal functions
     window.iwShowNewSupplierModal = function() {
@@ -134,48 +246,77 @@ jQuery(document).ready(function($) {
     loadOrders();
 
     // Add item row
-    window.iwAddOrderItem = function() {
+    window.iwAddOrderItem = function(prefill) {
+        prefill = prefill || {};
+        var pid  = prefill.product_id || '';
+        var qty  = prefill.quantity   || 1;
+        var pr   = prefill.unit_price || 0;
         var h = '<tr class="ao-item-row">';
         h += '<td><select class="ao-product regular-text" onchange="iwCalcRowTotal(this)"><option value="">اختر الصنف</option>';
-        products.forEach(function(p) { h += '<option value="'+p.id+'" data-price="'+p.price+'">'+p.name+' (المخزون: '+(p.current_stock||0)+')</option>'; });
+        products.forEach(function(p) {
+            var sel = (String(p.id) === String(pid)) ? ' selected' : '';
+            h += '<option value="'+p.id+'" data-price="'+p.price+'"'+sel+'>'+p.name+' (المخزون: '+(p.current_stock||0)+')</option>';
+        });
         h += '</select></td>';
-        h += '<td><input type="number" class="ao-qty" min="1" value="1" onchange="iwCalcRowTotal(this)" style="width:80px;"></td>';
-        h += '<td><input type="number" class="ao-price" min="0" step="0.01" value="0" onchange="iwCalcRowTotal(this)" style="width:100px;"></td>';
-        h += '<td class="ao-row-total">0.00</td>';
-        h += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove();iwCalcTotals();">حذف</button></td>';
+        h += '<td><input type="number" class="ao-qty" min="1" value="'+qty+'" oninput="iwCalcRowTotal(this)" style="width:90%;max-width:90px;"></td>';
+        h += '<td><input type="number" class="ao-price" min="0" step="0.01" value="'+pr+'" oninput="iwCalcRowTotal(this)" style="width:90%;max-width:110px;"></td>';
+        h += '<td class="ao-row-subtotal">0.00</td>';
+        if (TAX_ENABLED) {
+            h += '<td class="ao-row-tax">0.00</td>';
+            h += '<td class="ao-row-total">0.00</td>';
+        }
+        h += '<td><button type="button" class="button iw-btn-danger" onclick="jQuery(this).closest(\'tr\').remove();iwCalcTotals();">حذف</button></td>';
         h += '</tr>';
         $('#ao-items-body').append(h);
 
         var $row = $('#ao-items-body tr:last');
         if (typeof iwInitSelect2 === 'function') iwInitSelect2($row);
+        iwCalcRowTotal($row.find('.ao-qty')[0]);
     };
 
     // Calculate row total
     window.iwCalcRowTotal = function(el) {
         var $row = $(el).closest('tr');
-        // Only auto-fill price when product changes, not when price is manually edited
-        if ($(el).hasClass('ao-product')) {
+        // Only auto-fill price when product changes AND not coming from purchase request
+        // (PR flow leaves price blank for the user to enter)
+        if ($(el).hasClass('ao-product') && !FROM_PR_ID) {
             var price = $(el).find(':selected').data('price') || 0;
             $row.find('.ao-price').val(parseFloat(price).toFixed(2));
         }
 
-        var qty = parseInt($row.find('.ao-qty').val()) || 0;
+        var qty = parseFloat($row.find('.ao-qty').val()) || 0;
         var unitPrice = parseFloat($row.find('.ao-price').val()) || 0;
-        $row.find('.ao-row-total').text((qty * unitPrice).toFixed(2));
+        var subtotal  = qty * unitPrice;
+        var tax       = TAX_ENABLED ? subtotal * (TAX_RATE / 100) : 0;
+        var total     = subtotal + tax;
+
+        $row.find('.ao-row-subtotal').text(TAX_ENABLED ? subtotal.toFixed(2) : total.toFixed(2));
+        if (TAX_ENABLED) {
+            $row.find('.ao-row-tax').text(tax.toFixed(2));
+            $row.find('.ao-row-total').text(total.toFixed(2));
+        }
         iwCalcTotals();
     };
 
     // Calculate totals
     window.iwCalcTotals = function() {
-        var totalQty = 0, totalValue = 0;
+        var totalQty = 0, subTotal = 0, taxTotal = 0;
         $('.ao-item-row').each(function() {
-            totalQty += parseInt($(this).find('.ao-qty').val()) || 0;
-            var qty = parseInt($(this).find('.ao-qty').val()) || 0;
+            var qty   = parseFloat($(this).find('.ao-qty').val()) || 0;
             var price = parseFloat($(this).find('.ao-price').val()) || 0;
-            totalValue += qty * price;
+            totalQty += qty;
+            var sub   = qty * price;
+            subTotal += sub;
+            taxTotal += TAX_ENABLED ? sub * (TAX_RATE / 100) : 0;
         });
         $('#ao-total-qty').text(totalQty);
-        $('#ao-total-value').text(totalValue.toFixed(2));
+        if (TAX_ENABLED) {
+            $('#ao-total-value').text(subTotal.toFixed(2));
+            $('#ao-total-tax').text(taxTotal.toFixed(2));
+            $('#ao-total-grand').text((subTotal + taxTotal).toFixed(2));
+        } else {
+            $('#ao-total-value').text(subTotal.toFixed(2));
+        }
     };
 
     // Submit order
@@ -197,15 +338,37 @@ jQuery(document).ready(function($) {
             action: 'iw_create_add_order', nonce: iwAdmin.nonce,
             supplier_id: $('#ao_supplier_id').val(),
             notes: $('#ao_notes').val(),
-            items: JSON.stringify(items)
+            items: JSON.stringify(items),
+            from_pr_id: ($('#ao_from_pr_id').val() || 0),
+            tax_enabled: TAX_ENABLED ? 1 : 0,
+            tax_rate: TAX_RATE
         }, function(r) {
             alert(r.data.message);
             if (r.success) {
                 $('#iw-add-order-form')[0].reset();
+                TAX_ENABLED = false;
+                // Reset header back to 5-col mode
+                $('#ao-items-table thead tr').html(
+                    '<th style="width:36%"><?php echo iw_t('الصنف', 'Product'); ?></th>' +
+                    '<th style="width:9%"><?php echo iw_t('الكمية', 'Qty'); ?></th>' +
+                    '<th style="width:13%"><?php echo iw_t('سعر الوحدة', 'Unit Price'); ?></th>' +
+                    '<th style="width:22%"><?php echo iw_t('الإجمالي', 'Total'); ?></th>' +
+                    '<th style="width:10%"><?php echo iw_t('حذف', 'Del'); ?></th>'
+                );
+                $('#ao-add-btn-td').attr('colspan', 5);
+                $('#ao-totals-row').html(
+                    '<td colspan="2"><?php echo iw_t('الإجمالي', 'Total'); ?></td>' +
+                    '<td id="ao-total-qty">0</td>' +
+                    '<td id="ao-total-value">0.00</td>' +
+                    '<td></td>'
+                );
                 $('#ao-items-body').html('');
                 iwAddOrderItem();
                 loadOrders();
                 loadProducts();
+                if (FROM_PR_ID) {
+                    window.location.href = iwAdmin.adminurl + 'admin.php?page=iw-add-stock';
+                }
             }
         });
     });
@@ -278,7 +441,7 @@ jQuery(document).ready(function($) {
             content += '</tr></table>';
 
             var w = window.open('','','width=800,height=600');
-            w.document.write('<html dir="rtl"><head><title>إذن إضافة</title><style>body{font-family:Arial,sans-serif;padding:20px;direction:rtl;text-align:right;}table{direction:rtl;text-align:right;}th{background:#f0f0f0;text-align:right;}td{text-align:right;}</style></head><body>'+content+'</body></html>');
+            w.document.write('<html dir="<?php echo iw_dir(); ?>"><head><title>إذن إضافة</title><style>body{font-family:Arial,sans-serif;padding:20px;direction:rtl;text-align:right;}table{direction:rtl;text-align:right;}th{background:#f0f0f0;text-align:right;}td{text-align:right;}</style></head><body>'+content+'</body></html>');
             w.document.close(); w.print();
         });
     };
@@ -299,7 +462,7 @@ jQuery(document).ready(function($) {
                 html += '<td>'+i.product_name+'</td>';
                 html += '<td><input type="number" class="edit-qty" value="'+i.quantity+'" min="1"></td>';
                 html += '<td><input type="number" class="edit-price" value="'+i.unit_price+'" min="0" step="0.01"></td>';
-                html += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
+                html += '<td><button type="button" class="button iw-btn-danger" onclick="jQuery(this).closest(\'tr\').remove()">حذف</button></td></tr>';
             });
             html += '</tbody></table>';
             html += '<p style="margin-top:10px;"><button type="button" class="button" onclick="iwAddEditItem()">+ إضافة صنف</button></p>';
@@ -327,7 +490,7 @@ jQuery(document).ready(function($) {
         row += '<td><select class="edit-new-product regular-text" onchange="var p=$(this).find(\':selected\');$(this).closest(\'tr\').data(\'product\',$(this).val());$(this).closest(\'tr\').find(\'.edit-price\').val(p.data(\'price\')||0);">'+opts+'</select></td>';
         row += '<td><input type="number" class="edit-qty" value="1" min="1"></td>';
         row += '<td><input type="number" class="edit-price" value="0" min="0" step="0.01"></td>';
-        row += '<td><button type="button" class="button iw-btn-danger" onclick="$(this).closest(\'tr\').remove()">حذف</button></td></tr>';
+        row += '<td><button type="button" class="button iw-btn-danger" onclick="jQuery(this).closest(\'tr\').remove()">حذف</button></td></tr>';
         $('#edit-items-body').append(row);
     };
 

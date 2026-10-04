@@ -85,6 +85,7 @@ class IW_Database {
         $sql = "CREATE TABLE {$prefix}transactions (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
             transaction_type varchar(20) NOT NULL DEFAULT 'add',
+            add_order_id bigint(20) UNSIGNED DEFAULT NULL,
             product_id bigint(20) UNSIGNED NOT NULL,
             quantity int(11) NOT NULL,
             unit_price decimal(12,2) NOT NULL DEFAULT 0.00,
@@ -99,7 +100,8 @@ class IW_Database {
             PRIMARY KEY (id),
             KEY idx_product_type (product_id, transaction_type),
             KEY idx_remaining (product_id, remaining_qty),
-            KEY idx_created_at (created_at)
+            KEY idx_created_at (created_at),
+            KEY idx_add_order (add_order_id)
         ) $charset;";
         dbDelta($sql);
 
@@ -115,6 +117,7 @@ class IW_Database {
             approved_by bigint(20) UNSIGNED DEFAULT NULL,
             approved_at datetime DEFAULT NULL,
             signature_url varchar(500) DEFAULT '',
+            rejection_reason text,
             cancelled_by bigint(20) UNSIGNED DEFAULT NULL,
             cancelled_at datetime DEFAULT NULL,
             created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
@@ -195,6 +198,46 @@ class IW_Database {
         ) $charset;";
         dbDelta($sql);
 
+        // Return orders (إذن ارتجاع / رد عهدة)
+        $sql = "CREATE TABLE {$prefix}return_orders (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            order_number varchar(50) NOT NULL,
+            order_type varchar(20) NOT NULL DEFAULT 'normal',
+            original_order_id bigint(20) UNSIGNED DEFAULT NULL,
+            department_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            employee_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            department_name varchar(255) DEFAULT '',
+            employee_name varchar(255) DEFAULT '',
+            status varchar(20) NOT NULL DEFAULT 'pending',
+            notes text,
+            approved_by bigint(20) UNSIGNED DEFAULT NULL,
+            approved_at datetime DEFAULT NULL,
+            signature_url varchar(500) DEFAULT '',
+            rejection_reason text,
+            created_by bigint(20) UNSIGNED NOT NULL DEFAULT 0,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_status (status),
+            KEY idx_type (order_type),
+            KEY idx_original (original_order_id)
+        ) $charset;";
+        dbDelta($sql);
+
+        // Return order items
+        $sql = "CREATE TABLE {$prefix}return_order_items (
+            id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
+            order_id bigint(20) UNSIGNED NOT NULL,
+            product_id bigint(20) UNSIGNED NOT NULL,
+            quantity int(11) NOT NULL,
+            approved_quantity int(11) DEFAULT NULL,
+            unit_price decimal(12,2) NOT NULL DEFAULT 0.00,
+            PRIMARY KEY (id),
+            KEY idx_order_id (order_id),
+            KEY idx_product_id (product_id)
+        ) $charset;";
+        dbDelta($sql);
+
         // Permissions matrix
         $sql = "CREATE TABLE {$prefix}permissions (
             id bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -262,6 +305,10 @@ class IW_Database {
             if (!in_array('batch_number', $columns)) {
                 $wpdb->query("ALTER TABLE {$prefix}transactions ADD COLUMN batch_number varchar(100) DEFAULT '' AFTER notes");
             }
+            if (!in_array('add_order_id', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}transactions ADD COLUMN add_order_id bigint(20) UNSIGNED DEFAULT NULL AFTER transaction_type");
+                $wpdb->query("ALTER TABLE {$prefix}transactions ADD INDEX idx_add_order (add_order_id)");
+            }
         }
 
         // Note: departments table migration removed - now using RSYI HR System
@@ -313,6 +360,15 @@ class IW_Database {
             if (!in_array('cancelled_at', $columns)) {
                 $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN cancelled_at datetime DEFAULT NULL AFTER cancelled_by");
             }
+            if (!in_array('rejection_reason', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN rejection_reason text AFTER notes");
+            }
+            if (!in_array('department_name', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN department_name varchar(255) NOT NULL DEFAULT '' AFTER department_id");
+            }
+            if (!in_array('employee_name', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}withdrawal_orders ADD COLUMN employee_name varchar(255) NOT NULL DEFAULT '' AFTER employee_id");
+            }
         }
 
         // Check withdrawal_order_items table for custody_employee_name
@@ -330,6 +386,24 @@ class IW_Database {
             $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}purchase_request_items");
             if (!in_array('last_purchase_price', $columns)) {
                 $wpdb->query("ALTER TABLE {$prefix}purchase_request_items ADD COLUMN last_purchase_price decimal(12,2) NOT NULL DEFAULT 0.00 AFTER estimated_price");
+            }
+        }
+
+        // Add purchase_method to purchase_requests
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}purchase_requests'");
+        if ($table_exists) {
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}purchase_requests");
+            if (!in_array('purchase_method', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}purchase_requests ADD COLUMN purchase_method varchar(50) NOT NULL DEFAULT 'direct' AFTER notes");
+            }
+        }
+
+        // Add from_pr_id to add_orders (link add order to its source purchase request)
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$prefix}add_orders'");
+        if ($table_exists) {
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM {$prefix}add_orders");
+            if (!in_array('from_pr_id', $columns)) {
+                $wpdb->query("ALTER TABLE {$prefix}add_orders ADD COLUMN from_pr_id bigint(20) UNSIGNED DEFAULT NULL AFTER supplier_id");
             }
         }
     }

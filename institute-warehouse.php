@@ -3,7 +3,7 @@
  * Plugin Name: نظام إدارة مخازن المعهد
  * Plugin URI: https://example.com
  * Description: نظام متكامل لإدارة مخازن المعاهد التعليمية مع نظام FIFO وصلاحيات تفصيلية وتوقيع إلكتروني
- * Version: 2.3.2
+ * Version: 2.7.2
  * Author: AYMAN RAGAB
  * Author URI: tel:00201159230034
  * Text Domain: institute-warehouse
@@ -15,9 +15,46 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('IW_VERSION', '2.4.0');
+define('IW_VERSION', '2.7.2');
 define('IW_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IW_PLUGIN_URL', plugin_dir_url(__FILE__));
+
+// ── GitHub auto-updater ─────────────────────────────────────────────────────
+// Checks the GitHub repo for new Releases and lets WordPress install them
+// directly (no manual download/upload). To publish an update: bump the version
+// above, commit & push, then on GitHub create a Release whose tag is "vX.Y.Z"
+// matching this version.
+if (file_exists(IW_PLUGIN_DIR . 'vendor/plugin-update-checker/plugin-update-checker.php')) {
+    require_once IW_PLUGIN_DIR . 'vendor/plugin-update-checker/plugin-update-checker.php';
+    $iw_update_checker = YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+        'https://github.com/aymanrag1/institute-warehouse/',
+        __FILE__,
+        'institute-warehouse'
+    );
+    // Pull updates from GitHub Releases (recommended: create a Release per version)
+    $iw_update_checker->getVcsApi()->enableReleaseAssets();
+    // Track the main branch (optional - uncomment to update from branch tip instead of releases)
+    // $iw_update_checker->setBranch('main');
+}
+
+// ── Language helpers ────────────────────────────────────────────────────────
+/**
+ * Detect language from WordPress locale (not a custom option).
+ * Returns 'ar' for Arabic locales, 'en' for everything else.
+ */
+function iw_get_lang() {
+    $locale = get_locale();
+    return (strpos($locale, 'ar') !== false || is_rtl()) ? 'ar' : 'en';
+}
+function iw_is_ar() { return iw_get_lang() === 'ar'; }
+function iw_dir()   { return iw_is_ar() ? 'rtl' : 'ltr'; }
+/**
+ * Inline bilingual string helper.
+ * Usage: iw_t('النص العربي', 'English Text')
+ */
+function iw_t($ar, $en = '') {
+    return iw_is_ar() ? $ar : ($en ?: $ar);
+}
 
 /**
  * Check if RSYI HR System is active
@@ -252,6 +289,7 @@ class Institute_Warehouse_System {
         require_once IW_PLUGIN_DIR . 'includes/class-iw-categories.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-reports.php';
         require_once IW_PLUGIN_DIR . 'includes/class-iw-excel-import.php';
+        require_once IW_PLUGIN_DIR . 'includes/class-iw-return-orders.php';
         require_once IW_PLUGIN_DIR . 'admin/class-iw-admin.php';
     }
 
@@ -290,6 +328,7 @@ class Institute_Warehouse_System {
         IW_Categories::init();
         IW_Reports::init();
         IW_Excel_Import::init();
+        IW_Return_Orders::init();
     }
 
     public function activate() {
@@ -376,6 +415,26 @@ class Institute_Warehouse_System {
             'iw_view_warehouse',
             'iw-purchase-requests',
             array('IW_Admin', 'purchase_requests_page')
+        );
+
+        // أذون الارتجاع ورد العهدة
+        add_submenu_page(
+            'institute-warehouse',
+            __('أذون الارتجاع', 'institute-warehouse'),
+            __('أذون الارتجاع', 'institute-warehouse'),
+            'iw_withdraw_stock',
+            'iw-return-orders',
+            array('IW_Admin', 'return_orders_page')
+        );
+
+        // طباعة إذن ارتجاع
+        add_submenu_page(
+            'institute-warehouse',
+            __('طباعة إذن ارتجاع', 'institute-warehouse'),
+            __('طباعة إذن ارتجاع', 'institute-warehouse'),
+            'iw_withdraw_stock',
+            'iw-print-return-permit',
+            array('IW_Admin', 'print_return_permit_page')
         );
 
         // الرصيد الافتتاحي
@@ -548,14 +607,69 @@ class Institute_Warehouse_System {
         // إضافة مكتبة XLSX لاستيراد Excel
         wp_enqueue_script('xlsx-js', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', array(), '0.18.5', true);
 
+        $is_ar = iw_is_ar();
         wp_localize_script('iw-admin-js', 'iwAdmin', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('iw_admin_nonce'),
-            'strings' => array(
-                'confirm_delete' => __('هل أنت متأكد من الحذف؟', 'institute-warehouse'),
-                'error' => __('حدث خطأ، يرجى المحاولة مرة أخرى', 'institute-warehouse'),
-                'success' => __('تمت العملية بنجاح', 'institute-warehouse'),
-            )
+            'ajaxurl'       => admin_url('admin-ajax.php'),
+            'adminurl'      => admin_url(),
+            'nonce'         => wp_create_nonce('iw_admin_nonce'),
+            'isAdmin'       => current_user_can('manage_options') ? 1 : 0,
+            'sigWidth'      => intval(get_option('iw_signature_width', 150)),
+            'taxRate'       => floatval(get_option('iw_tax_rate', 14)),
+            'lang'     => iw_get_lang(),
+            'dir'      => iw_dir(),
+            'strings'  => array(
+                'confirm_delete' => $is_ar ? 'هل أنت متأكد من الحذف؟'           : 'Are you sure you want to delete?',
+                'error'          => $is_ar ? 'حدث خطأ، يرجى المحاولة مرة أخرى' : 'An error occurred, please try again.',
+                'success'        => $is_ar ? 'تمت العملية بنجاح'                : 'Operation completed successfully.',
+                'no_items'       => $is_ar ? 'لا توجد عناصر'                   : 'No items found.',
+                'choose'         => $is_ar ? 'اختر...'                          : 'Select...',
+                'save'           => $is_ar ? 'حفظ'            : 'Save',
+                'delete'         => $is_ar ? 'حذف'            : 'Delete',
+                'view'           => $is_ar ? 'عرض'            : 'View',
+                'print'          => $is_ar ? 'طباعة'          : 'Print',
+                'approve'        => $is_ar ? 'اعتماد'         : 'Approve',
+                'reject'         => $is_ar ? 'رفض'            : 'Reject',
+                'complete'       => $is_ar ? 'تنفيذ'          : 'Execute',
+                'cancel'         => $is_ar ? 'إلغاء'          : 'Cancel',
+                'edit'           => $is_ar ? 'تعديل'          : 'Edit',
+                'add'            => $is_ar ? 'إضافة'          : 'Add',
+                'pending'        => $is_ar ? 'معلق'           : 'Pending',
+                'approved'       => $is_ar ? 'معتمد'          : 'Approved',
+                'completed'      => $is_ar ? 'منفذ'           : 'Completed',
+                'rejected'       => $is_ar ? 'مرفوض'          : 'Rejected',
+                'cancelled'      => $is_ar ? 'ملغي'           : 'Cancelled',
+                'product'        => $is_ar ? 'الصنف'          : 'Product',
+                'quantity'       => $is_ar ? 'الكمية'         : 'Quantity',
+                'price'          => $is_ar ? 'السعر'          : 'Price',
+                'total'          => $is_ar ? 'الإجمالي'       : 'Total',
+                'grand_total'    => $is_ar ? 'الإجمالي الكلي' : 'Grand Total',
+                'est_total'      => $is_ar ? 'الإجمالي التقديري' : 'Estimated Total',
+                'notes'          => $is_ar ? 'ملاحظات'        : 'Notes',
+                'date'           => $is_ar ? 'التاريخ'        : 'Date',
+                'status'         => $is_ar ? 'الحالة'         : 'Status',
+                'actions'        => $is_ar ? 'إجراءات'        : 'Actions',
+                'department'     => $is_ar ? 'القسم'          : 'Department',
+                'employee'       => $is_ar ? 'الموظف'         : 'Employee',
+                'supplier'       => $is_ar ? 'المورد'         : 'Supplier',
+                'unit'           => $is_ar ? 'الوحدة'         : 'Unit',
+                'current_stock'  => $is_ar ? 'المخزون الحالي' : 'Current Stock',
+                'min_stock'      => $is_ar ? 'الحد الأدنى'    : 'Min Stock',
+                'max_stock'      => $is_ar ? 'الحد الأقصى'    : 'Max Stock',
+                'order_number'   => $is_ar ? 'رقم الإذن'      : 'Order No.',
+                'order_type'     => $is_ar ? 'النوع'          : 'Type',
+                'normal'         => $is_ar ? 'عادي'           : 'Normal',
+                'custody'        => $is_ar ? 'عهدة'           : 'Custody',
+                'approved_by'    => $is_ar ? 'المعتمد'        : 'Approved By',
+                'signature'      => $is_ar ? 'توقيع المعتمد'  : 'Approver Signature',
+                'last_price'     => $is_ar ? 'آخر سعر شراء'   : 'Last Purchase Price',
+                'est_price'      => $is_ar ? 'السعر التقديري' : 'Estimated Price',
+                'approved_qty'   => $is_ar ? 'الكمية المعتمدة': 'Approved Qty',
+                'req_number'     => $is_ar ? 'رقم الطلب'      : 'Request No.',
+                'confirm_approve'=> $is_ar ? 'هل أنت متأكد من اعتماد هذا الطلب؟' : 'Are you sure you want to approve this request?',
+                'reject_reason'  => $is_ar ? 'سبب الرفض:'     : 'Rejection reason:',
+                'return_type_normal'  => $is_ar ? 'ارتجاع عادي' : 'Normal Return',
+                'return_type_custody' => $is_ar ? 'رد عهدة'     : 'Custody Return',
+            ),
         ));
     }
 }

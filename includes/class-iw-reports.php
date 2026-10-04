@@ -41,17 +41,33 @@ class IW_Reports {
         if ($to)   $where .= $wpdb->prepare(" AND t.created_at <= %s", $to . ' 23:59:59');
         if ($type) $where .= $wpdb->prepare(" AND t.transaction_type = %s", $type);
 
+        // iw_departments / iw_employees tables were removed (plugin uses RSYI HR System).
+        // Enrich department/employee names in PHP via IW_Departments helpers, which handle any HR schema.
         $rows = $wpdb->get_results(
             "SELECT t.*, p.name as product_name, p.unit as product_unit,
-                    d.name as department_name, e.name as employee_name, s.name as supplier_name
+                    s.name as supplier_name
              FROM {$prefix}transactions t
              LEFT JOIN {$prefix}products p ON t.product_id = p.id
-             LEFT JOIN {$prefix}departments d ON t.department_id = d.id
-             LEFT JOIN {$prefix}employees e ON t.employee_id = e.id
              LEFT JOIN {$prefix}suppliers s ON t.supplier_id = s.id
              WHERE $where
              ORDER BY t.created_at DESC"
         );
+
+        if ($rows) {
+            foreach ($rows as $row) {
+                $row->department_name = '';
+                $row->employee_name   = '';
+                if (!empty($row->department_id)) {
+                    $dept = IW_Departments::get_by_id($row->department_id);
+                    if ($dept) $row->department_name = $dept->name;
+                }
+                if (!empty($row->employee_id)) {
+                    $emp = IW_Departments::get_employee_by_id($row->employee_id);
+                    if ($emp) $row->employee_name = $emp->name;
+                }
+            }
+        }
+
         wp_send_json_success($rows);
     }
 
@@ -89,16 +105,30 @@ class IW_Reports {
         if ($from) $where .= $wpdb->prepare(" AND t.created_at >= %s", $from . ' 00:00:00');
         if ($to)   $where .= $wpdb->prepare(" AND t.created_at <= %s", $to . ' 23:59:59');
 
+        // iw_departments / iw_employees tables were removed (plugin uses RSYI HR System).
+        // Enrich department/employee names in PHP via IW_Departments helpers.
         $rows = $wpdb->get_results(
-            "SELECT t.*, p.name as product_name, p.unit as product_unit,
-                    d.name as department_name, e.name as employee_name
+            "SELECT t.*, p.name as product_name, p.unit as product_unit
              FROM {$prefix}transactions t
              LEFT JOIN {$prefix}products p ON t.product_id = p.id
-             LEFT JOIN {$prefix}departments d ON t.department_id = d.id
-             LEFT JOIN {$prefix}employees e ON t.employee_id = e.id
              WHERE $where
              ORDER BY t.created_at DESC"
         );
+
+        if ($rows) {
+            foreach ($rows as $row) {
+                $row->department_name = '';
+                $row->employee_name   = '';
+                if (!empty($row->department_id)) {
+                    $dept = IW_Departments::get_by_id($row->department_id);
+                    if ($dept) $row->department_name = $dept->name;
+                }
+                if (!empty($row->employee_id)) {
+                    $emp = IW_Departments::get_employee_by_id($row->employee_id);
+                    if ($emp) $row->employee_name = $emp->name;
+                }
+            }
+        }
 
         // Calculate summary
         $total_qty = 0;

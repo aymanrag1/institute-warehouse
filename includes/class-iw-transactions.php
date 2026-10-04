@@ -182,11 +182,11 @@ class IW_Transactions {
             $remaining -= $deduct;
         }
 
-        // Update product stock
-        IW_Products::update_stock($product_id, -$quantity);
-
-        // Commit transaction
+        // Commit FIFO remaining_qty changes first, then update stock
         $wpdb->query('COMMIT');
+
+        // Update product stock AFTER commit so it's consistent with committed data
+        IW_Products::update_stock($product_id, -$quantity);
 
         return $total_cost;
     }
@@ -203,9 +203,11 @@ class IW_Transactions {
         }
 
         $results = $wpdb->get_results(
-            "SELECT t.*, p.name as product_name, p.unit as product_unit
+            "SELECT t.*, p.name as product_name, p.unit as product_unit,
+                    s.name as supplier_name
              FROM {$prefix}transactions t
              LEFT JOIN {$prefix}products p ON t.product_id = p.id
+             LEFT JOIN {$prefix}suppliers s ON t.supplier_id = s.id
              WHERE 1=1 $where
              ORDER BY t.created_at DESC LIMIT 200"
         );
