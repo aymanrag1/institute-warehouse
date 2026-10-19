@@ -342,12 +342,23 @@ jQuery(document).ready(function($) {
                 public_tender:  iwT('مناقصة عامة', 'Public Tender')
             };
             var methodLabel = methodLabels[o.purchase_method] || methodLabels.direct;
+            // Admin can edit approved/completed PRs — same UI as pending, but a dedicated save button
+            var adminEdit = iwAdmin.isAdmin && (o.status === 'approved' || o.status === 'completed');
+            var canEdit   = (o.status === 'pending') || adminEdit;
+
             var html = '<h2>' + iwT('طلب شراء رقم: ', 'Purchase Request No.: ') + o.request_number + '</h2>';
             html += '<p><strong>' + iwT('طريقة الشراء:', 'Purchase Method:') + '</strong> ' + methodLabel + '</p>';
+            if (adminEdit) {
+                html += '<div class="notice notice-warning inline" style="margin:10px 0;padding:8px 12px;">'
+                      + '<p style="margin:0;"><strong>⚠ ' + iwT('وضع تعديل المدير:', 'Admin edit mode:') + '</strong> '
+                      + iwT('يمكنك تعديل الكميات والأسعار وسيُعاد ضبط المخزون تلقائياً.',
+                            'You can edit quantities and prices; stock will be re-synced automatically.')
+                      + '</p></div>';
+            }
 
             // Items table
             html += '<table class="wp-list-table widefat fixed striped"><thead><tr>';
-            if (o.status === 'approved') {
+            if (o.status === 'approved' && !adminEdit) {
                 html += '<th style="width:40px;"><input type="checkbox" id="pr-select-all" onclick="iwPrToggleAll(this)"></th>';
             }
             html += '<th>' + iwT('الصنف', 'Product') + '</th>'
@@ -355,14 +366,14 @@ jQuery(document).ready(function($) {
                   + '<th>' + iwT('الحد الأدنى', 'Min') + '</th>'
                   + '<th>' + iwT('الحد الأقصى', 'Max') + '</th>'
                   + '<th>' + iwT('الكمية المطلوبة', 'Qty') + '</th>';
-            if (o.status === 'pending') html += '<th>' + iwT('الكمية المعتمدة', 'Approved Qty') + '</th>';
+            if (canEdit) html += '<th>' + iwT('الكمية المعتمدة', 'Approved Qty') + '</th>';
             html += '<th>' + iwT('آخر سعر شراء', 'Last Price') + '</th>'
                   + '<th>' + iwT('السعر التقديري', 'Est. Price') + '</th>'
                   + '<th>' + iwT('الإجمالي', 'Total') + '</th>';
-            if (o.status === 'pending') html += '<th>' + iwT('حذف', 'Del') + '</th>';
+            if (canEdit) html += '<th>' + iwT('حذف', 'Del') + '</th>';
             html += '</tr></thead><tbody>';
 
-            var emptyColspan = (o.status === 'approved') ? 10 : 9;
+            var emptyColspan = (o.status === 'approved' && !adminEdit) ? 10 : 9;
             if (!items.length) {
                 html += '<tr><td colspan="'+emptyColspan+'" style="text-align:center;padding:20px;color:#999;">'
                       + iwT('لا توجد أصناف مسجلة في هذا الطلب', 'No items recorded in this request.')
@@ -374,11 +385,11 @@ jQuery(document).ready(function($) {
                 var lastPrice  = parseFloat(it.last_purchase_price || it.estimated_price);
                 var estPrice   = parseFloat(it.estimated_price);
                 var approvedQty = it.approved_quantity !== null ? parseInt(it.approved_quantity) : parseInt(it.quantity);
-                var rowTotal   = (o.status === 'pending' ? parseInt(it.quantity) : approvedQty) * estPrice;
+                var rowTotal   = (canEdit ? approvedQty : approvedQty) * estPrice;
                 grandTotal    += rowTotal;
 
                 html += '<tr data-item-id="'+it.id+'" data-product-id="'+it.product_id+'" data-product-name="'+(it.product_name||'').replace(/"/g,'&quot;')+'" data-approved-qty="'+approvedQty+'">';
-                if (o.status === 'approved') {
+                if (o.status === 'approved' && !adminEdit) {
                     html += '<td><input type="checkbox" class="pr-item-check" value="'+it.id+'"></td>';
                 }
                 html += '<td>'+it.product_name+'</td>'
@@ -387,13 +398,13 @@ jQuery(document).ready(function($) {
                       + '<td>'+(it.max_stock||0)+'</td>'
                       + '<td>'+it.quantity+'</td>';
 
-                if (o.status === 'pending') {
+                if (canEdit) {
                     html += '<td><input type="number" class="pr-approve-qty" data-product="'+it.product_id+'"'
-                         + ' value="'+it.quantity+'" min="0" data-price="'+estPrice+'" style="width:80px;"'
+                         + ' value="'+approvedQty+'" min="0" data-price="'+estPrice+'" style="width:80px;"'
                          + ' oninput="iwRecalcModalTotal()"></td>';
                 }
                 html += '<td>' + lastPrice.toFixed(2) + '</td>';
-                if (o.status === 'pending') {
+                if (canEdit) {
                     html += '<td><input type="number" class="pr-edit-price" value="'+estPrice.toFixed(2)+'"'
                          + ' min="0" step="0.01" style="width:100px;" oninput="iwRecalcModalTotal()"></td>'
                          + '<td class="pr-row-total">'+rowTotal.toFixed(2)+'</td>'
@@ -406,12 +417,12 @@ jQuery(document).ready(function($) {
             });
 
             // Grand total row
-            var totalColspan = (o.status === 'approved') ? 9 : 8;
+            var totalColspan = (o.status === 'approved' && !adminEdit) ? 9 : 8;
             html += '<tr style="font-weight:bold;background:#f9f9f9;">'
                   + '<td colspan="' + totalColspan + '">'
                   + iwT('الإجمالي التقديري', 'Estimated Grand Total') + '</td>'
                   + '<td id="pr-modal-grand-total">' + grandTotal.toFixed(2) + '</td>';
-            if (o.status === 'pending') html += '<td></td>';
+            if (canEdit) html += '<td></td>';
             html += '</tr>';
 
             html += '</tbody></table>';
@@ -435,7 +446,7 @@ jQuery(document).ready(function($) {
                       + '<button class="button button-large" onclick="iwSavePrEdit('+o.id+')">' + iwT('حفظ التعديلات', 'Save Changes') + '</button>'
                       + '</div>';
             }
-            if (o.status === 'approved') {
+            if (o.status === 'approved' && !adminEdit) {
                 html += '<div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">'
                       + '<button class="button button-primary button-large" onclick="iwPrintPr('+o.id+')">' + iwT('طباعة', 'Print') + '</button>'
                       + '<button class="button button-secondary button-large" onclick="iwPrCreateAddOrder('+o.id+')" style="background:#2271b1;color:#fff;border-color:#2271b1;">'
@@ -445,6 +456,17 @@ jQuery(document).ready(function($) {
                       + iwT('حدد الأصناف التي تم استلامها فعلياً ثم اضغط "تنفيذ إذن إضافة للمحدد" لإنشاء إذن إضافة بهذه الأصناف فقط.',
                             'Select the items that were actually received, then click "Create Stock-In for Selected" to create a stock-in order with only those items.')
                       + '</p>';
+            }
+            if (adminEdit) {
+                var noteText = (o.status === 'completed')
+                    ? iwT('سيُعاد ضبط حركات المخزون تلقائياً بعد الحفظ.', 'Stock transactions will be re-synced automatically after save.')
+                    : iwT('التعديل يسري قبل تنفيذ إذن الإضافة.', 'Changes take effect before the stock-in is executed.');
+                html += '<div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">'
+                      + '<button class="button button-primary button-large" onclick="iwSavePrEdit('+o.id+')">💾 '
+                      + iwT('حفظ تعديلات المدير', 'Save Admin Edits') + '</button>'
+                      + '<button class="button button-large" onclick="iwPrintPr('+o.id+')">' + iwT('طباعة', 'Print') + '</button>'
+                      + '</div>'
+                      + '<p class="description" style="margin-top:8px;">' + noteText + '</p>';
             }
 
             // Admin: restore missing items

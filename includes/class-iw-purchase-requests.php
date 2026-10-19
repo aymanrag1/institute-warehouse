@@ -492,7 +492,87 @@ class IW_Purchase_Requests {
             );
         }
 
+        // Admin edit of a completed PR must re-sync FIFO transactions and product stock,
+        // otherwise the quantities already added to inventory would stay out of sync.
+        if ($is_admin && $request->status === 'completed') {
+            self::resync_completed_transactions($request_id, $request->request_number);
+            wp_send_json_success(array('message' => 'تم تعديل طلب الشراء وتم تحديث المخزون والحركات'));
+        }
+
         wp_send_json_success(array('message' => 'تم تعديل طلب الشراء'));
+    }
+
+    /**
+     * Rebuild FIFO 'add' transactions tied to a completed purchase request
+     * so that current_stock and remaining_qty reflect the edited item list.
+     *
+     * Transactions are linked by notes ("طلب شراء رقم: PR-...") because
+     * complete_request() does not stamp an FK. Already-consumed quantity is
+     * preserved so FIFO withdrawals that already happened remain correct.
+     */
+    private static function resync_completed_transactions($request_id, $request_number) {
+        global $wpdb;
+        $prefix = $wpdb->prefix . 'iw_';
+        $pr_note = 'طلب شراء رقم: ' . $request_number;
+
+        // Capture how much of each product was already consumed from the old PR transactions
+        $consumption_map = array();
+        $old_tx = $wpdb->get_results($wpdb->prepare(
+            "SELECT product_id, quantity, remaining_qty
+             FROM {$prefix}transactions
+             WHERE notes = %s AND transaction_type = 'add'",
+            $pr_note
+        ));
+        foreach ($old_tx as $t) {
+            $consumed = intval($t->quantity) - intval($t->remaining_qty);
+            $pid = intval($t->product_id);
+            $consumption_map[$pid] = ($consumption_map[$pid] ?? 0) + $consumed;
+        }
+
+        // Collect the products that will change so we can resync all of them
+        // (old products that got removed from the PR need to resync too)
+        $affected = array();
+        foreach ($old_tx as $t) {
+            $affected[intval($t->product_id)] = true;
+        }
+
+        // Delete old PR transactions
+        $wpdb->query($wpdb->prepare(
+            "DELETE FROM {$prefix}transactions WHERE notes = %s AND transaction_type = 'add'",
+            $pr_note
+        ));
+
+        // Recreate transactions from the current (edited) PR items
+        $new_items = $wpdb->get_results($wpdb->prepare(
+            "SELECT * FROM {$prefix}purchase_request_items WHERE request_id = %d",
+            $request_id
+        ));
+        foreach ($new_items as $item) {
+            $qty = $item->approved_quantity !== null ? intval($item->approved_quantity) : intval($item->quantity);
+            if ($qty <= 0) continue;
+
+            $pid = intval($item->product_id);
+            $already_consumed = $consumption_map[$pid] ?? 0;
+            $new_remaining = max(0, $qty - $already_consumed);
+
+            $wpdb->insert($prefix . 'transactions', array(
+                'transaction_type' => 'add',
+                'product_id'       => $pid,
+                'quantity'         => $qty,
+                'unit_price'       => floatval($item->estimated_price),
+                'remaining_qty'    => $new_remaining,
+                'notes'            => $pr_note,
+                'created_by'       => get_current_user_id(),
+                'created_at'       => current_time('mysql'),
+            ));
+
+            $affected[$pid] = true;
+        }
+
+        // Resync current_stock on every product that was touched
+        foreach (array_keys($affected) as $pid) {
+            IW_Products::sync_product_stock($pid);
+        }
     }
 
     /**
