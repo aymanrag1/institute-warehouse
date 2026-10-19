@@ -311,6 +311,10 @@ jQuery(document).ready(function($) {
                 if (status !== 'approved' && status) html += '<td>' + (o.notes || '-') + '</td>';
                 html += '<td>';
                 html += '<button class="button" onclick="iwViewPr('+o.id+')">' + iwT('عرض', 'View') + '</button>';
+                // Admin edit on approved/completed: opens the view modal in edit mode
+                if (iwAdmin.isAdmin && (o.status === 'approved' || o.status === 'completed')) {
+                    html += ' <button class="button button-primary" onclick="iwViewPr('+o.id+')" title="' + iwT('تعديل (مدير)', 'Admin edit') + '" style="background:#f0b232;border-color:#d99521;color:#fff;">✎ ' + iwT('تعديل', 'Edit') + '</button>';
+                }
                 if (o.status === 'pending')  html += ' <button class="button iw-btn-danger" onclick="iwDeletePr('+o.id+')">' + iwT('حذف', 'Delete') + '</button>';
                 else if (iwAdmin.isAdmin)    html += ' <button class="button iw-btn-danger" onclick="iwDeletePr('+o.id+')" title="' + iwT('حذف نهائي (مدير)', 'Admin force delete') + '">' + iwT('حذف', 'Delete') + '</button>';
                 if (o.status === 'approved') html += ' <button class="button button-primary" onclick="iwPrintPr('+o.id+')">' + iwT('طباعة', 'Print') + '</button>';

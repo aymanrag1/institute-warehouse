@@ -235,7 +235,7 @@ jQuery(document).ready(function($) {
                 h += '<button class="button" onclick="iwViewOrder('+o.id+')">عرض</button> ';
                 h += '<button class="button" onclick="iwPrintOrder('+o.id+')">طباعة</button>';
                 <?php if (current_user_can('manage_options')): ?>
-                h += ' <button class="button" onclick="iwEditOrder('+o.id+')">تعديل</button>';
+                h += ' <button class="button button-primary" onclick="iwEditOrder('+o.id+')" title="تعديل (مدير)" style="background:#f0b232;border-color:#d99521;color:#fff;">✎ تعديل</button>';
                 h += ' <button class="button iw-btn-danger" onclick="iwDeleteOrder('+o.id+')">حذف</button>';
                 <?php endif; ?>
                 h += '</td></tr>';
