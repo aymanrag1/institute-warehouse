@@ -362,7 +362,8 @@ jQuery(document).ready(function($) {
 
             // Items table
             html += '<table class="wp-list-table widefat fixed striped"><thead><tr>';
-            if (o.status === 'approved' && !adminEdit) {
+            // Checkbox column: for approved PRs (used by "Create Stock-In for Selected")
+            if (o.status === 'approved') {
                 html += '<th style="width:40px;"><input type="checkbox" id="pr-select-all" onclick="iwPrToggleAll(this)"></th>';
             }
             html += '<th>' + iwT('الصنف', 'Product') + '</th>'
@@ -377,7 +378,10 @@ jQuery(document).ready(function($) {
             if (canEdit) html += '<th>' + iwT('حذف', 'Del') + '</th>';
             html += '</tr></thead><tbody>';
 
-            var emptyColspan = (o.status === 'approved' && !adminEdit) ? 10 : 9;
+            // Column count = 8 fixed (product, stock, min, max, qty, last_price, est_price, total)
+            //              + 1 if approved (checkbox)
+            //              + 2 if canEdit (approved_qty + del)
+            var emptyColspan = 8 + (o.status === 'approved' ? 1 : 0) + (canEdit ? 2 : 0);
             if (!items.length) {
                 html += '<tr><td colspan="'+emptyColspan+'" style="text-align:center;padding:20px;color:#999;">'
                       + iwT('لا توجد أصناف مسجلة في هذا الطلب', 'No items recorded in this request.')
@@ -393,7 +397,7 @@ jQuery(document).ready(function($) {
                 grandTotal    += rowTotal;
 
                 html += '<tr data-item-id="'+it.id+'" data-product-id="'+it.product_id+'" data-product-name="'+(it.product_name||'').replace(/"/g,'&quot;')+'" data-approved-qty="'+approvedQty+'">';
-                if (o.status === 'approved' && !adminEdit) {
+                if (o.status === 'approved') {
                     html += '<td><input type="checkbox" class="pr-item-check" value="'+it.id+'"></td>';
                 }
                 html += '<td>'+it.product_name+'</td>'
@@ -420,8 +424,11 @@ jQuery(document).ready(function($) {
                 html += '</tr>';
             });
 
-            // Grand total row
-            var totalColspan = (o.status === 'approved' && !adminEdit) ? 9 : 8;
+            // Grand total row: colspan = all cols before "Total" column
+            //   = 7 fixed (product, stock, min, max, qty, last_price, est_price)
+            //   + 1 if approved (checkbox)
+            //   + 1 if canEdit (approved_qty)
+            var totalColspan = 7 + (o.status === 'approved' ? 1 : 0) + (canEdit ? 1 : 0);
             html += '<tr style="font-weight:bold;background:#f9f9f9;">'
                   + '<td colspan="' + totalColspan + '">'
                   + iwT('الإجمالي التقديري', 'Estimated Grand Total') + '</td>'
@@ -450,27 +457,33 @@ jQuery(document).ready(function($) {
                       + '<button class="button button-large" onclick="iwSavePrEdit('+o.id+')">' + iwT('حفظ التعديلات', 'Save Changes') + '</button>'
                       + '</div>';
             }
-            if (o.status === 'approved' && !adminEdit) {
+            // Approved: convert-to-stock-in + print are always shown (for everyone)
+            if (o.status === 'approved') {
                 html += '<div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">'
                       + '<button class="button button-primary button-large" onclick="iwPrintPr('+o.id+')">' + iwT('طباعة', 'Print') + '</button>'
                       + '<button class="button button-secondary button-large" onclick="iwPrCreateAddOrder('+o.id+')" style="background:#2271b1;color:#fff;border-color:#2271b1;">'
-                      + iwT('تنفيذ إذن إضافة للمحدد', 'Create Stock-In for Selected') + '</button>'
-                      + '</div>'
+                      + iwT('تنفيذ إذن إضافة للمحدد', 'Create Stock-In for Selected') + '</button>';
+                // Admin extra: save-edits button
+                if (adminEdit) {
+                    html += ' <button class="button button-large" onclick="iwSavePrEdit('+o.id+')" style="background:#f0b232;border-color:#d99521;color:#fff;">💾 '
+                          + iwT('حفظ تعديلات المدير', 'Save Admin Edits') + '</button>';
+                }
+                html += '</div>'
                       + '<p class="description" style="margin-top:8px;">'
                       + iwT('حدد الأصناف التي تم استلامها فعلياً ثم اضغط "تنفيذ إذن إضافة للمحدد" لإنشاء إذن إضافة بهذه الأصناف فقط.',
                             'Select the items that were actually received, then click "Create Stock-In for Selected" to create a stock-in order with only those items.')
                       + '</p>';
             }
-            if (adminEdit) {
-                var noteText = (o.status === 'completed')
-                    ? iwT('سيُعاد ضبط حركات المخزون تلقائياً بعد الحفظ.', 'Stock transactions will be re-synced automatically after save.')
-                    : iwT('التعديل يسري قبل تنفيذ إذن الإضافة.', 'Changes take effect before the stock-in is executed.');
+            // Completed: admin can only edit (no convert — stock-in already happened)
+            if (adminEdit && o.status === 'completed') {
                 html += '<div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">'
                       + '<button class="button button-primary button-large" onclick="iwSavePrEdit('+o.id+')">💾 '
                       + iwT('حفظ تعديلات المدير', 'Save Admin Edits') + '</button>'
                       + '<button class="button button-large" onclick="iwPrintPr('+o.id+')">' + iwT('طباعة', 'Print') + '</button>'
                       + '</div>'
-                      + '<p class="description" style="margin-top:8px;">' + noteText + '</p>';
+                      + '<p class="description" style="margin-top:8px;">'
+                      + iwT('سيُعاد ضبط حركات المخزون تلقائياً بعد الحفظ.', 'Stock transactions will be re-synced automatically after save.')
+                      + '</p>';
             }
 
             // Admin: restore missing items
@@ -619,10 +632,14 @@ jQuery(document).ready(function($) {
         var selected = [];
         $('.pr-item-check:checked').each(function() {
             var $tr = $(this).closest('tr');
+            // Prefer the current (possibly admin-edited) qty from the input, fall back to data attr
+            var $qtyInput = $tr.find('.pr-approve-qty');
+            var qty = $qtyInput.length ? parseInt($qtyInput.val(), 10) : parseInt($tr.data('approved-qty'), 10);
+            if (!qty || qty <= 0) return; // skip zero/invalid rows
             selected.push({
                 product_id:   $tr.data('product-id'),
                 product_name: $tr.data('product-name'),
-                quantity:     $tr.data('approved-qty')
+                quantity:     qty
             });
         });
         if (!selected.length) {
