@@ -192,11 +192,21 @@ class IW_Permissions {
             wp_send_json_error(array('message' => 'لم يتم اختيار ملف'));
         }
 
+        // Restrict signature uploads to images only (defense in depth on top of WP's own checks)
+        $allowed = array('jpg|jpeg' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp');
+        $file_check = wp_check_filetype(($_FILES['signature']['name'] ?? ''), $allowed);
+        if (empty($file_check['type'])) {
+            wp_send_json_error(array('message' => 'نوع ملف غير مسموح — ارفع صورة فقط (jpg/png/webp)'));
+        }
+        $mime_filter = function($mimes) use ($allowed) { return $allowed; };
+        add_filter('upload_mimes', $mime_filter, 99);
+
         require_once ABSPATH . 'wp-admin/includes/image.php';
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
 
-        $attachment_id = media_handle_upload('signature', 0);
+        $attachment_id = media_handle_upload('signature', 0, array(), array('test_form' => false, 'mimes' => $allowed));
+        remove_filter('upload_mimes', $mime_filter, 99);
 
         if (is_wp_error($attachment_id)) {
             wp_send_json_error(array('message' => $attachment_id->get_error_message()));

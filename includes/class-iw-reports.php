@@ -12,6 +12,9 @@ class IW_Reports {
 
     public static function stock_report() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
+        if (!IW_Permissions::current_user_can('reports', 'view')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
         global $wpdb;
 
         $category = sanitize_text_field($_POST['category'] ?? '');
@@ -29,6 +32,9 @@ class IW_Reports {
 
     public static function transactions_report() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
+        if (!IW_Permissions::current_user_can('reports', 'view')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
@@ -73,6 +79,9 @@ class IW_Reports {
 
     public static function low_stock_report() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
+        if (!IW_Permissions::current_user_can('reports', 'view')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
         global $wpdb;
 
         $category = sanitize_text_field($_POST['category'] ?? '');
@@ -93,6 +102,9 @@ class IW_Reports {
      */
     public static function dept_consumption_detail() {
         check_ajax_referer('iw_admin_nonce', 'nonce');
+        if (!IW_Permissions::current_user_can('reports', 'view')) {
+            wp_send_json_error(array('message' => 'ليس لديك صلاحية'));
+        }
         global $wpdb;
         $prefix = $wpdb->prefix . 'iw_';
 
